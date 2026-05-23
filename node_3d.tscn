@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://ouds37dqykfm"]
+
+[ext_resource type="Script" uid="uid://djxeuv1doa2be" path="res://BoardTeste.gd" id="1_a202f"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_noarx"]
+albedo_color = Color(2.7915835e-06, 0.6969806, 0.6987481, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_a0tk4"]
+material = SubResource("StandardMaterial3D_noarx")
+size = Vector3(1.5, 0.2, 1.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_r3fl7"]
+size = Vector3(1.5, 0.2, 1.5)
+
+[node name="Node3D" type="Node3D" unique_id=1472197813]
+script = ExtResource("1_a202f")
+
+[node name="Area3D" type="Area3D" parent="." unique_id=28256390]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Area3D" unique_id=400480923]
+mesh = SubResource("BoxMesh_a0tk4")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=748187785]
+shape = SubResource("BoxShape3D_r3fl7")
+
+[connection signal="mouse_entered" from="Area3D" to="." method="_on_area_3d_mouse_entered"]
+[connection signal="mouse_exited" from="Area3D" to="." method="_on_area_3d_mouse_exited"]

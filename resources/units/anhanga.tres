@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://bvn37klwvbyd7"]
+
+[ext_resource type="Texture2D" uid="uid://df77bw47st6hu" path="res://Assets/Units_teste/Anhangá.png" id="1_23mv6"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_64q5c"]
+
+[resource]
+script = ExtResource("1_64q5c")
+unit_name = "Anhangá"
+unit_id = "anhanga"
+description = "Protetor místico da floresta."
+lore = "Guardião espiritual da mata."
+icon = ExtResource("1_23mv6")
+max_health = 650.0
+attack_damage = 45.0
+attack_speed = 0.8
+armor = 30.0
+magic_resist = 20.0
+movement_speed = 180.0
+max_mana = 80.0
+mana_per_attack = 12.0
+mana_when_hit = 8.0
+origins = Array[String](["Amazônico"])
+classes = Array[String](["Protetor da Mata", "Tank"])
+ability_name = "Rugido da Floresta"
+ability_description = "Reduz ataque de inimigos próximos."
+ability_duration = 4.0
+ability_range = 3.0
+is_tank = true
+on_spawn_effect = "forest_leaves"

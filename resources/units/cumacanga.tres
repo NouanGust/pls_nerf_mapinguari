@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://byphjdy82iy7l"]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_lfirk"]
+[ext_resource type="Texture2D" uid="uid://cnwbv1m5rg6bm" path="res://Assets/Units_teste/Cumacanga.png" id="1_rpcj1"]
+
+[resource]
+script = ExtResource("1_lfirk")
+unit_name = "Cumacanga"
+unit_id = "cumacanga"
+description = "Crânio flamejante."
+icon = ExtResource("1_rpcj1")
+max_health = 400.0
+attack_speed = 1.1
+armor = 5.0
+magic_resist = 25.0
+movement_speed = 240.0
+can_fly = true
+max_mana = 70.0
+starting_mana = 20.0
+mana_per_attack = 15.0
+origins = Array[String](["Urbano"])
+classes = Array[String](["Assombração", "DPS"])
+ability_name = "Chamas do Terror"
+ability_description = "Queima inimigos."
+ability_damage = 30.0
+ability_duration = 4.0
+target_priority = 3

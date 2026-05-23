@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3 uid="uid://dmcjdd36m0kyp"]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_2wc1q"]
+
+[resource]
+script = ExtResource("1_2wc1q")
+unit_name = "Tutu-Marambá"
+unit_id = "tutu_maramba"
+description = "Bicho-papão supremo, terror absoluto das crianças."
+lore = "Monstro das sombras que encarna todos os medos infantis."
+tier = 5
+cost = 5
+max_health = 2200.0
+attack_damage = 160.0
+attack_speed = 0.85
+armor = 80.0
+magic_resist = 60.0
+movement_speed = 190.0
+mana_when_hit = 20.0
+origins = Array[String](["Urbano"])
+classes = Array[String](["Assombração", "Tank"])
+ability_name = "Presença Aterrorizante"
+ability_description = "Libera aura que causa medo, reduzindo stats inimigos drasticamente."
+ability_duration = 6.0
+ability_range = 5.0
+is_tank = true
+passive_aura_range = 3.0
+passive_aura_effect = "Inimigos próximos perdem 30% velocidade de ataque"
+stun_resist = 1.0

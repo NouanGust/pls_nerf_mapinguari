@@ -1,0 +1,276 @@
+[gd_scene format=3 uid="uid://c3exjsipb8037"]
+
+[ext_resource type="Script" uid="uid://c6d4f6am2fxkn" path="res://Scripts/UI/shop_ui.gd" id="1_13cgw"]
+[ext_resource type="Texture2D" uid="uid://cnljivd6cakk" path="res://Assets/Units_teste/Comadre_fulozinha.png" id="2_71wt1"]
+[ext_resource type="Texture2D" uid="uid://d0tnt6pe4eoxh" path="res://74880.jpg" id="2_xkiwj"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_43gfl"]
+bg_color = Color(0.3491902, 0.3491902, 0.3491902, 0.8)
+
+[node name="GameUi" type="CanvasLayer" unique_id=1728843799]
+
+[node name="Control" type="Control" parent="." unique_id=1312105481]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBar" type="Panel" parent="Control" unique_id=2065043646]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_right = 2.0
+offset_bottom = 150.0
+grow_horizontal = 2
+
+[node name="GoldLabel" type="Label" parent="Control/TopBar" unique_id=596846676]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 15.0
+offset_right = 60.0
+offset_bottom = 55.0
+theme_override_font_sizes/font_size = 24
+text = "Gold: 0"
+
+[node name="HealthLabel" type="Label" parent="Control/TopBar" unique_id=1104116360]
+layout_mode = 0
+offset_left = 200.0
+offset_top = 15.0
+offset_right = 240.0
+offset_bottom = 55.0
+theme_override_font_sizes/font_size = 24
+text = "Vida: 100"
+
+[node name="RoundLabel" type="Label" parent="Control/TopBar" unique_id=1919650044]
+layout_mode = 0
+offset_left = 400.0
+offset_top = 15.0
+offset_right = 440.0
+offset_bottom = 55.0
+theme_override_font_sizes/font_size = 24
+text = "Round: 1"
+
+[node name="LevelLabel" type="Label" parent="Control/TopBar" unique_id=1106596111]
+layout_mode = 0
+offset_left = 600.0
+offset_top = 15.0
+offset_right = 782.0
+offset_bottom = 49.0
+theme_override_font_sizes/font_size = 24
+text = "Level: 1 (XP:0/2)"
+
+[node name="BottomBar" type="Panel" parent="Control" unique_id=1904179370]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = -323.0
+offset_right = 5.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_43gfl")
+
+[node name="ShopLabel" type="Button" parent="Control/BottomBar" unique_id=2078547573]
+layout_mode = 0
+offset_top = -39.0
+offset_right = 126.0
+offset_bottom = -3.0
+theme_override_colors/font_color = Color(0.5875146, 0.58614224, 9.62615e-07, 1)
+theme_override_font_sizes/font_size = 20
+text = "LOJA"
+
+[node name="ShopContainer" type="HBoxContainer" parent="Control/BottomBar" unique_id=1611297172]
+clip_contents = true
+custom_minimum_size = Vector2(700, -200.565)
+layout_mode = 0
+offset_left = 31.0
+offset_top = 25.0
+offset_right = 1171.0
+offset_bottom = 291.0
+theme_override_constants/separation = 10
+script = ExtResource("1_13cgw")
+
+[node name="ControlsContainer" type="HBoxContainer" parent="Control/BottomBar" unique_id=1349561807]
+layout_mode = 0
+offset_left = 1523.0
+offset_top = 13.0
+offset_right = 1903.0
+offset_bottom = 63.0
+theme_override_constants/separation = 10
+
+[node name="RerollButton" type="Button" parent="Control/BottomBar/ControlsContainer" unique_id=1515377000]
+custom_minimum_size = Vector2(120, 50)
+layout_mode = 2
+text = "Reroll (2g)"
+
+[node name="LockButton" type="Button" parent="Control/BottomBar/ControlsContainer" unique_id=260637900]
+custom_minimum_size = Vector2(120, 50)
+layout_mode = 2
+text = "Unlock
+"
+
+[node name="BuyXPButton" type="Button" parent="Control/BottomBar/ControlsContainer" unique_id=336221098]
+custom_minimum_size = Vector2(120, 50)
+layout_mode = 2
+text = "Buy XP (4g)"
+
+[node name="ControlsContainer2" type="HBoxContainer" parent="Control/BottomBar" unique_id=920104245]
+layout_mode = 0
+offset_left = 1523.0
+offset_top = 97.0
+offset_right = 1903.0
+offset_bottom = 147.0
+theme_override_constants/separation = 10
+
+[node name="RerollButton" type="RichTextLabel" parent="Control/BottomBar/ControlsContainer2" unique_id=1945208626]
+custom_minimum_size = Vector2(120, 50)
+layout_mode = 2
+text = "Reroll (2g)"
+
+[node name="LockButton" type="Button" parent="Control/BottomBar/ControlsContainer2" unique_id=335247496]
+custom_minimum_size = Vector2(120, 50)
+layout_mode = 2
+text = "Unlock
+"
+
+[node name="BuyXPButton" type="Button" parent="Control/BottomBar/ControlsContainer2" unique_id=949805013]
+custom_minimum_size = Vector2(120, 50)
+layout_mode = 2
+text = "Buy XP (4g)"
+
+[node name="BenchLabel" type="Label" parent="Control/BottomBar" unique_id=1900415992]
+visible = false
+layout_mode = 0
+offset_left = 20.0
+offset_top = 150.0
+offset_right = 106.0
+offset_bottom = 173.0
+theme_override_font_sizes/font_size = 16
+text = "BANCO 0/9"
+
+[node name="StatsTooltip" type="PanelContainer" parent="Control/BottomBar" unique_id=475325823]
+layout_mode = 0
+offset_left = 4.0
+offset_top = -137.0
+offset_right = 180.0
+offset_bottom = -6.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/BottomBar/StatsTooltip" unique_id=1071325550]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Tooltip_name" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=1039519784]
+layout_mode = 2
+text = "Nome
+"
+fit_content = true
+
+[node name="Tooltip_hp" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=2065744821]
+layout_mode = 2
+text = "HP"
+fit_content = true
+
+[node name="Tooltip_range" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=1602243571]
+layout_mode = 2
+text = "range"
+fit_content = true
+
+[node name="Tooltip_type" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=102777709]
+layout_mode = 2
+text = "tipo"
+fit_content = true
+
+[node name="RightBar" type="Panel" parent="Control" unique_id=1903512356]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -230.0
+offset_top = 190.0
+offset_bottom = -383.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Control/RightBar" unique_id=2072667921]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_xkiwj")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/RightBar/NinePatchRect" unique_id=177663562]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Name_label" type="RichTextLabel" parent="Control/RightBar/NinePatchRect/VBoxContainer" unique_id=628121363]
+layout_mode = 2
+size_flags_vertical = 8
+text = "Nome
+"
+fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Image_container" type="TextureRect" parent="Control/RightBar/NinePatchRect/VBoxContainer" unique_id=1116855693]
+layout_mode = 2
+texture = ExtResource("2_71wt1")
+expand_mode = 5
+stretch_mode = 6
+
+[node name="Hp_label" type="RichTextLabel" parent="Control/RightBar/NinePatchRect/VBoxContainer" unique_id=947616224]
+layout_mode = 2
+text = "Vida"
+fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Mana_label" type="RichTextLabel" parent="Control/RightBar/NinePatchRect/VBoxContainer" unique_id=50575404]
+layout_mode = 2
+text = "Mana"
+fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Range_label" type="RichTextLabel" parent="Control/RightBar/NinePatchRect/VBoxContainer" unique_id=1995017617]
+layout_mode = 2
+text = "Range"
+fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Type_label" type="RichTextLabel" parent="Control/RightBar/NinePatchRect/VBoxContainer" unique_id=51925485]
+layout_mode = 2
+text = "Tipo"
+fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Player_Stats" type="Panel" parent="Control" unique_id=773727987]
+visible = false
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="NinePatchRect" type="NinePatchRect" parent="Control/Player_Stats" unique_id=2137963439]
+layout_mode = 0
+offset_right = 41.0
+offset_bottom = 40.0
+texture = ExtResource("2_xkiwj")
+region_rect = Rect2(2, 4, 1498, 837)
+
+[connection signal="pressed" from="Control/BottomBar/ShopLabel" to="Control/BottomBar/ShopContainer" method="toogle_shop"]

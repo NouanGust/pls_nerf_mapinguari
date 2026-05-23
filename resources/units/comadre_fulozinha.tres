@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://du1bxhc6bhwrk"]
+
+[ext_resource type="Texture2D" uid="uid://cnljivd6cakk" path="res://Assets/Units_teste/Comadre_fulozinha.png" id="1_tlm31"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_v6ogt"]
+
+[resource]
+script = ExtResource("1_v6ogt")
+unit_name = "Comadre Fulozinha"
+unit_id = "comadre_fulozinha"
+description = "Protetora mística que invoca espíritos da natureza."
+lore = "Mãe da mata que protege os animais e plantas."
+tier = 4
+cost = 4
+icon = ExtResource("1_tlm31")
+max_health = 1000.0
+health_regen = 8.0
+attack_damage = 70.0
+attack_range = 3
+armor = 35.0
+magic_resist = 55.0
+max_mana = 120.0
+starting_mana = 60.0
+mana_per_attack = 15.0
+mana_per_second = 8.0
+origins = Array[String](["Amazônico"])
+classes = Array[String](["Protetor da Mata", "Encantado", "Suporte"])
+ability_name = "Invocação da Floresta"
+ability_description = "Invoca 2 espíritos da mata para lutar ao seu lado."
+ability_duration = 10.0
+is_ranged = true
+prefers_backline = true
+passive_aura_range = 3.0
+passive_aura_effect = "Aliados próximos ganham +15% velocidade de ataque"

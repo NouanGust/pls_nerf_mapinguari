@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://oqcy4nvnnbd8"]
+
+[ext_resource type="Script" uid="uid://crg6jy2wapk7a" path="res://Scripts/Camera/camera.gd" id="1_wmbm5"]
+
+[node name="GameCamera" type="Node3D" unique_id=739736243]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 10)
+script = ExtResource("1_wmbm5")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=2038355395]
+fov = 50.0
+far = 1000.0
+
+[node name="CameraPivot" type="Node3D" parent="." unique_id=865437929]

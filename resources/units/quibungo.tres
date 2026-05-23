@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://xpggwkbbco2v"]
+
+[ext_resource type="Texture2D" uid="uid://b3q8rg21d8vcd" path="res://Assets/Units_teste/Quibungo.png" id="1_2h6l1"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_ubt1y"]
+
+[resource]
+script = ExtResource("1_ubt1y")
+unit_name = "Quibungo"
+unit_id = "quibungo"
+description = "Gigante corcunda com saco nas costas que sequestra crianças."
+lore = "Criatura das florestas que carrega um saco para capturar os desobedientes."
+tier = 3
+cost = 3
+icon = ExtResource("1_2h6l1")
+max_health = 1400.0
+attack_damage = 85.0
+attack_speed = 0.75
+armor = 50.0
+magic_resist = 30.0
+movement_speed = 160.0
+mana_when_hit = 15.0
+origins = Array[String](["Amazônico"])
+classes = Array[String](["Protetor da Mata", "Tank"])
+ability_name = "Saco das Sombras"
+ability_description = "Captura unidade inimiga por 3 segundos, causando dano contínuo."
+ability_damage = 40.0
+ability_duration = 3.0
+ability_damage_type = 2
+target_priority = 7
+is_tank = true

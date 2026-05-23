@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dd72oeu6y81cq"]
+
+[ext_resource type="Texture2D" uid="uid://dmrp8jxclu4lc" path="res://Assets/Units_teste/cabeça_cuia.png" id="1_hu2ai"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_m7tap"]
+
+[resource]
+script = ExtResource("1_m7tap")
+unit_name = "Cabeça-de-Cuia"
+unit_id = "cabeca_de_cuia"
+description = "Cabeça flutuante que arrasta vítimas para o fundo do rio."
+lore = "Condenado a vagar pelos rios em busca de sete Marias para se redimir."
+tier = 3
+cost = 3
+icon = ExtResource("1_hu2ai")
+max_health = 1000.0
+attack_damage = 95.0
+attack_range = 2
+armor = 30.0
+magic_resist = 50.0
+movement_speed = 230.0
+can_fly = true
+starting_mana = 30.0
+mana_per_attack = 12.0
+origins = Array[String](["Litorâneo"])
+classes = Array[String](["Aquático", "Assombração", "DPS"])
+ability_name = "Arrasto Amaldiçoado"
+ability_description = "Puxa inimigo para perto, causando dano e reduzindo armadura."
+ability_damage = 150.0
+ability_duration = 4.0
+target_priority = 4
+is_ranged = true

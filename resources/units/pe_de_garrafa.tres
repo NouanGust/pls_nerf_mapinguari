@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dywmdp4icgd16"]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_6nwsa"]
+[ext_resource type="Texture2D" uid="uid://laubf7gqu52s" path="res://Assets/Units_teste/Pe_garrafa.png" id="1_rh75l"]
+
+[resource]
+script = ExtResource("1_6nwsa")
+unit_name = "Pé-de-Garrafa"
+unit_id = "pe_de_garrafa"
+description = "Caçador fantasma implacável que nunca erra."
+lore = "Espectro de caçador amaldiçoado a vagar eternamente."
+tier = 5
+cost = 5
+icon = ExtResource("1_rh75l")
+max_health = 1400.0
+attack_damage = 200.0
+attack_speed = 1.3
+attack_range = 5
+critical_chance = 0.5
+critical_damage = 3.0
+armor = 35.0
+magic_resist = 35.0
+movement_speed = 250.0
+max_mana = 60.0
+mana_per_attack = 5.0
+origins = Array[String](["Sertanejo"])
+classes = Array[String](["Caçador", "Assombração", "DPS"])
+ability_name = "Tiro Certeiro"
+ability_description = "Disparo garantido que causa dano massivo e executa alvos baixos."
+ability_damage = 500.0
+ability_range = 8.0
+ability_damage_type = 0
+target_priority = 3
+is_assassin = true
+is_ranged = true
+prefers_backline = true

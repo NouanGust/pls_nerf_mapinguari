@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://dvk4d1hl5uabw"]
+
+[ext_resource type="Script" uid="uid://deaps6uldot3m" path="res://Scripts/Units/base_unit.gd" id="1_0kom6"]
+[ext_resource type="PackedScene" uid="uid://donoidnrqj2ni" path="res://Assets/Models/Meshy_AI_Full_3D_character_mod_0521231757_texture.glb" id="1_tgn0q"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_47dbo"]
+
+[node name="BaseUnit3D" type="CharacterBody3D" unique_id=195234914]
+script = ExtResource("1_0kom6")
+metadata/_custom_type_script = "uid://deaps6uldot3m"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=7920297]
+shape = SubResource("CapsuleShape3D_47dbo")
+
+[node name="Meshy_AI_Full_3D_character_mod_0521231757_texture" parent="." unique_id=1526935098 instance=ExtResource("1_tgn0q")]

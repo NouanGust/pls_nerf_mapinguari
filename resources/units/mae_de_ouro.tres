@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://ku31ahyw8i1f"]
+
+[ext_resource type="Texture2D" uid="uid://obiadekqclkx" path="res://Assets/Units_teste/Mãe_douro.png" id="1_c3y0t"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_whoo3"]
+
+[resource]
+script = ExtResource("1_whoo3")
+unit_name = "Mãe-de-Ouro"
+unit_id = "mae_de_ouro"
+description = "Bola de fogo."
+tier = 2
+cost = 2
+icon = ExtResource("1_c3y0t")
+max_health = 700.0
+attack_damage = 70.0
+attack_speed = 1.2
+attack_range = 3
+armor = 20.0
+magic_resist = 40.0
+movement_speed = 280.0
+can_fly = true
+max_mana = 80.0
+starting_mana = 30.0
+mana_per_attack = 12.0
+origins = Array[String](["Pantaneiro"])
+classes = Array[String](["Místico", "DPS", "Suporte"])
+ability_name = "Chamas Douradas"
+ability_description = "Explosão dupla."
+ability_damage = 150.0
+ability_heal = 120.0
+ability_targets = 3
+target_priority = 6
+is_ranged = true

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://ddie0cbejkgnc"]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_cm1nw"]
+[ext_resource type="Texture2D" uid="uid://cq38jb0je502y" path="res://Assets/Units_teste/Caapora.png" id="1_wnuna"]
+
+[resource]
+script = ExtResource("1_cm1nw")
+unit_name = "Caapora"
+unit_id = "caapora"
+description = "Guardião jovem da floresta com arco e flecha."
+lore = "Protetor ágil que pune caçadores gananciosos."
+tier = 4
+cost = 4
+icon = ExtResource("1_wnuna")
+max_health = 1100.0
+attack_damage = 130.0
+attack_speed = 1.4
+attack_range = 4
+critical_chance = 0.25
+critical_damage = 2.5
+armor = 30.0
+magic_resist = 30.0
+movement_speed = 260.0
+max_mana = 60.0
+mana_per_attack = 6.0
+origins = Array[String](["Amazônico"])
+classes = Array[String](["Protetor da Mata", "Caçador", "DPS"])
+ability_name = "Flecha Perfurante"
+ability_description = "Dispara flecha que atravessa inimigos, causando dano em linha."
+ability_damage = 200.0
+ability_targets = 5
+ability_range = 6.0
+ability_damage_type = 0
+target_priority = 1
+is_ranged = true
+prefers_backline = true

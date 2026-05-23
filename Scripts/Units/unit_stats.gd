@@ -1,0 +1,142 @@
+# res://scripts/units/unit_stats.gd
+class_name UnitStats
+extends Resource
+
+## ============================================
+## ENUMS (DEVEM VIR ANTES DE TUDO)
+## ============================================
+enum TargetPriority { 
+	CLOSEST,
+	LOWEST_HP,
+	HIGHEST_HP,
+	LOWEST_HP_PERCENT,
+	BACKLINE,
+	FRONTLINE,
+	RANDOM,
+	HIGHEST_ATTACK
+}
+
+enum DamageType { 
+	PHYSICAL, 
+	MAGICAL, 
+	TRUE 
+}
+
+## ============================================
+## INFORMAÇÕES BÁSICAS
+## ============================================
+@export_group("Basic Info")
+@export var unit_name: String = ""
+@export var unit_id: String = ""
+@export_multiline var description: String = ""
+@export var lore: String = ""
+@export var tier: int = 1
+@export var cost: int = 1
+
+## ============================================
+## VISUAIS E MODELO 3D
+## ============================================
+@export_group("Visuals")
+@export var model_scene: PackedScene
+@export var icon: Texture2D
+@export var model_scale: float = 1.0
+@export var model_rotation_offset: Vector3 = Vector3.ZERO
+
+## ============================================
+## STATS DE COMBATE
+## ============================================
+@export_group("Combat Stats")
+@export var max_health: float = 500.0
+@export var health_regen: float = 0.0
+
+@export_subgroup("Attack")
+@export var attack_damage: float = 50.0
+@export var attack_speed: float = 1.0
+@export var attack_range: int = 1
+@export var critical_chance: float = 0.0
+@export var critical_damage: float = 2.0
+
+@export_subgroup("Defense")
+@export var armor: float = 0.0
+@export var magic_resist: float = 0.0
+
+@export_subgroup("Movement")
+@export var movement_speed: float = 200.0
+@export var can_fly: bool = false
+
+## ============================================
+## SISTEMA DE MANA
+## ============================================
+@export_group("Mana System")
+@export var max_mana: float = 100.0
+@export var starting_mana: float = 0.0
+@export var mana_per_attack: float = 10.0
+@export var mana_per_second: float = 0.0
+@export var mana_when_hit: float = 10.0
+
+## ============================================
+## SINERGIAS
+## ============================================
+@export_group("Synergies")
+@export var origins: Array[String] = []
+@export var classes: Array[String] = []
+
+## ============================================
+## HABILIDADE
+## ============================================
+@export_group("Ability")
+@export var ability_name: String = ""
+@export_multiline var ability_description: String = ""
+
+@export_subgroup("Ability Stats")
+@export var ability_damage: float = 0.0
+@export var ability_heal: float = 0.0
+@export var ability_targets: int = 1
+@export var ability_duration: float = 0.0
+@export var ability_cooldown: float = 0.0
+@export var ability_range: float = 0.0
+@export var ability_damage_type: DamageType = DamageType.MAGICAL
+
+## ============================================
+## COMPORTAMENTO DE IA
+## ============================================
+@export_group("AI Behavior")
+@export var target_priority: TargetPriority = TargetPriority.CLOSEST
+@export var is_tank: bool = false
+@export var is_assassin: bool = false
+@export var is_ranged: bool = false
+@export var prefers_backline: bool = false
+
+## ============================================
+## EFEITOS ESPECIAIS
+## ============================================
+@export_group("Special Effects")
+@export var on_death_effect: String = ""
+@export var on_spawn_effect: String = ""
+@export var passive_aura_range: float = 0.0
+@export var passive_aura_effect: String = ""
+@export var stun_resist: float = 0.0
+@export var slow_resist: float = 0.0
+@export var silence_resist: float = 0.0
+
+## ============================================
+## HELPERS
+## ============================================
+func get_star_multiplier(stars: int) -> float:
+	match stars:
+		1: return 1.0
+		2: return 1.8
+		3: return 2.6
+		_: return 1.0
+
+func get_tier_color() -> Color:
+	match tier:
+		1: return Color(0.6, 0.6, 0.6)
+		2: return Color(0.3, 0.8, 0.3)
+		3: return Color(0.3, 0.6, 1.0)
+		4: return Color(0.7, 0.3, 0.9)
+		5: return Color(1.0, 0.6, 0.2)
+		_: return Color.WHITE
+
+func is_valid() -> bool:
+	return not unit_name.is_empty() and not unit_id.is_empty()

@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://b18nv54bkwaqh"]
+
+[ext_resource type="ArrayMesh" uid="uid://dxby0gactobvi" path="res://Assets/scenary/OBJ/BirchTree_1.obj" id="1_rj70i"]
+
+[node name="BirchTree1" type="Node3D" unique_id=1339311223]
+
+[node name="BirchTree1" type="MeshInstance3D" parent="." unique_id=317463258]
+mesh = ExtResource("1_rj70i")

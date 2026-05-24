@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://cr246ndfnwq61"]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_4nu4d"]
+[ext_resource type="Texture2D" uid="uid://cb44vi71rdx2k" path="res://Assets/Units_teste/Mapinguari.png" id="1_xuf38"]
+
+[resource]
+script = ExtResource("1_4nu4d")
+unit_name = "Mapinguari"
+unit_id = "mapinguari"
+description = "Besta gigante."
+tier = 2
+cost = 2
+icon = ExtResource("1_xuf38")
+max_health = 1200.0
+attack_damage = 80.0
+attack_speed = 0.7
+armor = 60.0
+magic_resist = 30.0
+movement_speed = 150.0
+origins = Array[String](["Amazônico"])
+classes = Array[String](["Protetor da Mata", "Tank"])
+ability_name = "Couro de Ferro"
+ability_description = "Reflete dano."
+ability_duration = 4.0
+ability_damage_type = 0
+is_tank = true

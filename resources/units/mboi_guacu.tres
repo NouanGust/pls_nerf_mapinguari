@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3 uid="uid://cmqj3h8koygs1"]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_1owcb"]
+
+[resource]
+script = ExtResource("1_1owcb")
+unit_name = "Mboi-Guaçu"
+unit_id = "mboi_guacu"
+description = "Serpente aquática colossal que domina os rios."
+lore = "Grande cobra d'água que protege tesouros submersos."
+tier = 4
+cost = 4
+max_health = 1700.0
+attack_damage = 120.0
+attack_speed = 0.8
+attack_range = 2
+armor = 55.0
+magic_resist = 45.0
+movement_speed = 180.0
+mana_when_hit = 15.0
+origins = Array[String](["Pantaneiro", "Litorâneo"])
+classes = Array[String](["Aquático", "Tank"])
+ability_name = "Constrição Mortal"
+ability_description = "Enrola-se no alvo, causando dano massivo ao longo do tempo."
+ability_damage = 60.0
+ability_duration = 5.0
+ability_damage_type = 0
+target_priority = 2
+is_tank = true

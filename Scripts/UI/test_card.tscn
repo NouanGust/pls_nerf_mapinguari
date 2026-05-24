@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://dpuaivxy664ou"]
+
+[ext_resource type="Script" uid="uid://dl4ww4nblud1r" path="res://Scripts/UI/test_card.gd" id="1_eiby8"]
+[ext_resource type="PackedScene" uid="uid://gu3h02fq00f5" path="res://Scenes/UI/Unit_card.tscn" id="2_qfgfg"]
+
+[node name="TestCard" type="Control" unique_id=1865575875]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_eiby8")
+
+[node name="UnitCard" parent="." unique_id=445710054 instance=ExtResource("2_qfgfg")]
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 240.0
+offset_bottom = 365.0
+grow_horizontal = 1
+grow_vertical = 1

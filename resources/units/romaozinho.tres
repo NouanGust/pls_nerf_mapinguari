@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://coalgro5m1qef"]
+
+[ext_resource type="Texture2D" uid="uid://ce6wrl3qksps0" path="res://Assets/Units_teste/Romaozionho.png" id="1_atoww"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_x2ek6"]
+
+[resource]
+script = ExtResource("1_x2ek6")
+unit_name = "Romãozinho"
+unit_id = "romaozinho"
+description = "Duende travesso de poder imenso."
+lore = "Pequeno mas poderoso, causa caos com sua magia imprevisível."
+tier = 5
+cost = 5
+icon = ExtResource("1_atoww")
+max_health = 1200.0
+attack_damage = 100.0
+attack_speed = 1.5
+attack_range = 3
+armor = 30.0
+magic_resist = 60.0
+movement_speed = 280.0
+can_fly = true
+max_mana = 80.0
+starting_mana = 40.0
+mana_per_attack = 8.0
+mana_per_second = 8.0
+origins = Array[String](["Pantaneiro"])
+classes = Array[String](["Encantado", "Metamorfo", "Suporte"])
+ability_name = "Travessura Caótica"
+ability_description = "Lança feitiço aleatório: dano, cura, CC ou buff."
+ability_damage = 300.0
+ability_heal = 300.0
+ability_targets = 3
+ability_range = 6.0
+target_priority = 6
+is_ranged = true
+stun_resist = 0.8

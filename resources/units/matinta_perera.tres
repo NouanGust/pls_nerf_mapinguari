@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://btcehjrk5vkew"]
+
+[ext_resource type="Texture2D" uid="uid://dogm2sr6o5ddy" path="res://Assets/Units_teste/MAtinta_pereira.png" id="1_jca3h"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_mrs1p"]
+
+[resource]
+script = ExtResource("1_mrs1p")
+unit_name = "Matinta Perera"
+unit_id = "matinta_perera"
+description = "Bruxa que se transforma em pássaro para assombrar."
+lore = "De dia é velha, de noite vira ave que assobia tristemente."
+tier = 3
+cost = 3
+icon = ExtResource("1_jca3h")
+max_health = 850.0
+attack_damage = 75.0
+attack_speed = 1.1
+attack_range = 3
+armor = 20.0
+magic_resist = 40.0
+movement_speed = 250.0
+can_fly = true
+max_mana = 80.0
+starting_mana = 40.0
+origins = Array[String](["Amazônico"])
+classes = Array[String](["Assombração", "Metamorfo"])
+ability_name = "Forma de Pássaro"
+ability_description = "Transforma-se, ficando imune e causando dano em área."
+ability_damage = 120.0
+ability_duration = 3.0
+ability_range = 3.0
+target_priority = 4
+is_assassin = true
+prefers_backline = true

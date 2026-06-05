@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://c6yi460emefd5"]
+
+[ext_resource type="Script" uid="uid://deaps6uldot3m" path="res://Scripts/Units/base_unit.gd" id="1_4ohls"]
+[ext_resource type="PackedScene" uid="uid://c6mvx4e6rlttu" path="res://Assets/Models/Bonecao_player.glb" id="2_1uh8n"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_cw5l3"]
+radius = 0.068359375
+height = 0.5187378
+
+[node name="BaseUnit3D" type="CharacterBody3D" unique_id=1220389407]
+script = ExtResource("1_4ohls")
+metadata/_custom_type_script = "uid://deaps6uldot3m"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=514683346]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25039673, 0)
+shape = SubResource("CapsuleShape3D_cw5l3")
+
+[node name="Model" parent="." unique_id=312792246 instance=ExtResource("2_1uh8n")]
+transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0)

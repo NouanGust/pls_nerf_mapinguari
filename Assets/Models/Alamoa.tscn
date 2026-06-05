@@ -12,4 +12,4 @@ metadata/_custom_type_script = "uid://deaps6uldot3m"
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=7920297]
 shape = SubResource("CapsuleShape3D_47dbo")
 
-[node name="Meshy_AI_Full_3D_character_mod_0521231757_texture" parent="." unique_id=1526935098 instance=ExtResource("1_tgn0q")]
+[node name="Model" parent="." unique_id=1526935098 instance=ExtResource("1_tgn0q")]

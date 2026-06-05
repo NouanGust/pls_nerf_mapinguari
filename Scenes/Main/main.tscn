@@ -110,6 +110,7 @@ environment = ExtResource("6_2a143")
 
 [node name="Env" parent="." unique_id=32248824 instance=ExtResource("7_xlvfx")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -6.0403004, 0)
+visible = false
 
 [connection signal="pressed" from="GameUi/Control/BottomBar/ControlsContainer/RerollButton" to="." method="_on_reroll_button_pressed"]
 [connection signal="pressed" from="GameUi/Control/BottomBar/ControlsContainer/LockButton" to="." method="_on_lock_button_pressed"]

@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Tatu-bola-do-nordeste"
+unit_id = "tatu_bola"
+description = "Pequeno defensor da Caatinga, protegido por sua carapaça móvel."
+lore = "Quando ameaçado, fecha-se em uma esfera quase impenetrável."
+tier = 2
+cost = 2
+max_health = 980.0
+attack_damage = 48.0
+attack_speed = 0.8
+attack_range = 1
+armor = 60.0
+magic_resist = 20.0
+movement_speed = 175.0
+max_mana = 80.0
+mana_when_hit = 15.0
+origins = Array[String](["Caatinga", "Sertanejo"])
+classes = Array[String](["Tank", "Protetor da Mata"])
+affinities = Array[String](["Fauna"])
+biomes = Array[String](["Caatinga", "Cerrado"])
+ability_name = "Carapaça Fechada"
+ability_description = "Encolhe-se e reduz o dano recebido por um breve período."
+ability_duration = 4.0
+is_tank = true
+

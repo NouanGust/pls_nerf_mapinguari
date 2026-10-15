@@ -34,13 +34,10 @@ enum DamageType {
 @export var cost: int = 1
 
 ## ============================================
-## VISUAIS E MODELO 3D
+## VISUAIS
 ## ============================================
 @export_group("Visuals")
-@export var model_scene: PackedScene
 @export var icon: Texture2D
-@export var model_scale: float = 1.0
-@export var model_rotation_offset: Vector3 = Vector3.ZERO
 
 ## ============================================
 ## STATS DE COMBATE
@@ -80,6 +77,10 @@ enum DamageType {
 @export_group("Synergies")
 @export var origins: Array[String] = []
 @export var classes: Array[String] = []
+@export var affinities: Array[String] = []
+
+## Habitats informativos, separados de origens que podem ativar sinergias.
+@export var biomes: Array[String] = []
 
 ## ============================================
 ## HABILIDADE
@@ -127,6 +128,7 @@ func get_star_multiplier(stars: int) -> float:
 		1: return 1.0
 		2: return 1.8
 		3: return 2.6
+		4: return 3.4
 		_: return 1.0
 
 func get_tier_color() -> Color:
@@ -140,3 +142,12 @@ func get_tier_color() -> Color:
 
 func is_valid() -> bool:
 	return not unit_name.is_empty() and not unit_id.is_empty()
+
+func has_origin(origin_name: String) -> bool:
+	return origins.has(origin_name)
+
+func has_class(class_label: String) -> bool:
+	return classes.has(class_label)
+
+func has_affinity(affinity_name: String) -> bool:
+	return affinities.has(affinity_name)

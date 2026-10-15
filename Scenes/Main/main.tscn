@@ -8,6 +8,8 @@
 [ext_resource type="Environment" uid="uid://ds86np0ou1qug" path="res://new_environment.tres" id="6_2a143"]
 [ext_resource type="PackedScene" uid="uid://bu1o8iehokw1k" path="res://Scenes/env.tscn" id="7_xlvfx"]
 
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_xlvfx"]
+
 [sub_resource type="NavigationMesh" id="NavigationMesh_2a143"]
 geometry_parsed_geometry_type = 1
 geometry_collision_mask = 4278190084
@@ -28,56 +30,42 @@ script = ExtResource("1_5yls4")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 0)
 
 [node name="GameUi" parent="." unique_id=1710037490 instance=ExtResource("4_xlvfx")]
+follow_viewport_enabled = true
 
 [node name="Control" parent="GameUi" index="0" unique_id=1312105481]
 offset_right = -1.0
 
-[node name="GoldLabel" parent="GameUi/Control/TopBar" parent_id_path=PackedInt32Array(1710037490, 2065043646) index="0" unique_id=596846676]
-offset_left = 1606.0
-offset_top = 110.0
-offset_right = 1686.0
-offset_bottom = 150.0
+[node name="TopBar" parent="GameUi/Control" index="0" unique_id=2065043646]
+offset_left = 34.0
+offset_top = 31.0
+offset_right = 591.0
+offset_bottom = 91.0
 
-[node name="HealthLabel" parent="GameUi/Control/TopBar" parent_id_path=PackedInt32Array(1710037490, 2065043646) index="1" unique_id=1104116360]
-offset_left = 1581.0
-offset_top = 65.0
-offset_right = 1685.0
-offset_bottom = 105.0
-
-[node name="RoundLabel" parent="GameUi/Control/TopBar" parent_id_path=PackedInt32Array(1710037490, 2065043646) index="2" unique_id=1919650044]
+[node name="BoardCountLabel" parent="GameUi/Control" index="1" unique_id=1900415998]
 layout_mode = 1
-anchors_preset = 14
+anchors_preset = 8
 anchor_top = 0.5
-anchor_right = 1.0
 anchor_bottom = 0.5
-offset_left = 0.0
-offset_top = -34.5
-offset_right = 0.0
-offset_bottom = 34.5
-grow_horizontal = 2
+offset_top = -18.0
+offset_bottom = 18.0
 grow_vertical = 2
-theme_override_font_sizes/font_size = 50
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="LevelLabel" parent="GameUi/Control/TopBar" parent_id_path=PackedInt32Array(1710037490, 2065043646) index="3" unique_id=1106596111]
-offset_left = 1505.0
-offset_top = 18.0
-offset_right = 1687.0
-offset_bottom = 52.0
-
-[node name="ShopLabel" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1904179370) index="0" unique_id=2078547573]
-offset_left = 1.0
-offset_top = -68.0
-offset_right = 161.0
-offset_bottom = -10.0
-theme_override_font_sizes/font_size = 36
 
 [node name="ShopContainer" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1904179370) index="1" unique_id=1611297172]
-offset_left = 23.0
-offset_top = 14.0
-offset_right = 1223.0
-offset_bottom = 293.0
+z_index = 2
+offset_left = 179.0
+offset_top = 33.0
+offset_right = 786.0
+offset_bottom = 198.0
+
+[node name="ControlsContainer" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1904179370) index="2" unique_id=758041956]
+anchors_preset = 0
+anchor_left = 0.0
+anchor_right = 0.0
+offset_left = 1549.0
+offset_top = 21.0
+offset_right = 1861.0
+offset_bottom = 59.0
+grow_horizontal = 1
 
 [node name="VBoxContainer" parent="GameUi/Control/BottomBar/StatsTooltip" parent_id_path=PackedInt32Array(1710037490, 475325823) index="0" unique_id=1071325550]
 alignment = 1
@@ -98,8 +86,35 @@ vertical_alignment = 1
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="RightBar" parent="GameUi/Control" index="2" unique_id=1903512356]
-visible = false
+[node name="BenchPanel" parent="GameUi/Control" index="3" unique_id=1900415993]
+anchors_preset = -1
+anchor_left = 0.504
+anchor_top = 0.75000006
+anchor_right = 0.504
+anchor_bottom = 0.75000006
+offset_left = -440.17603
+offset_top = -45.00006
+offset_right = 439.82397
+offset_bottom = 44.99994
+
+[node name="BenchContent" parent="GameUi/Control/BenchPanel" index="0" unique_id=1900415994]
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 1
+grow_vertical = 1
+
+[node name="RightBar" parent="GameUi/Control" index="4" unique_id=1903512356]
+theme_override_styles/panel = SubResource("StyleBoxTexture_xlvfx")
+
+[node name="HUDToggleButton" parent="GameUi" index="1" unique_id=1900415997]
+offset_left = -56.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 34.0
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1224019935]
 navigation_mesh = SubResource("NavigationMesh_2a143")

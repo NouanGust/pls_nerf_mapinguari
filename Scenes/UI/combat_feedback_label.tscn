@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://b8g5i1c7okb7c"]
+
+[node name="CombatFeedbackLabel" type="Node3D" unique_id=1193230011]
+
+[node name="DamageNumber" type="Label3D" parent="." unique_id=1144844880]
+visible = false
+billboard = 1
+no_depth_test = true
+
+[node name="HealNumber" type="Label3D" parent="." unique_id=798107527]
+visible = false
+billboard = 1
+no_depth_test = true
+
+[node name="CriticalNumber" type="Label3D" parent="." unique_id=2066976073]
+visible = false
+billboard = 1
+no_depth_test = true
+
+[node name="AbilityNumber" type="Label3D" parent="." unique_id=1594712474]
+visible = false
+billboard = 1
+no_depth_test = true
+
+[node name="AbilityName" type="Label3D" parent="." unique_id=425479096]
+visible = false
+billboard = 1
+no_depth_test = true
+
+[node name="StatusIndicator" type="Label3D" parent="." unique_id=1036628238]
+visible = false
+billboard = 1
+no_depth_test = true

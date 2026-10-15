@@ -2,21 +2,26 @@ class_name ShopUI
 extends HBoxContainer
 
 signal unit_selected(unit_stats: UnitStats, slot_index: int)
+signal unit_drag_requested(unit_stats: UnitStats, slot_index: int)
 signal reroll_requested()
 signal lock_toggled(is_locked: bool)
 
 var shop_system: ShopSystem
 var unit_cards: Array[UnitCard] = []
 var is_shop_visible: bool = true
-var hidden_position_y: float = 400.0
+var hidden_position_y: float = 0.0
 var original_position_y: float = 0.0
+var shop_tween: Tween
 @onready var stats_tooltip: PanelContainer = $"../StatsTooltip"
+@onready var shop_toggle_button: Button = $"../ShopLabel"
+@onready var lock_button: Button = $"../ControlsContainer/LockButton"
 
 const UNIT_CARD_SCENE := preload("res://Scenes/UI/unit_card.tscn")
 
 func _ready() -> void:
 	await get_tree().process_frame
 	original_position_y = position.y
+	hidden_position_y = get_parent_control().size.y + 18.0
 	setup_shop_slots()
 	stats_tooltip.hide()
 	
@@ -24,11 +29,15 @@ func _ready() -> void:
 func toogle_shop() -> void:
 	is_shop_visible = !is_shop_visible
 	var target_y = original_position_y if is_shop_visible else hidden_position_y
-	
-	var tween = create_tween()
-	tween.set_ease(Tween.EASE_OUT)
-	tween.set_trans(Tween.TRANS_QUINT)
-	tween.tween_property(self, "position:y", target_y, 0.5)
+	shop_toggle_button.text = "− LOJA" if is_shop_visible else "+ LOJA"
+	if shop_tween and shop_tween.is_running():
+		shop_tween.kill()
+	shop_tween = create_tween()
+	shop_tween.set_ease(Tween.EASE_OUT)
+	shop_tween.set_trans(Tween.TRANS_CUBIC)
+	shop_tween.set_parallel(true)
+	shop_tween.tween_property(self, "position:y", target_y, 0.3)
+	shop_tween.tween_property(self, "modulate:a", 1.0 if is_shop_visible else 0.0, 0.3)
 
 func setup_shop_slots() -> void:
 	for i in 5:
@@ -64,9 +73,10 @@ func _on_card_clicked(slot_index: int) -> void:
 			unit_selected.emit(unit, slot_index)
 
 func _on_drag_started(unit_stats: UnitStats, slot_index: int) -> void:
-	print("Drag iniciado: %s (slot %d)" % [unit_stats.unit_name, slot_index])
+	unit_drag_requested.emit(unit_stats, slot_index)
 
 func _on_lock_changed(is_locked: bool) -> void:
+	lock_button.text = "Destravar" if is_locked else "Travar loja"
 	print("Loja %s" % ("travada" if is_locked else "destravada"))
 
 func _on_card_hover_started(stats: UnitStats, card_pos: Vector2) -> void:

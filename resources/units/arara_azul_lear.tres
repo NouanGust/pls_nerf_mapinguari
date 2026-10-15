@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Arara-azul-de-lear"
+unit_id = "arara_azul_lear"
+description = "Arara rara das áreas de Caatinga no nordeste da Bahia."
+lore = "Com precisão e coragem, vigia os paredões e os caminhos da Caatinga."
+tier = 4
+cost = 4
+max_health = 680.0
+attack_damage = 96.0
+attack_speed = 1.1
+attack_range = 4
+armor = 20.0
+magic_resist = 35.0
+movement_speed = 235.0
+max_mana = 90.0
+mana_per_attack = 12.0
+origins = Array[String](["Caatinga", "Sertanejo"])
+classes = Array[String](["Caçador", "DPS"])
+affinities = Array[String](["Fauna"])
+biomes = Array[String](["Caatinga"])
+ability_name = "Voo de Lear"
+ability_description = "Dispara um ataque preciso contra o inimigo mais forte."
+ability_damage = 210.0
+ability_range = 6.0
+target_priority = 7
+is_ranged = true
+prefers_backline = true
+

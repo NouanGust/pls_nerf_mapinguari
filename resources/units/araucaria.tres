@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Araucária"
+unit_id = "araucaria"
+description = "Árvore de grande porte das florestas com araucária no Sul e Sudeste."
+lore = "Sua copa antiga protege os aliados contra as investidas inimigas."
+tier = 4
+cost = 4
+max_health = 1450.0
+attack_damage = 74.0
+attack_speed = 0.68
+attack_range = 1
+armor = 65.0
+magic_resist = 40.0
+movement_speed = 120.0
+max_mana = 105.0
+mana_when_hit = 15.0
+origins = Array[String](["Mata Atlântica"])
+classes = Array[String](["Tank", "Protetor da Mata"])
+affinities = Array[String](["Flora"])
+biomes = Array[String](["Mata Atlântica"])
+ability_name = "Copa Protetora"
+ability_description = "Ergue uma barreira de raízes para proteger aliados próximos."
+ability_duration = 4.0
+ability_range = 3.0
+is_tank = true
+

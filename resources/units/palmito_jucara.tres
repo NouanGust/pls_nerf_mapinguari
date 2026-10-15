@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://xogtmiy61b28"]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Palmito-juçara"
+unit_id = "palmito_jucara"
+description = "Palmeira ameaçada ligada à Mata Atlântica e a parte do Cerrado."
+lore = "Seus frutos alimentam a vida da floresta e fortalecem os aliados."
+tier = 3
+cost = 3
+max_health = 680.0
+attack_damage = 36.0
+attack_speed = 0.8
+attack_range = 3
+armor = 20.0
+magic_resist = 35.0
+movement_speed = 150.0
+max_mana = 85.0
+starting_mana = 25.0
+mana_per_second = 2.0
+origins = Array[String](["Mata Atlântica", "Litorâneo"])
+classes = Array[String](["Suporte", "Místico"])
+affinities = Array[String](["Flora"])
+biomes = Array[String](["Mata Atlântica", "Cerrado"])
+ability_name = "Frutos da Floresta"
+ability_description = "Cura aliados e concede energia para sua próxima habilidade."
+ability_heal = 100.0
+ability_targets = 3
+ability_range = 5.0
+is_ranged = true
+prefers_backline = true

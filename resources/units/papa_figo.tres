@@ -9,7 +9,6 @@ unit_name = "Papa-Figo"
 unit_id = "papa_figo"
 description = "Figura sinistra."
 icon = ExtResource("1_dtdlx")
-model_scale = 0.6
 max_health = 450.0
 attack_damage = 40.0
 attack_speed = 0.9

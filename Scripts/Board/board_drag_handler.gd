@@ -3,15 +3,22 @@ extends Node
 
 # --- Signals ---
 
-signal unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i)
+signal unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: String, source_index: int)
 signal unit_returned_to_shop(unit_stats: UnitStats)
+signal unit_placed_on_bench(unit: BaseUnit3D, source: String, source_index: int)
+signal unit_sold(unit: BaseUnit3D, source: String, source_index: int)
 
 var board: Board3D
 var camera: Camera3D
+var bench_control: Control
+var sell_zone_control: Control
+var interaction_enabled: bool = true
+var board_interaction_enabled: bool = true
 var dragging_unit_data: Dictionary = {}
 var is_dragging: bool = false
 
 var highlight_cells: Array[Vector2i] = []
+var attack_range_cells: Array[Vector2i] = []
 var ghost_unit: Node3D = null
 var current_hiver_cell: Vector2i = Vector2i(-1, -1)
 
@@ -23,12 +30,18 @@ func setup(board_ref: Board3D, camera_ref: Camera3D) -> void:
 	board = board_ref
 	camera = camera_ref
 
+func set_bench_control(control: Control) -> void:
+	bench_control = control
+
+func set_sell_zone_control(control: Control) -> void:
+	sell_zone_control = control
+
 #func _process(delta: float) -> void:
 	#if is_dragging and ghost_unit:
 		#update_ghost_position()
 
 func _input(event: InputEvent) -> void:
-	if not board or not camera:
+	if not board or not camera or not interaction_enabled:
 		return
 	
 	if event is InputEventMouseMotion and is_dragging:
@@ -38,11 +51,15 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT: 
 			if event.pressed and not is_dragging:
+				if get_viewport().gui_get_hovered_control() != null:
+					return
 				try_pickup_unit(event.position)
 			elif not event.pressed and is_dragging:
 				try_place_unit(event.position)
 
 func try_pickup_unit(mouse_pos: Vector2) -> void:
+	if not board_interaction_enabled:
+		return
 	var from = camera.project_ray_origin(mouse_pos)
 	var to = from + camera.project_ray_normal(mouse_pos) * 1000
 	var query = PhysicsRayQueryParameters3D.create(from, to)
@@ -52,7 +69,7 @@ func try_pickup_unit(mouse_pos: Vector2) -> void:
 	
 	if result and result.collider is BaseUnit3D:
 		var unit: BaseUnit3D = result.collider
-		if unit.team == 0:
+		if unit.team == 0 and unit.current_state != BaseUnit3D.State.DEAD:
 			var grid_pos = unit.board_position
 			board.remove_unit(grid_pos)
 			
@@ -64,14 +81,20 @@ func try_pickup_unit(mouse_pos: Vector2) -> void:
 			})
 			
 func start_drag(unit_data: Dictionary) -> void:
+	if not interaction_enabled or is_dragging:
+		return
+	if not board_interaction_enabled and unit_data.get("source", "") != "bench":
+		return
 	dragging_unit_data = unit_data
 	is_dragging = true
 	
 	create_ghost_unit()
 	
 	if unit_data.has("source"):
-		if unit_data.source == "shop":
+		if unit_data.source == "shop" or unit_data.source == "bench":
 			highlight_valid_cells_for_player()
+	if sell_zone_control and unit_data.get("source", "") in ["board", "bench"]:
+		sell_zone_control.visible = true
 
 func create_ghost_unit() -> void:
 	if not dragging_unit_data.has("unit_instance"):
@@ -105,7 +128,7 @@ func create_ghost_unit() -> void:
 	ghost_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	ghost_material.emission_enabled = true
 	ghost_material.emission = ghost_material.albedo_color
-	ghost_material.emission_energy = 1.5
+	ghost_material.emission_energy_multiplier = 1.5
 	
 	mesh_copy.material_override = ghost_material
 	ghost_unit.add_child(mesh_copy)
@@ -114,6 +137,8 @@ func create_ghost_unit() -> void:
 	label.text = unit.stats.unit_name if unit.stats else "Unit"
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
+	label.fixed_size = true
+	label.font_size = 14
 	label.position = Vector3(0, 2.5, 0)
 	label.modulate = Color(1, 1, 1, 0.8)
 	label.outline_size = 8
@@ -138,6 +163,8 @@ func update_ghost_position(mouse_pos: Vector2) -> void:
 
 func stop_drag() -> void:
 	is_dragging = false
+	if sell_zone_control:
+		sell_zone_control.visible = false
 	dragging_unit_data.clear()
 	clear_all_highlights()
 	if ghost_unit:
@@ -145,11 +172,19 @@ func stop_drag() -> void:
 		ghost_unit = null
 		
 	current_hiver_cell = Vector2i(-1, -1)
+
+func cancel_drag() -> void:
+	if not is_dragging:
+		return
+	return_unit_to_origin()
+	stop_drag()
 	
 
 func highlight_valid_cells_for_player() -> void:
 	print("Destacando celulas validas...")
 	clear_all_highlights()
+	if not board_interaction_enabled:
+		return
 	
 	var highlighted_count: int = 0
 	
@@ -167,8 +202,13 @@ func clear_all_highlights() -> void:
 	for pos in highlight_cells:
 		board.highlight_cell(pos, false)
 	highlight_cells.clear()
+	for pos in attack_range_cells:
+		board.highlight_cell(pos, false)
+	attack_range_cells.clear()
 
 func update_hover_highlight(mouse_pos: Vector2) -> void:
+	if not board_interaction_enabled:
+		return
 	var grid_pos: Vector2i = get_grid_position_from_mouse(mouse_pos)
 	
 	if grid_pos == current_hiver_cell:
@@ -177,14 +217,57 @@ func update_hover_highlight(mouse_pos: Vector2) -> void:
 	current_hiver_cell = grid_pos
 	
 	highlight_valid_cells_for_player()
+	if grid_pos != Vector2i(-1, -1):
+		_highlight_attack_range(grid_pos)
 	
 	if grid_pos != Vector2i(-1, -1):
 		if board.is_player_zone(grid_pos) and not board.is_cell_occupied(grid_pos):
-			board.highlight_cell(grid_pos, true)
+			board.highlight_cell(grid_pos, true, Color("#f2d477"))
 			if grid_pos not in highlight_cells:
 				highlight_cells.append(grid_pos)
 
+func _highlight_attack_range(center: Vector2i) -> void:
+	var unit := dragging_unit_data.get("unit_instance") as BaseUnit3D
+	if not is_instance_valid(unit) or not unit.stats:
+		return
+	var range_in_world := float(unit.stats.attack_range) * 2.0 + 0.5
+	for row in board.rows:
+		for col in board.columns:
+			var candidate := Vector2i(col, row)
+			if board.get_distance_between_cells(center, candidate) <= range_in_world:
+				board.highlight_cell(candidate, true, Color("#55cfe0"))
+				attack_range_cells.append(candidate)
+
 func try_place_unit(mouse_pos: Vector2) -> void:
+	var source: String = dragging_unit_data.get("source", "")
+	if source in ["board", "bench"] and sell_zone_control and sell_zone_control.is_visible_in_tree() and sell_zone_control.get_global_rect().has_point(mouse_pos):
+		if dragging_unit_data.has("unit_instance"):
+			unit_sold.emit(
+				dragging_unit_data.unit_instance,
+				source,
+				int(dragging_unit_data.get("bench_index", -1))
+			)
+		stop_drag()
+		return
+	if not board_interaction_enabled:
+		# Reservas podem ser vendidas, mas nunca entrar no combate em andamento.
+		return_unit_to_origin()
+		stop_drag()
+		return
+	if bench_control and bench_control.is_visible_in_tree() and bench_control.get_global_rect().has_point(mouse_pos):
+		if source != "bench" and dragging_unit_data.has("unit_instance"):
+			unit_placed_on_bench.emit(
+				dragging_unit_data.unit_instance,
+				source,
+				int(dragging_unit_data.get("bench_index", -1))
+			)
+		stop_drag()
+		return
+	if get_viewport().gui_get_hovered_control() != null:
+		return_unit_to_origin()
+		stop_drag()
+		return
+
 	var grid_pos: Vector2i = get_grid_position_from_mouse(mouse_pos)
 	
 	var drop_valid := (
@@ -209,17 +292,24 @@ func return_unit_to_origin() -> void:
 		var old_pos: Vector2i = dragging_unit_data.get("old_pos", Vector2i(-1,-1))
 		if old_pos != Vector2i(-1,-1):
 			board.place_unit(unit, old_pos, true)
-	else:
+	elif dragging_unit_data.get("source") == "shop":
 		if dragging_unit_data.has("unit_stats"):
 			unit_returned_to_shop.emit(dragging_unit_data.unit_stats)
 		unit.queue_free()
+	elif dragging_unit_data.get("source") == "bench":
+		unit.visible = false
 
 
 
 func emit_place_unit_signal(grid_pos: Vector2i) -> void:
 	if dragging_unit_data.has("unit_instance"):
 		print("  Emitindo sinal unit_placed_on_board")
-		unit_placed_on_board.emit(dragging_unit_data.unit_instance, grid_pos)
+		unit_placed_on_board.emit(
+			dragging_unit_data.unit_instance,
+			grid_pos,
+			dragging_unit_data.get("source", ""),
+			int(dragging_unit_data.get("bench_index", -1))
+		)
 	else:
 		print("  ERRO: unit_instance nao encontrado em dragging_unit_data")
 
@@ -239,10 +329,7 @@ func get_grid_position_from_mouse(mouse_pos: Vector2) -> Vector2i:
 		var hit_pos = result.position
 		var local_pos = board.to_local(hit_pos)
 		
-		var total_cell_size = board.cell_size + board.cell_spacing
-		var col = floor((local_pos.x + (board.columns * total_cell_size / 2.0)) / total_cell_size)
-		var row = floor((local_pos.z + (board.rows * total_cell_size / 2.0)) / total_cell_size)
-		return Vector2i(int(col), int(row))
+		return board.get_grid_position(local_pos)
 		
 	
 	return Vector2i(-1, -1)

@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Guaraná"
+unit_id = "guarana"
+description = "Trepadeira amazônica cujas sementes inspiram energia renovada."
+lore = "O espírito do guaraná desperta a força adormecida dos aliados."
+tier = 2
+cost = 2
+max_health = 570.0
+attack_damage = 35.0
+attack_speed = 0.85
+attack_range = 3
+armor = 15.0
+magic_resist = 30.0
+movement_speed = 180.0
+max_mana = 75.0
+starting_mana = 15.0
+mana_per_second = 2.0
+origins = Array[String](["Amazônico"])
+classes = Array[String](["Místico", "Suporte"])
+affinities = Array[String](["Flora"])
+biomes = Array[String](["Amazônia"])
+ability_name = "Sementes de Energia"
+ability_description = "Reforça a velocidade de ataque dos aliados próximos."
+ability_duration = 4.0
+ability_range = 4.0
+is_ranged = true
+prefers_backline = true
+

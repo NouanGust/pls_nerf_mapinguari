@@ -1,34 +1,38 @@
 [gd_scene format=3 uid="uid://gu3h02fq00f5"]
 
 [ext_resource type="Script" uid="uid://dr0egn6bpoh33" path="res://Scripts/UI/unit_card.gd" id="1_4khua"]
+[ext_resource type="Texture2D" uid="uid://bhsyhygsnitft" path="res://Assets/UI/GUI_4x.png" id="1_vq6yy"]
 [ext_resource type="Texture2D" uid="uid://3lotu357dqsu" path="res://Assets/Units_teste/Alamoa.png" id="2_denju"]
 [ext_resource type="Shader" uid="uid://k1kcw6nimnf6" path="res://Scenes/UI/Unit_card.gdshader" id="2_r7s3e"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pujwi"]
-bg_color = Color(0.5648038, 0.5648038, 0.642951, 0.90000004)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0, 0.6651851, 0.735357, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_wt8ad"]
+texture = ExtResource("1_vq6yy")
+texture_margin_left = 56.0
+texture_margin_top = 8.0
+texture_margin_right = 56.0
+texture_margin_bottom = 8.0
+region_rect = Rect2(384, 192, 64, 64)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_vq6yy"]
 shader = ExtResource("2_r7s3e")
 shader_parameter/radius = 0.278000013205
 
 [node name="UnitCard" type="PanelContainer" unique_id=184768968]
-custom_minimum_size = Vector2(140, 200)
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -102.0
+offset_top = -107.0
+offset_right = 102.0
+offset_bottom = 107.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 mouse_filter = 1
-theme_override_styles/panel = SubResource("StyleBoxFlat_pujwi")
+theme_override_styles/panel = SubResource("StyleBoxTexture_wt8ad")
 script = ExtResource("1_4khua")
 
 [node name="VBox" type="VBoxContainer" parent="." unique_id=1408509230]
@@ -37,22 +41,22 @@ theme_override_constants/separation = 4
 alignment = 1
 
 [node name="NameLabel" type="Label" parent="VBox" unique_id=756597904]
-custom_minimum_size = Vector2(0, 24)
+custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 12
 text = "Unit name"
 horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="TierBadge" type="Label" parent="VBox" unique_id=631374955]
-custom_minimum_size = Vector2(0, 24)
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 11
 text = "Tier 1"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -60,7 +64,7 @@ vertical_alignment = 1
 [node name="IconRect" type="TextureRect" parent="VBox" unique_id=1752911456]
 material = SubResource("ShaderMaterial_vq6yy")
 clip_contents = true
-custom_minimum_size = Vector2(150, 150)
+custom_minimum_size = Vector2(92, 58)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -97,7 +101,7 @@ alignment = 1
 [node name="OriginLabel" type="Label" parent="VBox/TraitsContainer" unique_id=1689258292]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85430586, 0.95468724, 1, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 11
 text = "Origem"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -105,18 +109,18 @@ vertical_alignment = 1
 [node name="ClassLabel" type="Label" parent="VBox/TraitsContainer" unique_id=136722182]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.95468724, 0.7977378, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 11
 text = "Classe"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="CostLabel" type="Label" parent="VBox" unique_id=1584045906]
-custom_minimum_size = Vector2(0, 28)
+custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.9260749, 0, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 text = "1"
 horizontal_alignment = 1
 vertical_alignment = 1

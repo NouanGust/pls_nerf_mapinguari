@@ -2,7 +2,6 @@
 
 [ext_resource type="Texture2D" uid="uid://3lotu357dqsu" path="res://Assets/Units_teste/Alamoa.png" id="1_iig5i"]
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_pkwj0"]
-[ext_resource type="PackedScene" uid="uid://dvk4d1hl5uabw" path="res://Assets/Models/Alamoa.tscn" id="2_raq0r"]
 
 [resource]
 script = ExtResource("1_pkwj0")
@@ -12,7 +11,6 @@ description = "Sereia amazônica de beleza hipnotizante."
 lore = "Encanta pescadores com seu canto, levando-os para as profundezas."
 tier = 3
 cost = 3
-model_scene = ExtResource("2_raq0r")
 icon = ExtResource("1_iig5i")
 max_health = 900.0
 health_regen = 5.0

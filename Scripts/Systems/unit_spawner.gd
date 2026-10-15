@@ -89,17 +89,10 @@ static func spawn_unit_from_stats(unit_stats: UnitStats, star_level: int = 1, te
 		return null
 	
 	# Validar star level
-	star_level = clampi(star_level, 1, 3)
+	star_level = clampi(star_level, 1, 4)
 	
-	# Instanciar cena base ou cena customizada
-	var unit: BaseUnit3D
-	
-	if unit_stats.model_scene:
-		# Usar modelo customizado se disponível
-		unit = unit_stats.model_scene.instantiate() as BaseUnit3D
-	else:
-		# Usar modelo base
-		unit = BASE_UNIT_3D_SCENE.instantiate() as BaseUnit3D
+	# As unidades usam o mesmo corpo placeholder até a arte 3D estar pronta.
+	var unit: BaseUnit3D = BASE_UNIT_3D_SCENE.instantiate() as BaseUnit3D
 	
 	if not unit:
 		push_error("Failed to instantiate unit: " + unit_stats.unit_id)
@@ -169,6 +162,18 @@ static func get_units_by_class(classes_name: String) -> Array[UnitStats]:
 		if unit_stats.has_class(classes_name):
 			result.append(unit_stats)
 	
+	return result
+
+## Retorna unidades que possuem uma afinidade de fauna ou flora.
+static func get_units_by_affinity(affinity_name: String) -> Array[UnitStats]:
+	if not _cache_loaded:
+		load_all_units()
+
+	var result: Array[UnitStats] = []
+	for unit_stats in _units_cache.values():
+		if unit_stats.has_affinity(affinity_name):
+			result.append(unit_stats)
+
 	return result
 
 ## Retorna unidades dentro de um range de custo

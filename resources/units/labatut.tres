@@ -2,7 +2,6 @@
 
 [ext_resource type="Texture2D" uid="uid://bap3li3tswnt2" path="res://Assets/Units_teste/Labatut.png" id="1_a4wlh"]
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_vjcm3"]
-[ext_resource type="PackedScene" uid="uid://c6yi460emefd5" path="res://Scenes/Units/Player_bonecao.tscn" id="2_ni7jl"]
 
 [resource]
 script = ExtResource("1_vjcm3")
@@ -10,7 +9,6 @@ unit_name = "Labatut"
 unit_id = "labatut"
 description = "Criatura aquática curadora."
 lore = "Ser das águas turvas."
-model_scene = ExtResource("2_ni7jl")
 icon = ExtResource("1_a4wlh")
 health_regen = 3.0
 attack_damage = 35.0
@@ -23,9 +21,5 @@ origins = Array[String](["Amazônico"])
 classes = Array[String](["Aquático", "Místico", "Suporte"])
 ability_name = "Corrente Curativa"
 ability_description = "Cura aliados feridos."
-ability_heal = 200.0
-ability_targets = 3
+ability_heal = 80.0
 ability_range = 5.0
-target_priority = 1
-is_ranged = true
-prefers_backline = true

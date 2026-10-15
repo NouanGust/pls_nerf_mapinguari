@@ -10,6 +10,9 @@ var unit_stats: UnitStats
 var slot_index: int = 0
 var is_sold: bool = false
 var is_hovered: bool = false
+var pointer_down: bool = false
+var drag_was_requested: bool = false
+var press_position: Vector2 = Vector2.ZERO
 
 # Referências dos nodes
 @onready var vbox: VBoxContainer = $VBox
@@ -35,7 +38,6 @@ var tier_colors := {
 }
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(140, 200)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	
 	setup_styles()
@@ -81,7 +83,6 @@ func set_unit(stats: UnitStats) -> void:
 	if not unit_stats:
 		clear()
 		return
-	
 	# Nome
 	name_label.text = unit_stats.unit_name
 	name_label.add_theme_color_override("font-color", Color("#2d1d12"))
@@ -97,9 +98,17 @@ func set_unit(stats: UnitStats) -> void:
 	# Origens e Classes
 	var origins: Array[String] = unit_stats.origins
 	var classes: Array[String] = unit_stats.classes
-	
-	origin_label.text = origins[0] if origins.size() > 0 else ""
-	class_label.text = classes[0] if classes.size() > 0 else ""
+	origin_label.text = "Origem: %s" % (" · ".join(origins) if not origins.is_empty() else "—")
+	class_label.text = "Classe: %s" % (" · ".join(classes) if not classes.is_empty() else "—")
+	origin_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	class_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	origin_label.add_theme_font_size_override("font_size", 9)
+	class_label.add_theme_font_size_override("font_size", 9)
+	tooltip_text = "Clique para comprar · arraste para posicionar\nOrigens: %s\nClasses: %s\nAfinidades: %s" % [
+		", ".join(origins) if not origins.is_empty() else "—",
+		", ".join(classes) if not classes.is_empty() else "—",
+		", ".join(unit_stats.affinities) if not unit_stats.affinities.is_empty() else "—",
+	]
 	
 	# Custo
 	cost_label.text = "%d" % unit_stats.cost
@@ -165,6 +174,7 @@ func mark_as_sold() -> void:
 func clear() -> void:
 	unit_stats = null
 	is_sold = false
+	tooltip_text = ""
 	
 	name_label.text = "---"
 	tier_badge.text = ""
@@ -216,39 +226,19 @@ func _on_mouse_exited() -> void:
 func _on_gui_input(event: InputEvent) -> void:
 	if is_sold or not unit_stats:
 		return
-	
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			card_clicked.emit(slot_index)
-			
-			# Visual feedback
-			var tween := create_tween()
-			tween.tween_property(self, "scale", Vector2(0.95, 0.95), 0.05)
-			tween.tween_property(self, "scale", Vector2(1.05, 1.05), 0.05)
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			pointer_down = true
+			drag_was_requested = false
+			press_position = event.position
+		else:
+			if pointer_down and not drag_was_requested:
+				card_clicked.emit(slot_index)
+			pointer_down = false
+	elif event is InputEventMouseMotion and pointer_down and not drag_was_requested:
+		if press_position.distance_to(event.position) >= 8.0:
+			drag_was_requested = true
+			drag_started.emit(unit_stats, slot_index)
 
 func get_drag_data(_at_position: Vector2) -> Variant:
-	#if is_sold or not unit_stats:
-		#return null
-	#
-	## Criar preview visual para o drag
-	#var preview := PanelContainer.new()
-	#var label := Label.new()
-	#label.text = unit_stats.unit_name
-	#label.add_theme_font_size_override("font_size", 16)
-	#preview.add_child(label)
-	#
-	#var preview_style := StyleBoxFlat.new()
-	#preview_style.bg_color = tier_colors.get(unit_stats.tier, Color.WHITE)
-	#preview_style.bg_color.a = 0.8
-	#preview.add_theme_stylebox_override("panel", preview_style)
-	#
-	#set_drag_preview(preview)
-	#
-	#drag_started.emit(unit_stats, slot_index)
-	#
-	#return {
-		#"unit_stats": unit_stats,
-		#"slot_index": slot_index,
-		#"source": "shop"
-	#}
 	return null

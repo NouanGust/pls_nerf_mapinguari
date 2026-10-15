@@ -15,6 +15,7 @@ signal shop_locked_changed(is_locked: bool)
 ## Estado da loja
 var current_units: Array[UnitStats] = []
 var is_shop_locked: bool = false
+var unavailable_unit_ids: Array[String] = []
 
 ## Pools de unidades por tier (chance de aparecer)
 var tier_chances := {
@@ -38,15 +39,14 @@ func refresh_shop(player_level: int) -> void:
 		return
 	
 	current_units.clear()
+	current_units.resize(shop_slots)
 	
 	var chances: Array = tier_chances.get(player_level, [100, 0, 0, 0, 0])
 	
 	for i in shop_slots:
 		var tier: int = roll_tier(chances)
 		var unit: UnitStats = get_random_unit_by_tier(tier)
-		
-		if unit:
-			current_units.append(unit)
+		current_units[i] = unit
 	
 	shop_refreshed.emit(current_units)
 	print("Loja atualizada (Level %d)" % player_level)
@@ -67,13 +67,27 @@ func roll_tier(chances: Array) -> int:
 	return 1  # Fallback
 
 func get_random_unit_by_tier(tier: int) -> UnitStats:
-	var units: Array[UnitStats] = UnitSpawner.get_units_by_tier(tier)
+	var units: Array[UnitStats] = []
+	for unit in UnitSpawner.get_units_by_tier(tier):
+		if not unavailable_unit_ids.has(unit.unit_id):
+			units.append(unit)
 	
 	if units.is_empty():
 		print("Nenhuma unidade Tier %d disponível" % tier)
 		return null
 	
 	return units.pick_random()
+
+func set_unavailable_unit_ids(unit_ids: Array[String]) -> void:
+	unavailable_unit_ids = unit_ids.duplicate()
+	var changed := false
+	for i in current_units.size():
+		var unit := current_units[i]
+		if unit and unavailable_unit_ids.has(unit.unit_id):
+			current_units[i] = null
+			changed = true
+	if changed:
+		shop_refreshed.emit(current_units)
 
 func purchase_unit(slot_index: int) -> UnitStats:
 	if slot_index < 0 or slot_index >= current_units.size():

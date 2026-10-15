@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Brinco-de-princesa"
+unit_id = "brinco_de_princesa"
+description = "Fuchsia alpestris, trepadeira florida endêmica da Mata Atlântica serrana."
+lore = "Flores pendentes escondem um encanto que acalma e revigora aliados."
+tier = 2
+cost = 2
+max_health = 560.0
+attack_damage = 34.0
+attack_speed = 0.85
+attack_range = 3
+armor = 15.0
+magic_resist = 35.0
+movement_speed = 180.0
+max_mana = 80.0
+starting_mana = 20.0
+mana_per_second = 2.0
+origins = Array[String](["Mata Atlântica"])
+classes = Array[String](["Suporte", "Encantado"])
+affinities = Array[String](["Flora"])
+biomes = Array[String](["Mata Atlântica"])
+ability_name = "Florada Encantada"
+ability_description = "Recupera a vida de aliados próximos."
+ability_heal = 160.0
+ability_targets = 2
+ability_range = 4.0
+is_ranged = true
+prefers_backline = true

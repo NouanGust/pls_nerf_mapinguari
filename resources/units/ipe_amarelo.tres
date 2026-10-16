@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/ipe_amarelo.png" id="2_splash_art"]
+
+[resource]
+script = ExtResource("1_stats")
+icon = ExtResource("2_splash_art")
+unit_id = "ipe_amarelo"
+unit_name = "Ipê-amarelo"
+cost = 2
+description = "Protetor de linha de frente que amplia as opções de Flora e Cerrado."
+origins = Array[String](["Cerrado"])
+classes = Array[String](["Protetor da Mata","Tank"])
+affinities = Array[String](["Flora"])
+biomes = Array[String](["Cerrado"])
+max_health = 820
+attack_damage = 42
+attack_speed = 0.8
+armor = 35
+magic_resist = 30
+max_mana = 100
+ability_name = "Casca Dourada"
+ability_description = "Renova um escudo próprio de 200 até ser consumido."
+ability_shield = 200
+is_tank = true
+tier = 2
+movement_speed = 190
+mana_per_attack = 10
+mana_when_hit = 10

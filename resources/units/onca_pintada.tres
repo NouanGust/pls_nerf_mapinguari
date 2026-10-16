@@ -1,9 +1,12 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
 
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/onca_pintada.png" id="2_splash_art"]
+
 [resource]
 script = ExtResource("1_stats")
+icon = ExtResource("2_splash_art")
 unit_name = "Onça-pintada"
 unit_id = "onca_pintada"
 description = "Predadora de emboscada dos biomas brasileiros."

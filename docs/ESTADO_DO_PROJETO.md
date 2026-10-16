@@ -1,5 +1,13 @@
 # Folchess — panorama do projeto
 
+## Atualização de fluxo — 16/10/2026
+
+A cena principal agora é `Scenes/UI/Menu.tscn`: Iniciar → escolha entre seis regiões → partida. As composições inimigas são definidas por região e crescem de uma a nove peças conforme o nível. Jogador e inimigo recebem 2 XP por round; o jogador compra 4 XP por 4 ouro. A capacidade do campo corresponde ao nível, com teto 9. O fim de jogo retorna ao menu. Detalhes e formações: [FLUXO_REGIOES_E_XP.md](FLUXO_REGIOES_E_XP.md).
+
+O levantamento abaixo é histórico: suas referências à ausência de cena principal, ao início de teste e ao elenco antigo foram substituídas pelas alterações posteriores.
+
+## Levantamento original
+
 Atualizado em 15/10/2026 a partir de uma leitura estática do repositório. Este documento registra o estado observado no código e nos arquivos; não houve execução do jogo nem validação de exportação.
 
 ## Resumo

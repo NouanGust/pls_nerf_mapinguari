@@ -17,6 +17,11 @@ var _tabs: Array[Button] = []
 var _round_label: Label
 var _result_label: Label
 var _legend_label: Label
+var _continue_button: Button
+
+func set_return_to_menu() -> void:
+	_result_label.text = "FIM DE JOGO"
+	_continue_button.text = "VOLTAR AO INÍCIO"
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -120,6 +125,7 @@ func _build_interface() -> void:
 	footer.alignment = BoxContainer.ALIGNMENT_CENTER
 	content.add_child(footer)
 	var continue_button := Button.new()
+	_continue_button = continue_button
 	continue_button.text = "CONTINUAR"
 	continue_button.custom_minimum_size = Vector2(180, 42)
 	_style_button(continue_button, true)

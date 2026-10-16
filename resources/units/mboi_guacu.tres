@@ -1,9 +1,12 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3 uid="uid://cmqj3h8koygs1"]
+[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3 uid="uid://cmqj3h8koygs1"]
 
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_1owcb"]
 
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mboi_guacu.png" id="2_splash_art"]
+
 [resource]
 script = ExtResource("1_1owcb")
+icon = ExtResource("2_splash_art")
 unit_name = "Mboi-Guaçu"
 unit_id = "mboi_guacu"
 description = "Serpente aquática colossal que domina os rios."

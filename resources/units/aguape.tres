@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/aguape.png" id="2_splash_art"]
+
+[resource]
+script = ExtResource("1_stats")
+icon = ExtResource("2_splash_art")
+unit_id = "aguape"
+unit_name = "Aguapé"
+cost = 2
+description = "Suporte que liga Flora e as composições aquáticas do Pantanal."
+origins = Array[String](["Pantaneiro"])
+classes = Array[String](["Aquático","Suporte"])
+affinities = Array[String](["Flora"])
+biomes = Array[String](["Pantanal"])
+max_health = 580
+attack_damage = 30
+attack_speed = 0.8
+attack_range = 3
+armor = 15
+magic_resist = 35
+max_mana = 85
+starting_mana = 20
+ability_name = "Manto Flutuante"
+ability_description = "Recupera 140 de vida de até dois aliados feridos próximos."
+ability_heal = 140
+ability_targets = 2
+ability_range = 5
+is_ranged = true
+prefers_backline = true
+tier = 2
+movement_speed = 190
+mana_per_attack = 10
+mana_when_hit = 10

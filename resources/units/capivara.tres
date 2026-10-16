@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/capivara.png" id="2_splash_art"]
+
+[resource]
+script = ExtResource("1_stats")
+icon = ExtResource("2_splash_art")
+unit_id = "capivara"
+unit_name = "Capivara"
+cost = 1
+description = "Defensora de entrada que liga o Pantanal às composições aquáticas."
+origins = Array[String](["Pantaneiro"])
+classes = Array[String](["Aquático","Tank"])
+affinities = Array[String](["Fauna"])
+biomes = Array[String](["Pantanal"])
+max_health = 680
+attack_damage = 38
+attack_speed = 0.75
+armor = 25
+magic_resist = 20
+max_mana = 90
+ability_name = "Refúgio da Margem"
+ability_description = "Renova um escudo próprio de 130 até ser consumido."
+ability_shield = 130
+is_tank = true
+tier = 1
+movement_speed = 190
+mana_per_attack = 10
+mana_when_hit = 10

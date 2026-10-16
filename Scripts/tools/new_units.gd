@@ -639,6 +639,9 @@ func save_unit(unit: UnitStats, filename: String) -> void:
 		return
 	
 	var path: String = "res://resources/units/%s.tres" % filename
+	if ResourceLoader.exists(path):
+		print("Preservando unidade existente: %s" % filename)
+		return
 	var error: int = ResourceSaver.save(unit, path)
 	
 	if error == OK:

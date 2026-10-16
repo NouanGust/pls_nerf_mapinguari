@@ -1,35 +1,37 @@
 class_name SynergySystem
 extends Node
 
-## Primeira etapa do relatório: patamares 2 e 4; etiquetas menores ativam no 2.
+## Patamares por identidade: individuais, pares e composições de três ou mais.
+## Cada unit_id conta uma única vez, independentemente das estrelas ou cópias.
 const RULES: Array[Dictionary] = [
-	{"field": "origins", "name": "Amazônico", "thresholds": [2, 4], "effects": [
+	{"field": "origins", "name": "Amazônico", "thresholds": [3, 6], "effects": [
 		{"text": "Regenera 4 de vida por segundo", "bonuses": {"health_regen": 4.0}},
 		{"text": "Regenera 8 de vida por segundo", "bonuses": {"health_regen": 8.0}},
 	]},
-	{"field": "origins", "name": "Aquático", "thresholds": [2], "effects": [
-		{"text": "Começa o combate com escudo de 10% da vida", "bonuses": {"start_shield_pct": 0.10}},
+	{"field": "origins", "name": "Aquático", "thresholds": [1], "effects": [
+		{"text": "Começa o combate com escudo de 8% da vida", "bonuses": {"start_shield_pct": 0.08}},
 	]},
 	{"field": "origins", "name": "Caatinga", "thresholds": [2, 4], "effects": [
 		{"text": "Recebe 8% menos dano", "bonuses": {"damage_reduction_pct": 0.08}},
 		{"text": "Recebe 15% menos dano e resiste a controle", "bonuses": {"damage_reduction_pct": 0.15, "control_resist_pct": 0.20}},
 	]},
-	{"field": "origins", "name": "Cerrado", "thresholds": [2], "effects": [
+	{"field": "origins", "name": "Cerrado", "thresholds": [2, 4], "effects": [
 		{"text": "Ganha 6% de crítico por inimigo derrotado", "bonuses": {"crit_after_kill": 0.06}},
+		{"text": "Ganha 12% de crítico por inimigo derrotado", "bonuses": {"crit_after_kill": 0.12}},
 	]},
 	{"field": "origins", "name": "Litorâneo", "thresholds": [2, 4], "effects": [
 		{"text": "+10% de velocidade de ataque", "bonuses": {"attack_speed_pct": 0.10}},
 		{"text": "+20% de velocidade de ataque e resistência a controle", "bonuses": {"attack_speed_pct": 0.20, "control_resist_pct": 0.20}},
 	]},
-	{"field": "origins", "name": "Mata Atlântica", "thresholds": [2, 4], "effects": [
+	{"field": "origins", "name": "Mata Atlântica", "thresholds": [3, 5], "effects": [
 		{"text": "Regenera 4 de vida por segundo", "bonuses": {"health_regen": 4.0}},
 		{"text": "Regenera 8/s e cura de habilidades +15%", "bonuses": {"health_regen": 8.0, "healing_power_pct": 0.15}},
 	]},
-	{"field": "origins", "name": "Pantaneiro", "thresholds": [2, 4], "effects": [
+	{"field": "origins", "name": "Pantaneiro", "thresholds": [3, 5], "effects": [
 		{"text": "+8% de vida máxima e cura recebida", "bonuses": {"max_health_pct": 0.08, "healing_received_pct": 0.15}},
 		{"text": "+15% de vida máxima e cura recebida", "bonuses": {"max_health_pct": 0.15, "healing_received_pct": 0.30}},
 	]},
-	{"field": "origins", "name": "Sertanejo", "thresholds": [2, 4], "effects": [
+	{"field": "origins", "name": "Sertanejo", "thresholds": [3, 5], "effects": [
 		{"text": "Com pouca vida, recebe 10% menos dano", "bonuses": {"low_health_resistance_pct": 0.10}},
 		{"text": "Com pouca vida, recebe 20% menos dano", "bonuses": {"low_health_resistance_pct": 0.20}},
 	]},
@@ -57,8 +59,8 @@ const RULES: Array[Dictionary] = [
 		{"text": "+15% de poder de habilidade e cura", "bonuses": {"healing_power_pct": 0.15}},
 		{"text": "+30% de poder de habilidade e cura", "bonuses": {"healing_power_pct": 0.30}},
 	]},
-	{"field": "classes", "name": "Metamorfo", "thresholds": [2], "effects": [
-		{"text": "35% de chance de esquivar do primeiro golpe", "bonuses": {"dodge_first_hit_chance": 0.35}},
+	{"field": "classes", "name": "Metamorfo", "thresholds": [1], "effects": [
+		{"text": "20% de chance de esquivar do primeiro golpe", "bonuses": {"dodge_first_hit_chance": 0.20}},
 	]},
 	{"field": "classes", "name": "Místico", "thresholds": [2, 4], "effects": [
 		{"text": "+12% de poder de habilidade e geração de mana", "bonuses": {"healing_power_pct": 0.12, "mana_generation_pct": 0.10}},
@@ -72,15 +74,15 @@ const RULES: Array[Dictionary] = [
 		{"text": "+15% de cura e escudos concedidos", "bonuses": {"healing_power_pct": 0.15, "shield_power_pct": 0.15}},
 		{"text": "+30% de cura e escudos concedidos", "bonuses": {"healing_power_pct": 0.30, "shield_power_pct": 0.30}},
 	]},
-	{"field": "classes", "name": "Tank", "thresholds": [2, 4], "effects": [
+	{"field": "classes", "name": "Tank", "thresholds": [3, 6], "effects": [
 		{"text": "+10% de vida máxima e 10 de armadura", "bonuses": {"max_health_pct": 0.10, "armor_flat": 10.0}},
 		{"text": "+20% de vida máxima e 20 de armadura", "bonuses": {"max_health_pct": 0.20, "armor_flat": 20.0}},
 	]},
-	{"field": "affinities", "name": "Fauna", "thresholds": [2, 4], "effects": [
+	{"field": "affinities", "name": "Fauna", "thresholds": [3, 6], "effects": [
 		{"text": "+10% de velocidade de ataque e movimento", "bonuses": {"attack_speed_pct": 0.10, "move_speed_pct": 0.10}},
 		{"text": "+20% de velocidade; aliados focados causam +10%", "bonuses": {"attack_speed_pct": 0.20, "move_speed_pct": 0.20, "focus_fire_damage_pct": 0.10}},
 	]},
-	{"field": "affinities", "name": "Flora", "thresholds": [2, 4], "effects": [
+	{"field": "affinities", "name": "Flora", "thresholds": [3, 6], "effects": [
 		{"text": "+15% de cura e escudos recebidos", "bonuses": {"healing_received_pct": 0.15, "shield_received_pct": 0.15}},
 		{"text": "+30% de cura e escudos; 15% de chance de enraizar", "bonuses": {"healing_received_pct": 0.30, "shield_received_pct": 0.30, "root_on_hit_chance": 0.15}},
 	]},
@@ -134,6 +136,7 @@ func update_synergies(units: Array) -> Dictionary:
 				"count": count,
 				"tier": tier_index + 1,
 				"threshold": next_threshold,
+				"thresholds": rule.thresholds.duplicate(),
 				"active": tier_index >= 0,
 				"description": effect.text,
 				"units": unit_names,

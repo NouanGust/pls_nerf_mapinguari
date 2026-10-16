@@ -12,6 +12,8 @@ var is_shop_visible: bool = true
 var hidden_position_y: float = 0.0
 var original_position_y: float = 0.0
 var shop_tween: Tween
+var owned_star_counts: Dictionary = {}
+var upgrades_deferred: bool = false
 @onready var stats_tooltip: PanelContainer = $"../StatsTooltip"
 @onready var shop_toggle_button: Button = $"../ShopLabel"
 @onready var lock_button: Button = $"../ControlsContainer/LockButton"
@@ -23,6 +25,8 @@ func _ready() -> void:
 	original_position_y = position.y
 	hidden_position_y = get_parent_control().size.y + 18.0
 	setup_shop_slots()
+	if shop_system:
+		_on_shop_refreshed(shop_system.current_units)
 	stats_tooltip.hide()
 	
 
@@ -65,6 +69,40 @@ func _on_shop_refreshed(units: Array[UnitStats]) -> void:
 			unit_cards[i].set_unit(units[i])
 		else:
 			unit_cards[i].clear()
+	_refresh_upgrade_hints()
+
+func set_owned_star_counts(counts: Dictionary, in_combat: bool) -> void:
+	owned_star_counts = counts.duplicate(true)
+	upgrades_deferred = in_combat
+	_refresh_upgrade_hints()
+
+func _refresh_upgrade_hints() -> void:
+	for card in unit_cards:
+		var stars := 0
+		if card.unit_stats and not card.is_sold:
+			stars = _get_purchase_upgrade_star(card.unit_stats.unit_id)
+		card.set_purchase_upgrade(stars, upgrades_deferred)
+		if card.is_hovered:
+			if card.unit_stats and not card.is_sold:
+				update_tooltip_labels(card.unit_stats)
+			else:
+				stats_tooltip.hide()
+
+func _get_purchase_upgrade_star(unit_id: String) -> int:
+	if not owned_star_counts.has(unit_id):
+		return 0
+	var counts: Array = owned_star_counts[unit_id].duplicate()
+	# Primeiro resolve trios já pendentes, para não atribuir à próxima compra
+	# uma evolução que já ocorreria sem ela no fim do combate.
+	for star in range(1, 4):
+		counts[star + 1] += floori(float(counts[star]) / 3.0)
+		counts[star] = int(counts[star]) % 3
+	if int(counts[4]) > 0 or int(counts[1]) != 2:
+		return 0
+	var result := 2
+	while result < 4 and int(counts[result]) == 2:
+		result += 1
+	return result
 
 func _on_card_clicked(slot_index: int) -> void:
 	if shop_system and slot_index < shop_system.current_units.size():
@@ -91,6 +129,9 @@ func update_tooltip_labels(stats: UnitStats) -> void:
 	var v_box = stats_tooltip.get_node("VBoxContainer")
 	
 	v_box.get_node("Tooltip_name").text = stats.unit_name
+	var upgrade_star := _get_purchase_upgrade_star(stats.unit_id)
+	if upgrade_star > 0:
+		v_box.get_node("Tooltip_name").text += "\nEvolui para %d★%s" % [upgrade_star, " no próximo round" if upgrades_deferred else " ao comprar"]
 	v_box.get_node("Tooltip_hp").text = "Vida: %s" %[str(stats.max_health)]
 	
 	var is_ranged = stats.attack_range > 2.5

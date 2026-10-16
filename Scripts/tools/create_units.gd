@@ -288,6 +288,10 @@ func save_unit(unit: UnitStats, filename: String) -> void:
 		return
 	
 	var path: String = "res://resources/units/%s.tres" % filename
+	# Este gerador legado só preenche recursos ausentes; o balanceamento vive nos .tres.
+	if ResourceLoader.exists(path):
+		print("Preservando unidade existente: %s" % filename)
+		return
 	var error: int = ResourceSaver.save(unit, path)
 	
 	if error == OK:

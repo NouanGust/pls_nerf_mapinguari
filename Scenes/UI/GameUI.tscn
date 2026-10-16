@@ -229,9 +229,24 @@ offset_bottom = 118.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(0.97, 0.87, 0.62, 1)
 theme_override_font_sizes/font_size = 19
-text = "NO CAMPO · 0 / 3"
+text = "NO CAMPO · 0 / 1"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="RegionLabel" type="Label" parent="Control"]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -280.0
+offset_top = 120.0
+offset_right = 280.0
+offset_bottom = 148.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.8, 0.88, 0.86, 1)
+theme_override_font_sizes/font_size = 15
+text = "Cerrado · Inimigo nível 1 · XP 0/2"
+horizontal_alignment = 1
+mouse_filter = 2
 
 [node name="SynergyToggleButton" type="Button" parent="Control"]
 layout_mode = 0

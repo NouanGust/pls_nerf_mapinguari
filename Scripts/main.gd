@@ -1,5 +1,12 @@
 extends Node3D
 
+const Progression = preload("res://Scripts/Systems/level_progression.gd")
+const Regions = preload("res://Scripts/Systems/region_rosters.gd")
+
+@export_enum("cerrado", "pantanal", "amazonia", "caatinga", "mata_atlantica", "litoral") var region_id: String = "cerrado"
+var enemy_level: int = 1
+var enemy_xp: int = 0
+
 ## Referências
 @onready var board: Board3D = $board
 @onready var camera: GameCamera = $Node3D
@@ -74,10 +81,7 @@ func _ready() -> void:
 	
 	update_ui()
 	
-	print("\n" + "-".repeat(50))
-	print("SPAWNING BOSS")
-	print("-".repeat(50))
-	test_spawn_units()
+	spawn_enemy_team()
 	
 	print("\n" + "=".repeat(50))
 	print("CONTROLES:")
@@ -92,25 +96,21 @@ func _ready() -> void:
 	debug_initialization()
 
 func spawn_enemy_team() -> void:
-	var old_enemies = get_tree().get_nodes_in_group("enemy_units")
-	for e in old_enemies: e.queue_free()
-	var num_enemies = clampi(current_round, 1, 6)
-	
-	print("Gerando time inimigo com %d unidades" % num_enemies)
-	
-	for i in num_enemies:
-		var tier = 1
-		if current_round > 5: tier = [1,2,3].pick_random()
-		elif current_round> 3: tier = [1,2].pick_random()
-		
-		var spawn_pos = Vector2i(randi() % board.columns, randi() % (board.rows  - board.player_rows))
-		while board.is_cell_occupied(spawn_pos):
-			spawn_pos = Vector2i(randi()% board.columns, randi() % (board.rows - board.player_rows))
-		
-		var enemy = UnitSpawner.spawn_random_unit_by_tier(tier, 1, 1)
+	for old_enemy in get_tree().get_nodes_in_group("enemy_units"):
+		if old_enemy is BaseUnit3D and board.get_unit_at(old_enemy.board_position) == old_enemy:
+			board.remove_unit(old_enemy.board_position)
+		old_enemy.remove_from_group("enemy_units")
+		old_enemy.queue_free()
+	for slot in Regions.get_formation(region_id, enemy_level):
+		var enemy := UnitSpawner.spawn_unit(str(slot["unit_id"]), 1, 1)
 		if enemy:
+			enemy.use_navigation = false
+			enemy.debug_movement = false
 			add_child(enemy)
-			board.place_unit(enemy, spawn_pos, true)
+			if not board.place_unit(enemy, slot["position"], false):
+				push_error("Não foi possível posicionar a unidade regional %s" % slot["unit_id"])
+				enemy.remove_from_group("enemy_units")
+				enemy.queue_free()
 	_refresh_synergies()
 
 func setup_shop_system() -> void:
@@ -170,7 +170,8 @@ func setup_drag_handler() -> void:
 func _on_unit_returned_to_shop(unit_stats: UnitStats) -> void:
 	player_gold += unit_stats.cost
 	print("Reembolso: +%dg (%s)" % [unit_stats.cost, unit_stats.unit_name])
-	update_ui()
+	# O arraste libera a unidade logo após emitir o reembolso.
+	update_ui.call_deferred()
 
 func _on_bench_unit_drag_started(slot_index: int) -> void:
 	if round_resolution_pending or not drag_handler or drag_handler.is_dragging:
@@ -686,31 +687,34 @@ func end_combat(player_won: bool, is_draw: bool = false) -> void:
 		loss_streak = 0
 		player_gold += roundi(float(gold_on_win) * 0.5)
 		player_health -= 5
-		current_round += 1
 	elif player_won:
 		win_streak += 1
 		loss_streak = 0
 		
 		var streak_bonus = min((win_streak - 1) * win_streak_bonus_step, max_win_streak_bonus)
 		player_gold += gold_on_win + streak_bonus
-		current_round += 1
 	else:
 		loss_streak += 1
 		win_streak = 0
 		
 		player_gold += gold_on_loss
 		player_health -= 10
+	# Todo resultado encerra um round, inclusive derrota e empate.
+	current_round += 1
+	_grant_round_xp()
 	revive_dead_player_units()
 	update_ui()
 	var is_game_over := player_health <= 0
 	var report := CombatReport.new()
 	ui.add_child(report)
 	report.show_report(finished_round, player_won, _get_combat_report_data(), is_draw)
+	if is_game_over:
+		report.set_return_to_menu()
 	await report.continue_requested
 	report.queue_free()
 
 	if is_game_over:
-		get_tree().reload_current_scene()
+		get_tree().change_scene_to_file("res://Scenes/UI/Menu.tscn")
 		return
 	print("=".repeat(50) + "\n")
 	prepare_next_round()
@@ -772,13 +776,37 @@ func update_ui() -> void:
 		health_label.text = "HP: %d" % player_health
 	_update_round_label()
 	if level_label:
-		var xp_needed: int = player_level * 2
-		level_label.text = "Nível %d · XP %d/%d" % [player_level, player_xp, xp_needed]
+		level_label.text = "Nível 9 · MÁX" if player_level >= Progression.MAX_LEVEL else "Nível %d · XP %d/%d" % [player_level, player_xp, Progression.required_xp(player_level)]
+	var region_label := ui.get_node_or_null("Control/RegionLabel") as Label
+	if region_label:
+		var xp_text := "MÁX" if enemy_level >= Progression.MAX_LEVEL else "XP %d/%d" % [enemy_xp, Progression.required_xp(enemy_level)]
+		region_label.text = "%s · Inimigo nível %d · %s" % [Regions.get_region(region_id)["name"], enemy_level, xp_text]
+	var xp_button := ui.get_node_or_null("Control/BottomBar/ControlsContainer/BuyXPButton") as Button
+	if xp_button and shop_system:
+		xp_button.disabled = round_resolution_pending or player_level >= Progression.MAX_LEVEL or player_gold < shop_system.xp_cost
+		xp_button.text = "Nível máximo" if player_level >= Progression.MAX_LEVEL else "+4 XP · 4g"
+		xp_button.tooltip_text = "Limite de 9 peças alcançado" if player_level >= Progression.MAX_LEVEL else "Comprar 4 XP por 4 de ouro (Q). +2 XP gratuitos ao final de cada round."
 	var board_count_label: Label = ui.get_node_or_null("Control/BoardCountLabel")
 	if board_count_label:
 		board_count_label.text = "NO CAMPO · %d / %d" % [get_player_units_on_board_count(), get_board_unit_limit()]
 	if bench_ui:
 		bench_ui.set_units(bench_units, combat_active)
+	_update_shop_upgrade_hints()
+
+func _update_shop_upgrade_hints() -> void:
+	if not shop_ui:
+		return
+	var counts: Dictionary = {}
+	# Inclui combatentes mortos: eles voltam na preparação e continuam sendo
+	# propriedade do jogador. Exclui cópias vendidas/consumidas aguardando liberação.
+	for unit in get_tree().get_nodes_in_group("player_units"):
+		if not (unit is BaseUnit3D) or unit.is_queued_for_deletion() or not unit.stats:
+			continue
+		var unit_id: String = unit.stats.unit_id
+		if not counts.has(unit_id):
+			counts[unit_id] = [0, 0, 0, 0, 0]
+		counts[unit_id][clampi(unit.star_level, 1, 4)] += 1
+	shop_ui.set_owned_star_counts(counts, combat_active or round_resolution_pending)
 
 func _update_round_label() -> void:
 	if not ui:
@@ -788,6 +816,8 @@ func _update_round_label() -> void:
 		return
 	if combat_active:
 		round_label.text = "LUTA · R%d · %02ds" % [current_round, ceili(battle_time_remaining)]
+	elif round_resolution_pending:
+		round_label.text = "RESULTADO · R%d" % (current_round - 1)
 	else:
 		round_label.text = "PREP · R%d" % current_round
 
@@ -837,6 +867,8 @@ func clear_board() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if not shop_system:
+		return
 	if event.is_action_pressed("ui_accept"):
 		if not combat_active:
 			start_combat()
@@ -853,8 +885,7 @@ func _input(event: InputEvent) -> void:
 				_on_lock_toggled(not shop_system.is_shop_locked)
 			
 			KEY_Q:
-				if not combat_active and not round_resolution_pending:
-					buy_xp()
+				buy_xp()
 			
 			KEY_C:
 				if not combat_active and not round_resolution_pending:
@@ -874,21 +905,29 @@ func _input(event: InputEvent) -> void:
 			inspect_unit_at_mouse(event.position)
 
 func buy_xp() -> void:
+	if not shop_system or round_resolution_pending or player_level >= Progression.MAX_LEVEL:
+		return
 	if player_gold < shop_system.xp_cost:
 		print("Gold insuficiente para XP!")
 		return
 	
 	player_gold -= shop_system.xp_cost
-	player_xp += 4
-	
-	var xp_needed: int = player_level * 2
-	if player_xp >= xp_needed:
-		player_level += 1
-		player_xp -= xp_needed
-		print("LEVEL UP! Agora level %d" % player_level)
+	var previous_level := player_level
+	var progress := Progression.gain_xp(player_level, player_xp, Progression.PURCHASE_XP)
+	player_level = progress.x
+	player_xp = progress.y
+	if player_level != previous_level:
 		_refresh_shop()
 	
 	update_ui()
+
+func _grant_round_xp() -> void:
+	var player_progress := Progression.gain_xp(player_level, player_xp, Progression.ROUND_XP)
+	player_level = player_progress.x
+	player_xp = player_progress.y
+	var enemy_progress := Progression.gain_xp(enemy_level, enemy_xp, Progression.ROUND_XP)
+	enemy_level = enemy_progress.x
+	enemy_xp = enemy_progress.y
 
 #func _process(_delta: float) -> void:
 	## Atualizar debug info
@@ -955,7 +994,7 @@ func hide_unit_inspector() -> void:
 
 
 func get_board_unit_limit() -> int:
-	return player_level + 2
+	return clampi(player_level, 1, Progression.MAX_LEVEL)
 	
 
 func get_player_units_on_board_count() -> int:

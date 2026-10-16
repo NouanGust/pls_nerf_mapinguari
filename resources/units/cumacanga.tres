@@ -27,3 +27,5 @@ ability_damage = 30.0
 ability_duration = 2.0
 target_priority = 3
 is_ranged = true
+tier = 1
+cost = 1

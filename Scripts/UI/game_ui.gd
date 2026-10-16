@@ -192,8 +192,11 @@ func update_synergies(synergies: Array) -> void:
 			progress.max_value = maxi(int(synergy.threshold), 1)
 			progress.value = mini(int(synergy.count), int(synergy.threshold))
 		var unit_names := PackedStringArray(synergy.get("units", []))
-		var activation_text := "Ativa: %s" % synergy.description if is_active else "Inativa · precisa de %d unidades" % synergy.threshold
-		row.tooltip_text = "%s\nUnidades desta sinergia:\n%s" % [activation_text, "\n".join(unit_names)]
+		var activation_text := "Ativa: %s" % synergy.description if is_active else "Inativa · precisa de %d unidades diferentes\n%s" % [synergy.threshold, synergy.description]
+		var threshold_labels := PackedStringArray()
+		for threshold in synergy.get("thresholds", [synergy.threshold]):
+			threshold_labels.append(str(threshold))
+		row.tooltip_text = "%s\nPatamares: %s · cópias repetidas contam uma vez\nUnidades desta sinergia:\n%s" % [activation_text, "/".join(threshold_labels), "\n".join(unit_names)]
 		synergy_list.add_child(row)
 		spawned_synergy_rows.append(row)
 

@@ -1,6 +1,13 @@
 class_name UnitCard
 extends PanelContainer
 
+const UPGRADE_HINT_SHADER: Shader = preload("res://Assets/Shaders/shop_upgrade_hint.gdshader")
+
+var upgrade_glow: ColorRect
+var upgrade_material: ShaderMaterial
+var purchase_upgrade_star: int = 0
+var base_tooltip_text: String = ""
+
 signal card_clicked(slot_index: int)
 signal drag_started(unit_stats: UnitStats, slot_index: int)
 signal hover_started(stats: UnitStats, pos: Vector2)
@@ -42,6 +49,44 @@ func _ready() -> void:
 	
 	setup_styles()
 	setup_signals()
+	_setup_upgrade_glow()
+
+func _setup_upgrade_glow() -> void:
+	upgrade_material = ShaderMaterial.new()
+	upgrade_material.shader = UPGRADE_HINT_SHADER
+	upgrade_glow = ColorRect.new()
+	upgrade_glow.name = "UpgradeGlow"
+	upgrade_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	upgrade_glow.material = upgrade_material
+	upgrade_glow.z_index = 1
+	upgrade_glow.hide()
+	add_child(upgrade_glow)
+	upgrade_glow.resized.connect(_resize_upgrade_glow)
+	_resize_upgrade_glow()
+
+func _resize_upgrade_glow() -> void:
+	upgrade_material.set_shader_parameter("card_size", upgrade_glow.size)
+
+func set_purchase_upgrade(stars: int, deferred_until_next_round: bool = false) -> void:
+	purchase_upgrade_star = clampi(stars, 2, 4) if stars >= 2 and unit_stats and not is_sold else 0
+	if not is_instance_valid(upgrade_glow):
+		return
+	upgrade_glow.visible = purchase_upgrade_star > 0
+	tooltip_text = base_tooltip_text
+	if purchase_upgrade_star == 0:
+		if unit_stats:
+			tier_badge.text = "Tier %d" % unit_stats.tier
+			tier_badge.add_theme_color_override("font_color", tier_colors.get(unit_stats.tier, Color.WHITE))
+		return
+	var tint := Color("#ffd16b")
+	if purchase_upgrade_star == 3:
+		tint = Color("#dca1ff")
+	elif purchase_upgrade_star == 4:
+		tint = Color("#88f4ff")
+	upgrade_material.set_shader_parameter("glow_color", tint)
+	tier_badge.text = "EVOLUI → %s" % "★".repeat(purchase_upgrade_star)
+	tier_badge.add_theme_color_override("font_color", tint)
+	tooltip_text += "\nEsta compra completa uma evolução para %d estrelas%s." % [purchase_upgrade_star, " no início do próximo round" if deferred_until_next_round else ""]
 
 func setup_styles() -> void:
 	# Estilo padrão
@@ -109,6 +154,8 @@ func set_unit(stats: UnitStats) -> void:
 		", ".join(classes) if not classes.is_empty() else "—",
 		", ".join(unit_stats.affinities) if not unit_stats.affinities.is_empty() else "—",
 	]
+	base_tooltip_text = tooltip_text
+	set_purchase_upgrade(0)
 	
 	# Custo
 	cost_label.text = "%d" % unit_stats.cost
@@ -164,6 +211,7 @@ func update_tier_style() -> void:
 
 func mark_as_sold() -> void:
 	is_sold = true
+	set_purchase_upgrade(0)
 	
 	if sold_overlay:
 		sold_overlay.show()
@@ -174,6 +222,8 @@ func mark_as_sold() -> void:
 func clear() -> void:
 	unit_stats = null
 	is_sold = false
+	base_tooltip_text = ""
+	set_purchase_upgrade(0)
 	tooltip_text = ""
 	
 	name_label.text = "---"

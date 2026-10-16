@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/jararaca.png" id="2_splash_art"]
+
+[resource]
+script = ExtResource("1_stats")
+icon = ExtResource("2_splash_art")
+unit_id = "jararaca"
+unit_name = "Jararaca"
+cost = 2
+description = "Caçadora de curta distância que pressiona os inimigos feridos."
+origins = Array[String](["Mata Atlântica"])
+classes = Array[String](["Caçador","DPS"])
+affinities = Array[String](["Fauna"])
+biomes = Array[String](["Mata Atlântica"])
+max_health = 640
+attack_damage = 63
+attack_speed = 1
+armor = 25
+magic_resist = 20
+max_mana = 80
+ability_name = "Bote Certeiro"
+ability_description = "Causa 170 de dano físico ao alvo atual; prioriza inimigos com menos vida."
+ability_damage = 170
+ability_damage_type = 0
+target_priority = 1
+is_assassin = true
+movement_speed = 230
+tier = 2
+mana_per_attack = 10
+mana_when_hit = 10

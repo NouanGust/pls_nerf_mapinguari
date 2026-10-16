@@ -92,6 +92,10 @@ enum DamageType {
 @export_subgroup("Ability Stats")
 @export var ability_damage: float = 0.0
 @export var ability_heal: float = 0.0
+## Escudo próprio renovado pela habilidade, sem acumular escudos a cada conjuração.
+@export var ability_shield: float = 0.0
+## Mana concedida aos aliados próximos com menor proporção de mana.
+@export var ability_mana: float = 0.0
 @export var ability_targets: int = 1
 @export var ability_duration: float = 0.0
 @export var ability_cooldown: float = 0.0

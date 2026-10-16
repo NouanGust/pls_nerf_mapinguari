@@ -1128,8 +1128,38 @@ func apply_ability_effect() -> void:
 			_cast_teiniagua_orb()
 			return
 	_apply_ability_healing()
-	if stats.cost == 1:
+	_apply_ability_shield()
+	_apply_ability_energy()
+	if stats.cost <= 2:
 		_apply_ability_damage()
+
+func _apply_ability_shield() -> void:
+	if stats.ability_shield <= 0.0:
+		return
+	var shield := stats.ability_shield * stats.get_star_multiplier(star_level)
+	shield *= 1.0 + float(synergy_bonuses.get("shield_power_pct", 0.0))
+	shield *= 1.0 + float(synergy_bonuses.get("shield_received_pct", 0.0))
+	current_shield = maxf(current_shield, shield)
+	CombatFeedback.create_status_indicator(self, "ESCUDO", 1.0)
+
+func _apply_ability_energy() -> void:
+	if stats.ability_mana <= 0.0:
+		return
+	var ally_group := "player_units" if team == 0 else "enemy_units"
+	var allies: Array = get_tree().get_nodes_in_group(ally_group).filter(func(ally):
+		if not is_instance_valid(ally) or ally == self or not ally.visible:
+			return false
+		if ally.current_state not in [State.MOVING, State.ATTACKING] or ally.current_mana >= ally.stats.max_mana:
+			return false
+		var distance := Vector2(global_position.x, global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
+		return distance <= maxf(stats.ability_range, stats.attack_range * 2.0)
+	)
+	allies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+		return a.current_mana / maxf(a.stats.max_mana, 1.0) < b.current_mana / maxf(b.stats.max_mana, 1.0)
+	)
+	for i in mini(maxi(stats.ability_targets, 1), allies.size()):
+		allies[i].add_mana(stats.ability_mana)
+		CombatFeedback.create_hit_particles(allies[i].global_position, Color("#80d8ea"))
 
 func _cast_anhanga_roar() -> void:
 	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 4.0

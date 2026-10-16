@@ -1,41 +1,42 @@
 # Unidades de fauna e flora — Folchess
 
-Atualizado em 15/10/2026. Este documento registra os novos recursos de unidade e espécies pesquisadas para futuras adições. Os dados de conservação servem como referência de contexto e devem ser revistos com a lista oficial mais recente antes de uma publicação.
+Atualizado em **16/10/2026**. O elenco possui **45 unidades**, com **13 portadoras de Fauna** e **13 de Flora**. Lobo-guará conta nas duas afinidades; Boiúna e Mboi-Guaçu também têm Fauna por seu papel de serpentes folclóricas.
 
-## Unidades adicionadas
+## Distribuição atual de espécies
 
-O elenco passa de 22 para **37 recursos de unidade**. As novas unidades usam ícone placeholder até a produção de arte. Foram incluídas afinidades de sinergia `Fauna` e `Flora`, e um campo separado de biomas para guardar habitat sem confundir habitat com papel de combate.
+As unidades abaixo representam fauna/flora; as lendas de forma animal citadas acima ficam nos custos 4 e 5. O custo é uma decisão de jogo, sem relação com o grau de ameaça da espécie. Ícones e modelos continuam provisórios.
 
-| Unidade | Afinidade | Origem / bioma | Função proposta |
-| --- | --- | --- | --- |
-| Onça-pintada | Fauna | Amazônico, Pantaneiro | Caçador / DPS |
-| Tamanduá-bandeira | Fauna | Cerrado, Pantaneiro | Tank / Protetor da Mata |
-| Lobo-guará | Fauna e Flora | Cerrado, Pantaneiro | Caçador / Suporte; ponte de dispersão de sementes |
-| Mandacaru | Flora | Caatinga, Sertanejo | Tank / Protetor da Mata |
-| Vitória-régia | Flora | Amazônico | Aquático / Suporte |
-| Sumaúma | Flora | Amazônico | Tank / Protetor da Mata |
-| Pau-brasil | Flora | Mata Atlântica, Litorâneo | Tank / Protetor da Mata |
-| Brinco-de-princesa (*Fuchsia alpestris*) | Flora | Mata Atlântica | Suporte / Encantado |
+| Unidade | Custo | Afinidade | Origens | Classes |
+| --- | ---: | --- | --- | --- |
+| Brinco-de-princesa | 1 | Flora | Mata Atlântica | Suporte, Encantado |
+| Bromélia | 1 | Flora | Mata Atlântica, Litorâneo | Suporte |
+| Capivara | 1 | Fauna | Pantaneiro | Aquático, Tank |
+| Guaraná | 1 | Flora | Amazônico | Místico, Suporte |
+| Mandacaru | 1 | Flora | Caatinga, Sertanejo | Tank, Protetor da Mata |
+| Pequi | 1 | Flora | Cerrado | Místico |
+| Sabiá-laranjeira | 1 | Fauna | Mata Atlântica | Caçador |
+| Tatu-bola-do-nordeste | 1 | Fauna | Caatinga, Sertanejo | Tank, Protetor da Mata |
+| Aguapé | 2 | Flora | Pantaneiro | Aquático, Suporte |
+| Arara-azul-de-lear | 2 | Fauna | Caatinga, Sertanejo | Caçador, DPS |
+| Caranguejo-uçá | 2 | Fauna | Litorâneo | Aquático, Tank |
+| Ipê-amarelo | 2 | Flora | Cerrado | Protetor da Mata, Tank |
+| Jararaca | 2 | Fauna | Mata Atlântica | Caçador, DPS |
+| Lobo-guará | 2 | Fauna, Flora | Cerrado, Pantaneiro | Caçador, Suporte |
+| Palmito-juçara | 2 | Flora | Mata Atlântica, Litorâneo | Suporte, Místico |
+| Tamanduá-bandeira | 2 | Fauna | Cerrado, Pantaneiro | Tank, Protetor da Mata |
+| Vitória-régia | 2 | Flora | Amazônico | Aquático, Suporte |
+| Araucária | 4 | Flora | Mata Atlântica | Tank, Protetor da Mata |
+| Onça-pintada | 4 | Fauna | Amazônico, Pantaneiro | Caçador, DPS |
+| Pau-brasil | 4 | Flora | Mata Atlântica, Litorâneo | Tank, Protetor da Mata |
+| Sumaúma | 4 | Flora | Amazônico | Tank, Protetor da Mata |
+| Ararinha-azul | 5 | Fauna | Caatinga, Sertanejo | Caçador, Suporte |
+| Mutum-de-alagoas | 5 | Fauna | Mata Atlântica, Litorâneo | Tank, Suporte |
 
-Boiúna e Mboi-Guaçu também receberam afinidade `Fauna`, como criaturas folclóricas com forma de serpente. O lobo-guará tem `Fauna` e `Flora` porque dispersa sementes ao consumir frutos; essa ponte é uma interpretação de jogo baseada em sua ecologia. Assim, a lista atual tem **5 unidades de Fauna** e **6 de Flora**.
+Fauna e Flora ativam em **3/6 unidades diferentes**. O sistema já aplica bônus em combate; as habilidades básicas das opções de custo 1 e 2 têm efeitos de dano, cura, escudo ou mana. Veja [BALANCEAMENTO_POOL.md](BALANCEAMENTO_POOL.md) e [LEVANTAMENTO_SINERGIAS.md](LEVANTAMENTO_SINERGIAS.md).
 
-### Resources adicionados na segunda leva
+## Referências de biodiversidade do levantamento anterior
 
-| Unidade | Afinidade | Origem / bioma | Função proposta |
-| --- | --- | --- | --- |
-| Ararinha-azul | Fauna | Caatinga, Sertanejo | Caçador / Suporte |
-| Arara-azul-de-lear | Fauna | Caatinga, Sertanejo | Caçador / DPS |
-| Mutum-de-alagoas | Fauna | Mata Atlântica, Litorâneo | Tank / Suporte |
-| Tatu-bola-do-nordeste | Fauna | Caatinga, Sertanejo | Tank / Protetor da Mata |
-| Palmito-juçara | Flora | Mata Atlântica, Litorâneo | Suporte / Místico |
-| Araucária | Flora | Mata Atlântica | Tank / Protetor da Mata |
-| Guaraná | Flora | Amazônico | Místico / Suporte |
-
-## Sinergias após a inclusão
-
-Com as duas afinidades e três origens de bioma novas (Cerrado, Caatinga e Mata Atlântica), existem **21 etiquetas candidatas a sinergia**: 9 origens, 10 classes e 2 afinidades. Fauna e Flora contam agora 9 unidades cada, permitindo planejar patamares 2/4/6. As origens de bioma novas cresceram: Cerrado 2, Mata Atlântica 5 e Caatinga 4. O patamar de Cerrado ainda precisa de mais elenco para oferecer progressão longa.
-
-O sistema de combate ainda não ativa os bônus de sinergia. As afinidades agora estão armazenadas e podem ser consultadas pelos dados/`UnitSpawner`; descrições de habilidades e números-base são propostas de protótipo, não efeitos já validados em combate. As classes continuam com as etiquetas antigas de função, e alguns papéis terão de ser balanceados porque Suporte, Tank e Protetor da Mata já são frequentes.
+A pesquisa abaixo foi registrada em 15/10/2026 e foi preservada como contexto. Não houve nova revisão das fontes de conservação nesta rodada de balanceamento. Ideias de função e raridade neste histórico não substituem os custos da tabela atual.
 
 ## Espécies adicionais pesquisadas
 

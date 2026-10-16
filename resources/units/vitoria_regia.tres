@@ -2,20 +2,23 @@
 
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/vitoria_regia.png" id="2_splash_art"]
+
 [resource]
 script = ExtResource("1_stats")
+icon = ExtResource("2_splash_art")
 unit_name = "Vitória-régia"
 unit_id = "vitoria_regia"
 description = "Planta aquática amazônica que sustenta a retaguarda."
 lore = "Suas folhas largas formam um refúgio tranquilo sobre as águas."
-tier = 3
-cost = 3
-max_health = 700.0
-attack_damage = 38.0
+tier = 2
+cost = 2
+max_health = 600
+attack_damage = 35
 attack_speed = 0.8
 attack_range = 3
 armor = 20.0
-magic_resist = 45.0
+magic_resist = 30
 movement_speed = 150.0
 max_mana = 90.0
 starting_mana = 30.0
@@ -25,10 +28,10 @@ classes = Array[String](["Aquático", "Suporte"])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Amazônia"])
 ability_name = "Manto das Águas"
-ability_description = "Cura aliados feridos e os protege por um breve período."
-ability_heal = 180.0
-ability_targets = 3
-ability_duration = 3.0
+ability_description = "Recupera 130 de vida de até dois aliados feridos próximos."
+ability_heal = 130
+ability_targets = 2
+ability_duration = 0
 ability_range = 5.0
 is_ranged = true
 prefers_backline = true

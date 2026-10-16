@@ -1,22 +1,25 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
 
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/lobo_guara.png" id="2_splash_art"]
+
 [resource]
 script = ExtResource("1_stats")
+icon = ExtResource("2_splash_art")
 unit_name = "Lobo-guará"
 unit_id = "lobo_guara"
 description = "Veloz habitante dos campos do Cerrado e importante dispersor de sementes."
 lore = "Seu rastro liga os frutos do campo aos novos brotos."
-tier = 3
-cost = 3
-max_health = 760.0
-attack_damage = 78.0
-attack_speed = 1.15
+tier = 2
+cost = 2
+max_health = 650
+attack_damage = 60
+attack_speed = 1.05
 attack_range = 2
-armor = 25.0
-magic_resist = 30.0
-movement_speed = 285.0
+armor = 20
+magic_resist = 20
+movement_speed = 265
 max_mana = 90.0
 starting_mana = 20.0
 mana_per_attack = 12.0
@@ -25,10 +28,9 @@ classes = Array[String](["Caçador", "Suporte"])
 affinities = Array[String](["Fauna", "Flora"])
 biomes = Array[String](["Cerrado", "Pantanal", "Pampa", "Mata Atlântica"])
 ability_name = "Rastro da Lobeira"
-ability_description = "Marca um alvo e espalha sementes que ajudam aliados próximos."
-ability_heal = 120.0
+ability_description = "Espalha sementes que recuperam 90 de vida de até dois aliados feridos próximos."
+ability_heal = 90
 ability_targets = 2
 ability_range = 4.0
 target_priority = 0
 is_assassin = true
-

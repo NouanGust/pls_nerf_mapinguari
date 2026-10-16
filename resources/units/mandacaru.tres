@@ -1,20 +1,23 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
 
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mandacaru.png" id="2_splash_art"]
+
 [resource]
 script = ExtResource("1_stats")
+icon = ExtResource("2_splash_art")
 unit_name = "Mandacaru"
 unit_id = "mandacaru"
 description = "Cacto imponente da Caatinga, firme diante da estiagem."
 lore = "Suas hastes espinhosas formam uma muralha viva no sertão."
-tier = 2
-cost = 2
-max_health = 1050.0
-attack_damage = 62.0
+tier = 1
+cost = 1
+max_health = 650
+attack_damage = 42
 attack_speed = 0.72
 attack_range = 1
-armor = 55.0
+armor = 30
 magic_resist = 20.0
 movement_speed = 145.0
 max_mana = 90.0
@@ -24,9 +27,9 @@ classes = Array[String](["Tank", "Protetor da Mata"])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Caatinga"])
 ability_name = "Cerca de Espinhos"
-ability_description = "Fere inimigos próximos e protege a linha de frente."
-ability_damage = 100.0
-ability_duration = 3.0
+ability_description = "Causa 75 de dano mágico ao alvo atual e renova um escudo próprio de 80."
+ability_damage = 75
+ability_duration = 0
 ability_range = 2.0
 is_tank = true
-
+ability_shield = 80

@@ -18,7 +18,7 @@ var upgrades_deferred: bool = false
 @onready var shop_toggle_button: Button = $"../ShopLabel"
 @onready var lock_button: Button = $"../ControlsContainer/LockButton"
 
-const UNIT_CARD_SCENE := preload("res://Scenes/UI/unit_card.tscn")
+const UNIT_CARD_SCENE := preload("res://Scenes/UI/Unit_card.tscn")
 
 func _ready() -> void:
 	await get_tree().process_frame
@@ -136,9 +136,13 @@ func update_tooltip_labels(stats: UnitStats) -> void:
 	
 	var is_ranged = stats.attack_range > 2.5
 	v_box.get_node("Tooltip_range").text = "Tipo: " + ("Distância" if is_ranged else "Corpo a Corpo")
+	if stats.is_stationary:
+		v_box.get_node("Tooltip_range").text = "Planta imóvel · alcance %d" % stats.attack_range
 	
 	var dmg_text = "Físico" if stats.ability_damage_type == 0 else "Mágico"
 	v_box.get_node("Tooltip_type").text = "Dano: %s" %[dmg_text]
+	if stats.passive_aura_effect == "power":
+		v_box.get_node("Tooltip_type").text += "\nAura: +%d%% ataque · raio %.0fm" % [roundi(stats.passive_aura_power * 100.0), stats.passive_aura_range]
 
 func mark_slot_as_sold(slot_index: int) -> void:
 	if slot_index >= 0 and slot_index < unit_cards.size():

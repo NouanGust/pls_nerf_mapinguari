@@ -20,6 +20,79 @@ expand_margin_right = 10.0
 expand_margin_bottom = 10.0
 region_rect = Rect2(0, 352, 160, 48)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_panel"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.055, 0.078, 0.09, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.52, 0.49, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_active"]
+content_margin_left = 6.0
+content_margin_top = 4.0
+content_margin_right = 6.0
+content_margin_bottom = 4.0
+bg_color = Color(0.141, 0.275, 0.255, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.72, 0.64, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_synergy_icon"]
+atlas = ExtResource("2_npa51")
+region = Rect2(256, 256, 16, 16)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_bar_bg"]
+bg_color = Color(0.09, 0.13, 0.15, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_bar_active"]
+bg_color = Color(0.39, 0.82, 0.68, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_inactive"]
+content_margin_left = 6.0
+content_margin_top = 4.0
+content_margin_right = 6.0
+content_margin_bottom = 4.0
+bg_color = Color(0.145, 0.17, 0.19, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.39, 0.41, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_bar_inactive"]
+bg_color = Color(0.49, 0.6, 0.61, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_4284l"]
 texture = ExtResource("2_npa51")
 texture_margin_left = 48.0
@@ -75,79 +148,6 @@ expand_margin_top = 10.0
 expand_margin_right = 10.0
 expand_margin_bottom = 10.0
 region_rect = Rect2(192, 0, 96, 96)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_panel"]
-bg_color = Color(0.055, 0.078, 0.09, 0.96)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.3, 0.52, 0.49, 1)
-corner_radius_top_left = 5
-corner_radius_top_right = 5
-corner_radius_bottom_right = 5
-corner_radius_bottom_left = 5
-content_margin_left = 8.0
-content_margin_top = 8.0
-content_margin_right = 8.0
-content_margin_bottom = 8.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_active"]
-bg_color = Color(0.141, 0.275, 0.255, 0.98)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.4, 0.72, 0.64, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-content_margin_left = 6.0
-content_margin_top = 4.0
-content_margin_right = 6.0
-content_margin_bottom = 4.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_inactive"]
-bg_color = Color(0.145, 0.17, 0.19, 0.98)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.35, 0.39, 0.41, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-content_margin_left = 6.0
-content_margin_top = 4.0
-content_margin_right = 6.0
-content_margin_bottom = 4.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_bar_bg"]
-bg_color = Color(0.09, 0.13, 0.15, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_bar_active"]
-bg_color = Color(0.39, 0.82, 0.68, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_bar_inactive"]
-bg_color = Color(0.49, 0.6, 0.61, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_synergy_icon"]
-atlas = ExtResource("2_npa51")
-region = Rect2(256, 256, 16, 16)
 
 [node name="GameUi" type="CanvasLayer" unique_id=1728843799]
 script = ExtResource("4_game_ui")
@@ -233,7 +233,7 @@ text = "NO CAMPO · 0 / 1"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="RegionLabel" type="Label" parent="Control"]
+[node name="RegionLabel" type="Label" parent="Control" unique_id=878686082]
 layout_mode = 0
 anchor_left = 0.5
 anchor_right = 0.5
@@ -246,9 +246,8 @@ theme_override_colors/font_color = Color(0.8, 0.88, 0.86, 1)
 theme_override_font_sizes/font_size = 15
 text = "Cerrado · Inimigo nível 1 · XP 0/2"
 horizontal_alignment = 1
-mouse_filter = 2
 
-[node name="SynergyToggleButton" type="Button" parent="Control"]
+[node name="SynergyToggleButton" type="Button" parent="Control" unique_id=1960782639]
 layout_mode = 0
 offset_left = 18.0
 offset_top = 82.0
@@ -257,8 +256,7 @@ offset_bottom = 116.0
 tooltip_text = "Mostrar sinergias ativas e inativas"
 text = "Sinergias · 0"
 
-[node name="SynergyPanel" type="PanelContainer" parent="Control"]
-visible = true
+[node name="SynergyPanel" type="PanelContainer" parent="Control" unique_id=951990027]
 layout_mode = 0
 offset_left = 18.0
 offset_top = 122.0
@@ -266,29 +264,29 @@ offset_right = 268.0
 offset_bottom = 542.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_synergy_panel")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Control/SynergyPanel"]
+[node name="ScrollContainer" type="ScrollContainer" parent="Control/SynergyPanel" unique_id=1853953061]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="SynergyList" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer"]
+[node name="SynergyList" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer" unique_id=1166405583]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="SynergyRowTemplateActive" type="PanelContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList"]
+[node name="SynergyRowTemplateActive" type="PanelContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList" unique_id=386822474]
 visible = false
 custom_minimum_size = Vector2(224, 42)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_synergy_active")
 
-[node name="Row" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive"]
+[node name="Row" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive" unique_id=1512154998]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 7
 
-[node name="Icon" type="TextureRect" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row"]
+[node name="Icon" type="TextureRect" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row" unique_id=1401000248]
 custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
 mouse_filter = 2
@@ -296,33 +294,31 @@ texture = SubResource("AtlasTexture_synergy_icon")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Content" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row"]
+[node name="Content" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row" unique_id=1544494059]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 2
 
-[node name="Header" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content"]
+[node name="Header" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content" unique_id=1563724651]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="TagLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content/Header"]
+[node name="TagLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content/Header" unique_id=1842208429]
 layout_mode = 2
 size_flags_horizontal = 3
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.94, 0.84, 0.55, 1)
 theme_override_font_sizes/font_size = 12
 text = "Origem · Amazônico"
 
-[node name="CountLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content/Header"]
+[node name="CountLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content/Header" unique_id=778475528]
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.88, 0.92, 0.88, 1)
 theme_override_font_sizes/font_size = 11
 text = "2/2"
 horizontal_alignment = 2
 
-[node name="Progress" type="ProgressBar" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content"]
+[node name="Progress" type="ProgressBar" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content" unique_id=1994926569]
 custom_minimum_size = Vector2(0, 5)
 layout_mode = 2
 mouse_filter = 2
@@ -330,18 +326,18 @@ theme_override_styles/background = SubResource("StyleBoxFlat_synergy_bar_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_synergy_bar_active")
 show_percentage = false
 
-[node name="SynergyRowTemplateInactive" type="PanelContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList"]
+[node name="SynergyRowTemplateInactive" type="PanelContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList" unique_id=1514227656]
 visible = false
 custom_minimum_size = Vector2(224, 42)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_synergy_inactive")
 
-[node name="Row" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive"]
+[node name="Row" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive" unique_id=1632759281]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 7
 
-[node name="Icon" type="TextureRect" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row"]
+[node name="Icon" type="TextureRect" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row" unique_id=1360699354]
 custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
 mouse_filter = 2
@@ -349,33 +345,31 @@ texture = SubResource("AtlasTexture_synergy_icon")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Content" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row"]
+[node name="Content" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row" unique_id=1618663125]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 2
 
-[node name="Header" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content"]
+[node name="Header" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content" unique_id=2140273357]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="TagLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content/Header"]
+[node name="TagLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content/Header" unique_id=289658011]
 layout_mode = 2
 size_flags_horizontal = 3
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.73, 0.77, 0.78, 1)
 theme_override_font_sizes/font_size = 12
 text = "Classe · Tank"
 
-[node name="CountLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content/Header"]
+[node name="CountLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content/Header" unique_id=1717006618]
 layout_mode = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.71, 0.75, 0.76, 1)
 theme_override_font_sizes/font_size = 11
 text = "1/2"
 horizontal_alignment = 2
 
-[node name="Progress" type="ProgressBar" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content"]
+[node name="Progress" type="ProgressBar" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content" unique_id=398173755]
 custom_minimum_size = Vector2(0, 5)
 layout_mode = 2
 mouse_filter = 2

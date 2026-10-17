@@ -18,7 +18,7 @@ var current_mana: float
 var star_level: int = 1
 
 ## Estado de Combate
-enum State { IDLE, MOVING, ATTACKING, CASTING, DEAD }
+enum State { IDLE, MOVING, ATTACKING, CASTING, DEAD, ROOTED }
 var current_state: State = State.IDLE
 var current_target: BaseUnit3D = null
 var invested_gold: int = 0
@@ -35,6 +35,8 @@ var mark_expires_at_msec: int = 0
 var _health_regen_accumulator: float = 0.0
 var _burn_generation: int = 0
 var _burn_expires_at_msec: int = 0
+var _rooted_target_timer := 0.0
+var _aura_ring: MeshInstance3D
 
 ## Posição no Board
 var board_position: Vector2i = Vector2i.ZERO
@@ -99,6 +101,9 @@ func _ready() -> void:
 
 func move_direct_to_target() -> void:
 	"""Movimento planar para o alvo, mantendo a unidade na altura do tabuleiro."""
+	if stats.is_stationary:
+		_wait_rooted()
+		return
 	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
 		current_target = null
 		current_state = State.IDLE
@@ -192,7 +197,7 @@ func setup_model() -> void:
 		model.name = "Model"
 		add_child(model)
 	unit_visual = UNIT_VISUAL_SCENE.instantiate() as UnitVisual
-	unit_visual.configure(get_team_display_color())
+	unit_visual.configure(get_team_display_color(), stats)
 	model.add_child(unit_visual)
 	animation_player = unit_visual.animation_player
 
@@ -201,6 +206,30 @@ func setup_model() -> void:
 	model.rotation = Vector3.ZERO
 	rotation.y = PI if team == 1 else 0.0
 	setup_team_indicator()
+	setup_aura_indicator()
+
+func setup_aura_indicator() -> void:
+	if _aura_ring:
+		_aura_ring.queue_free()
+		_aura_ring = null
+	if stats.passive_aura_power <= 0.0:
+		return
+	_aura_ring = MeshInstance3D.new()
+	_aura_ring.name = "PowerAura"
+	var ring := TorusMesh.new()
+	ring.inner_radius = stats.passive_aura_range - 0.035
+	ring.outer_radius = stats.passive_aura_range
+	_aura_ring.mesh = ring
+	_aura_ring.position.y = 0.04
+	_aura_ring.scale.y = 0.1
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.35, 0.9, 0.55, 0.3) if team == 0 else Color(1.0, 0.4, 0.45, 0.3)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_aura_ring.material_override = material
+	_aura_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_aura_ring.visible = false
+	add_child(_aura_ring)
 
 func get_team_display_color() -> Color:
 	var tier_color := stats.get_tier_color()
@@ -468,13 +497,28 @@ func get_attack_damage() -> float:
 		if buff.has("attack_multiplier"):
 			base_damage *= buff.attack_multiplier
 	
-	var damage_multiplier := 1.0 + float(synergy_bonuses.get("damage_pct", 0.0))
+	var damage_multiplier := 1.0 + float(synergy_bonuses.get("damage_pct", 0.0)) + get_power_aura_bonus()
 	if is_instance_valid(current_target):
 		if current_target.marked_team == team and Time.get_ticks_msec() < current_target.mark_expires_at_msec:
 			damage_multiplier += float(synergy_bonuses.get("marked_target_damage_pct", 0.0))
 		if _has_ally_focusing_target(current_target):
 			damage_multiplier += float(synergy_bonuses.get("focus_fire_damage_pct", 0.0))
 	return base_damage * damage_multiplier
+
+func get_power_aura_bonus() -> float:
+	if not is_inside_tree() or not visible or current_state in [State.IDLE, State.DEAD]:
+		return 0.0
+	var bonus := 0.0
+	var ally_group := "player_units" if team == 0 else "enemy_units"
+	for source: BaseUnit3D in get_tree().get_nodes_in_group(ally_group):
+		if source == self or not source.visible or source.current_state in [State.IDLE, State.DEAD]:
+			continue
+		if source.stats.passive_aura_effect != "power":
+			continue
+		var distance := Vector2(global_position.x, global_position.z).distance_to(Vector2(source.global_position.x, source.global_position.z))
+		if distance <= source.stats.passive_aura_range:
+			bonus = maxf(bonus, source.stats.passive_aura_power)
+	return bonus
 
 func set_synergy_bonuses(bonuses: Dictionary) -> void:
 	var old_health_ratio := current_health / maxf(get_max_health(), 1.0) if stats else 1.0
@@ -549,6 +593,15 @@ func find_target() -> void:
 	enemies = enemies.filter(func(e):
 		return is_instance_valid(e) and e.current_state != State.DEAD and e.visible
 	)
+	# Uma planta escolhe entre alvos que consegue alcançar sem sair da casa.
+	if stats.is_stationary and not enemies.is_empty():
+		enemies = enemies.filter(func(e):
+			return Vector2(global_position.x, global_position.z).distance_to(Vector2(e.global_position.x, e.global_position.z)) <= stats.attack_range * 2.0 + 0.5
+		)
+		if enemies.is_empty():
+			current_target = null
+			_wait_rooted()
+			return
 	
 	print("  %s procurando alvo... encontrados %d inimigos" % [stats.unit_name, enemies.size()])
 	
@@ -701,6 +754,9 @@ func check_attack_or_move() -> void:
 		move_towards_target()
 
 func move_towards_target() -> void:
+	if stats.is_stationary:
+		_wait_rooted()
+		return
 	# MODO DEBUG: Movimento direto
 	if not use_navigation:
 		move_direct_to_target()
@@ -770,6 +826,14 @@ func move_towards_target() -> void:
 		
 
 func _physics_process(delta: float) -> void:
+	if stats and stats.is_stationary:
+		velocity = Vector3.ZERO
+		if current_state == State.ROOTED:
+			_rooted_target_timer -= delta
+			if _rooted_target_timer <= 0.0:
+				_rooted_target_timer = 0.25
+				find_target()
+		return
 	# MOVIMENTO DIRETO (sem navigation)
 	if not use_navigation:
 		if current_state == State.MOVING:
@@ -842,6 +906,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
+	if stats and stats.is_stationary:
+		velocity = Vector3.ZERO
+		return
 	if current_state == State.MOVING:
 		velocity = safe_velocity
 		velocity.y = 0.0
@@ -851,10 +918,22 @@ func _on_velocity_computed(safe_velocity: Vector3) -> void:
 func get_movement_speed() -> float:
 	if not stats:
 		return 2.0
+	if stats.is_stationary:
+		return 0.0
 	var speed := stats.movement_speed / 100.0 * (1.0 + float(synergy_bonuses.get("move_speed_pct", 0.0)))
 	if Time.get_ticks_msec() < slowed_until_msec:
 		speed *= 0.7
 	return speed
+
+func _wait_rooted() -> void:
+	if current_state in [State.DEAD, State.CASTING]:
+		return
+	current_state = State.ROOTED
+	velocity = Vector3.ZERO
+	if attack_timer:
+		attack_timer.stop()
+	if navigation_agent:
+		navigation_agent.velocity = Vector3.ZERO
 
 func start_attacking() -> void:
 	if current_state == State.DEAD or current_state == State.CASTING:
@@ -918,6 +997,8 @@ func perform_attack() -> void:
 	
 	_face_target()
 	unit_visual.play_attack(stats.attack_range > 1, 1.0 / get_effective_attack_speed())
+	if stats.is_stationary:
+		_show_plant_projectile(current_target.global_position)
 	
 	var damage: float = get_attack_damage()
 	if not first_attack_used:
@@ -938,12 +1019,31 @@ func perform_attack() -> void:
 	check_attack_or_move()
 
 func _face_target() -> void:
+	if stats.is_stationary:
+		return
 	if not is_instance_valid(current_target):
 		return
 	var offset := current_target.global_position - global_position
 	# O manequim olha para +Z, igual ao movimento; evita virar de costas ao atacar.
 	if Vector2(offset.x, offset.z).length_squared() > 0.0001:
 		rotation.y = atan2(offset.x, offset.z)
+
+func _show_plant_projectile(target_position: Vector3) -> void:
+	# Rastro visual; o dano segue o instante do ataque, como nas outras unidades.
+	var projectile := MeshInstance3D.new()
+	var seed := SphereMesh.new()
+	seed.radius = 0.09
+	seed.height = 0.18
+	projectile.mesh = seed
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color("#b5e66a")
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	projectile.material_override = material
+	get_parent().add_child(projectile)
+	projectile.global_position = global_position + Vector3.UP * 0.65
+	var flight := projectile.create_tween()
+	flight.tween_property(projectile, "global_position", target_position + Vector3.UP * 0.65, 0.18)
+	flight.tween_callback(projectile.queue_free)
 
 func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.DamageType = UnitStats.DamageType.PHYSICAL) -> void:
 	if current_state == State.DEAD:
@@ -1081,7 +1181,7 @@ func apply_ability_effect() -> void:
 	_apply_ability_healing()
 	_apply_ability_shield()
 	_apply_ability_energy()
-	if stats.cost <= 2:
+	if stats.cost <= 2 or stats.is_stationary:
 		_apply_ability_damage()
 
 func _apply_ability_shield() -> void:
@@ -1100,7 +1200,7 @@ func _apply_ability_energy() -> void:
 	var allies: Array = get_tree().get_nodes_in_group(ally_group).filter(func(ally):
 		if not is_instance_valid(ally) or ally == self or not ally.visible:
 			return false
-		if ally.current_state not in [State.MOVING, State.ATTACKING] or ally.current_mana >= ally.stats.max_mana:
+		if ally.current_state not in [State.MOVING, State.ATTACKING, State.ROOTED] or ally.current_mana >= ally.stats.max_mana:
 			return false
 		var distance := Vector2(global_position.x, global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
 		return distance <= maxf(stats.ability_range, stats.attack_range * 2.0)
@@ -1430,6 +1530,8 @@ func update_mana_bar() -> void:
 	mana_changed.emit(current_mana, stats.max_mana)
 
 func _process(delta: float) -> void:
+	if _aura_ring:
+		_aura_ring.visible = visible and current_state not in [State.IDLE, State.DEAD]
 	if unit_visual:
 		unit_visual.update_locomotion(current_state == State.MOVING, get_movement_speed(), current_state == State.IDLE)
 	if current_state == State.DEAD or current_state == State.IDLE:

@@ -94,7 +94,7 @@ func _set_hidden_positions() -> void:
 func _hidden_position(panel: Control) -> Vector2:
 	var destination: Vector2 = visible_positions.get(panel, panel.position)
 	if panel == top_bar:
-		destination.y = -panel.size.y - 20.0
+		destination.y = - panel.size.y - 20.0
 	elif panel == right_bar:
 		destination.x = get_viewport().get_visible_rect().size.x + 20.0
 	else:
@@ -132,9 +132,9 @@ func _apply_button_skins() -> void:
 
 func _style_button(button: Button) -> void:
 	button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	var normal_region := Rect2(128, 0, 96, 64)
+	var normal_region := Rect2(132, 4, 88, 56)
 	var hover_region := Rect2(224, 0, 96, 64)
-	var pressed_region := Rect2(64, 0, 64, 64)
+	var pressed_region := Rect2(228, 8.0, 88, 52)
 	if button == toggle_button:
 		normal_region = Rect2(0, 0, 64, 64)
 		hover_region = Rect2(64, 0, 64, 64)
@@ -160,7 +160,17 @@ func set_sell_zone_visible(is_visible: bool) -> void:
 
 func update_synergies(synergies: Array) -> void:
 	var active_count := 0
-	for synergy in synergies:
+	var ordered := synergies.duplicate()
+	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if bool(a.get("active", false)) != bool(b.get("active", false)):
+			return bool(a.get("active", false))
+		var a_progress := float(a.count) / maxf(float(a.threshold), 1.0)
+		var b_progress := float(b.count) / maxf(float(b.threshold), 1.0)
+		if not is_equal_approx(a_progress, b_progress):
+			return a_progress > b_progress
+		return str(a.name) < str(b.name)
+	)
+	for synergy in ordered:
 		if synergy.get("active", false):
 			active_count += 1
 	if is_instance_valid(synergy_button):
@@ -171,7 +181,7 @@ func update_synergies(synergies: Array) -> void:
 		if is_instance_valid(row):
 			row.queue_free()
 	spawned_synergy_rows.clear()
-	for synergy in synergies:
+	for synergy in ordered:
 		var is_active: bool = synergy.get("active", false)
 		var template := synergy_row_active_template if is_active else synergy_row_inactive_template
 		if not is_instance_valid(template):
@@ -179,26 +189,33 @@ func update_synergies(synergies: Array) -> void:
 		if not is_instance_valid(template):
 			continue
 		var row := template.duplicate() as PanelContainer
+		row.custom_minimum_size.y = 52
+		row.get_node("Row/Icon").hide()
 		row.name = "Synergy_%s_%s" % [str(synergy.category).replace(" ", ""), str(synergy.name).replace(" ", "_")]
 		row.show()
 		var title := row.get_node_or_null("Row/Content/Header/TagLabel") as Label
 		var progress_text := row.get_node_or_null("Row/Content/Header/CountLabel") as Label
 		var progress := row.get_node_or_null("Row/Content/Progress") as ProgressBar
 		if title:
-			title.text = "%s · %s" % [synergy.category, synergy.name]
+			title.text = str(synergy.name)
+			title.add_theme_font_size_override("font_size", 18)
+			title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		if progress_text:
-			progress_text.text = "%d/%d" % [synergy.count, synergy.threshold]
+			progress_text.add_theme_font_size_override("font_size", 16)
+			progress_text.text = "%s%d/%d" % ["✓ " if is_active else "", synergy.count, synergy.threshold]
 		if progress:
 			progress.max_value = maxi(int(synergy.threshold), 1)
 			progress.value = mini(int(synergy.count), int(synergy.threshold))
-		var unit_names := PackedStringArray(synergy.get("units", []))
-		var activation_text := "Ativa: %s" % synergy.description if is_active else "Inativa · precisa de %d unidades diferentes\n%s" % [synergy.threshold, synergy.description]
-		var threshold_labels := PackedStringArray()
-		for threshold in synergy.get("thresholds", [synergy.threshold]):
-			threshold_labels.append(str(threshold))
-		row.tooltip_text = "%s\nPatamares: %s · cópias repetidas contam uma vez\nUnidades desta sinergia:\n%s" % [activation_text, "/".join(threshold_labels), "\n".join(unit_names)]
+		var status := "Ativa" if is_active else "Faltam %d" % maxi(int(synergy.threshold) - int(synergy.count), 0)
+		row.tooltip_text = "%s · %s\n%s: %s" % [synergy.name, synergy.category, status, synergy.description]
+		row.tooltip_text += "\nCada unidade diferente conta uma vez."
 		synergy_list.add_child(row)
 		spawned_synergy_rows.append(row)
+	_fit_synergy_height.call_deferred()
+
+func _fit_synergy_height() -> void:
+	if synergy_panel:
+		synergy_panel.size.y = clampf(spawned_synergy_rows.size() * 58.0 + 16.0, 68.0, 420.0)
 
 func _bind_synergy_panel() -> void:
 	synergy_button = hud.get_node_or_null("SynergyToggleButton") as Button

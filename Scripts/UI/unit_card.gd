@@ -154,6 +154,8 @@ func set_unit(stats: UnitStats) -> void:
 		", ".join(classes) if not classes.is_empty() else "—",
 		", ".join(unit_stats.affinities) if not unit_stats.affinities.is_empty() else "—",
 	]
+	if unit_stats.is_stationary:
+		tooltip_text += "\n" + unit_stats.description
 	base_tooltip_text = tooltip_text
 	set_purchase_upgrade(0)
 	

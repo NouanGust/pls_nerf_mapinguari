@@ -40,8 +40,8 @@ var active_synergies: Dictionary = {}
 var battle_time_remaining: float = 0.0
 
 
-@export var gold_on_win: int = 5
-@export var gold_on_loss: int = 2
+@export var gold_on_win: int = 2
+@export var gold_on_loss: int = 1
 @export var battle_duration_seconds: float = 60.0
 @export var win_streak_bonus_step: int = 1
 @export var max_win_streak_bonus: int = 5
@@ -888,7 +888,7 @@ func _input(event: InputEvent) -> void:
 				buy_xp()
 			
 			KEY_C:
-				if not combat_active and not round_resolution_pending:
+				if OS.is_debug_build() and not combat_active and not round_resolution_pending:
 					clear_board()
 			
 			KEY_ESCAPE:

@@ -27,16 +27,9 @@ static func load_all_units() -> Dictionary:
 		push_error("Units directory not found: " + units_path)
 		return {}
 	
-	var dir := DirAccess.open(units_path)
-	if not dir:
-		push_error("Failed to open units directory")
-		return {}
-	
-	dir.list_dir_begin()
-	var file_name := dir.get_next()
 	var loaded_count := 0
-	
-	while file_name != "":
+	# ResourceLoader preserva os nomes originais no PCK, inclusive recursos convertidos.
+	for file_name in ResourceLoader.list_directory(units_path):
 		if file_name.ends_with(".tres"):
 			var unit_stats: UnitStats = ResourceLoader.load(units_path + file_name, "", ResourceLoader.CACHE_MODE_REPLACE)
 			if unit_stats and unit_stats.is_valid():
@@ -45,9 +38,6 @@ static func load_all_units() -> Dictionary:
 			else:
 				push_warning("Failed to load or invalid unit: " + file_name)
 		
-		file_name = dir.get_next()
-	
-	dir.list_dir_end()
 	_cache_loaded = true
 	
 	print("UnitSpawner: Loaded %d units" % loaded_count)
@@ -91,7 +81,7 @@ static func spawn_unit_from_stats(unit_stats: UnitStats, star_level: int = 1, te
 	# Validar star level
 	star_level = clampi(star_level, 1, 4)
 	
-	# Corpo animado compartilhado UAL1; stats e identidade continuam por unidade.
+	# A apresentação escolhe o modelo por espécie; as lendas usam o humanoide.
 	var unit: BaseUnit3D = BASE_UNIT_3D_SCENE.instantiate() as BaseUnit3D
 	
 	if not unit:

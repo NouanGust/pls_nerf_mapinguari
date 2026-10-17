@@ -8,7 +8,6 @@ var _panel: PanelContainer
 var _home: VBoxContainer
 var _selection: VBoxContainer
 var _grid: GridContainer
-var _preview: RichTextLabel
 var _enter_button: Button
 var _start_button: Button
 var _region_buttons: Dictionary = {}
@@ -55,24 +54,21 @@ func _build_interface() -> void:
 	content.add_theme_constant_override("separation", 18)
 	_panel.add_child(content)
 	content.add_child(_label("FOLCHESS", 42, Color("#efd7a0")))
-	content.add_child(_label("Fauna, flora e lendas em cada batalha", 17, Color("#afc4ba")))
-	content.add_child(HSeparator.new())
 	_home = VBoxContainer.new()
 	_home.add_theme_constant_override("separation", 14)
 	content.add_child(_home)
-	_home.add_child(_label("Monte seu time. Descubra as forças de cada região.", 19))
-	_start_button = _button("INICIAR")
+	_start_button = _button("Jogar")
 	_start_button.pressed.connect(_show_regions)
 	_home.add_child(_start_button)
-	var exit_button := _button("SAIR")
+	var exit_button := _button("Sair")
 	exit_button.pressed.connect(func() -> void: get_tree().quit())
 	_home.add_child(exit_button)
+	exit_button.visible = not OS.has_feature("web")
 	_selection = VBoxContainer.new()
 	_selection.add_theme_constant_override("separation", 14)
 	_selection.hide()
 	content.add_child(_selection)
-	_selection.add_child(_label("ESCOLHA SEU ADVERSÁRIO REGIONAL", 22, Color("#efd7a0")))
-	_selection.add_child(_label("A região define o time inimigo. Sua loja continua com todas as regiões.", 16))
+	_selection.add_child(_label("Escolha a região", 22, Color("#efd7a0")))
 	_grid = GridContainer.new()
 	_grid.columns = 3
 	_grid.add_theme_constant_override("h_separation", 12)
@@ -84,7 +80,7 @@ func _build_interface() -> void:
 		var button := _button(str(region["name"]))
 		button.toggle_mode = true
 		button.button_group = group
-		button.tooltip_text = str(region["description"])
+		button.tooltip_text = "Enfrentar " + str(region["name"])
 		button.pressed.connect(_select_region.bind(str(region_id)))
 		button.add_theme_color_override("font_pressed_color", Color("#162522"))
 		var selected_style := StyleBoxFlat.new()
@@ -93,20 +89,10 @@ func _build_interface() -> void:
 		button.add_theme_stylebox_override("pressed", selected_style)
 		_grid.add_child(button)
 		_region_buttons[region_id] = button
-	_preview = RichTextLabel.new()
-	_preview.bbcode_enabled = true
-	_preview.fit_content = true
-	_preview.scroll_active = false
-	_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_preview.add_theme_font_size_override("normal_font_size", 17)
-	_preview.add_theme_font_size_override("bold_font_size", 17)
-	_preview.add_theme_color_override("default_color", Color("#d5dfd8"))
-	_selection.add_child(_preview)
-	_selection.add_child(_label("+2 XP por round para os dois times · 4 ouro = 4 XP\nUma peça por nível · Máximo de 9 peças no campo", 15, Color("#afc4ba")))
-	_enter_button = _button("JOGAR NO CERRADO")
+	_enter_button = _button("Jogar")
 	_enter_button.pressed.connect(_start_selected_region)
 	_selection.add_child(_enter_button)
-	var back := _button("VOLTAR")
+	var back := _button("Voltar")
 	back.pressed.connect(_show_home)
 	_selection.add_child(back)
 
@@ -126,6 +112,7 @@ func _button(text: String) -> Button:
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.add_theme_font_size_override("font_size", 18)
 	button.add_theme_color_override("font_color", Color("#302019"))
+	button.add_theme_color_override("font_focus_color", Color("#302019"))
 	button.add_theme_color_override("font_hover_color", Color("#302019"))
 	button.add_theme_color_override("font_pressed_color", Color("#302019"))
 	for state in ["normal", "hover", "pressed"]:
@@ -140,37 +127,34 @@ func _button(text: String) -> Button:
 
 func _fit_layout() -> void:
 	var width: float = get_viewport_rect().size.x
-	_panel.custom_minimum_size.x = maxf(minf(width - 40.0, 960.0), 280.0)
+	_panel.custom_minimum_size.x = maxf(minf(width - 40.0, 720.0 if _selection.visible else 420.0), 280.0)
 	_grid.columns = 3 if width >= 800.0 else (2 if width >= 540.0 else 1)
 
 func _show_regions() -> void:
 	_home.hide()
 	_selection.show()
+	_fit_layout()
 	_region_buttons[_selected_region].grab_focus()
 
 func _show_home() -> void:
 	_selection.hide()
 	_home.show()
+	_fit_layout()
 	_start_button.grab_focus()
 
 func _select_region(region_id: String) -> void:
 	_selected_region = region_id
-	_region_buttons[region_id].set_pressed_no_signal(true)
+	for id in _region_buttons:
+		_region_buttons[id].set_pressed_no_signal(id == region_id)
 	var region: Dictionary = Regions.get_region(region_id)
-	var entries := PackedStringArray()
-	var roster: Array = region["roster"]
-	for i in roster.size():
-		var stats := load("res://resources/units/%s.tres" % roster[i]) as UnitStats
-		entries.append("[b]%d.[/b] %s" % [i + 1, stats.unit_name if stats else str(roster[i])])
-	_preview.text = "[b]%s[/b]\n%s\n\n[b]Formação por nível · 1 → 9[/b]\n%s" % [region["name"], region["description"], "   ·   ".join(entries)]
-	_enter_button.text = "JOGAR · %s" % str(region["name"]).to_upper()
+	_enter_button.text = "Jogar · %s" % region["name"]
 
 func _start_selected_region() -> void:
 	if _starting:
 		return
 	_starting = true
 	_enter_button.disabled = true
-	_enter_button.text = "PREPARANDO TABULEIRO…"
+	_enter_button.text = "Carregando…"
 	_enter_region.call_deferred(_selected_region)
 
 func _enter_region(region_id: String) -> void:

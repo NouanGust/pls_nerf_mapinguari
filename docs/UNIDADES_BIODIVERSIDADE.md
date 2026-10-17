@@ -4,7 +4,7 @@ Atualizado em **16/10/2026**. O elenco possui **45 unidades**, com **13 portador
 
 ## Distribuição atual de espécies
 
-As unidades abaixo representam fauna/flora; as lendas de forma animal citadas acima ficam nos custos 4 e 5. O custo é uma decisão de jogo, sem relação com o grau de ameaça da espécie. Ícones e modelos continuam provisórios.
+As unidades abaixo representam fauna/flora; as lendas de forma animal citadas acima ficam nos custos 4 e 5. O custo é uma decisão de jogo, sem relação com o grau de ameaça da espécie. As associações dos modelos e o comportamento imóvel das plantas estão em [MODELOS_FAUNA_FLORA.md](MODELOS_FAUNA_FLORA.md); espécies ausentes nos pacotes usam aproximações visuais.
 
 | Unidade | Custo | Afinidade | Origens | Classes |
 | --- | ---: | --- | --- | --- |

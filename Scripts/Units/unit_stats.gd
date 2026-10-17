@@ -59,6 +59,7 @@ enum DamageType {
 
 @export_subgroup("Movement")
 @export var movement_speed: float = 200.0
+@export var is_stationary: bool = false
 @export var can_fly: bool = false
 
 ## ============================================
@@ -120,6 +121,8 @@ enum DamageType {
 @export var on_spawn_effect: String = ""
 @export var passive_aura_range: float = 0.0
 @export var passive_aura_effect: String = ""
+## Fração de dano de ataque adicional; auras iguais usam apenas o maior valor.
+@export var passive_aura_power: float = 0.0
 @export var stun_resist: float = 0.0
 @export var slow_resist: float = 0.0
 @export var silence_resist: float = 0.0

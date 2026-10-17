@@ -47,8 +47,8 @@ var model: Node3D
 var model_base_scale: Vector3 = Vector3.ONE
 var animation_player: AnimationPlayer
 var attack_timer: Timer
-var _star_upgrade_tween: Tween
-var _star_upgrade_base_material: Material
+var unit_visual: UnitVisual
+var _death_generation: int = 0
 var _star_upgrade_effect_pending: bool = false
 
 ## UI 3D
@@ -78,7 +78,8 @@ var ui_ready: bool = false
 
 const CombatFeedback = preload("res://Scripts/Systems/combat_feedback.gd")
 const UNIT_LABEL_ATLAS: Texture2D = preload("res://Assets/UI/GUI_4x.png")
-const STAR_EVOLUTION_SHADER: Shader = preload("res://Assets/Shaders/star_evolution.gdshader")
+const UnitVisual = preload("res://Scripts/Units/unit_visual.gd")
+const UNIT_VISUAL_SCENE: PackedScene = preload("res://Scenes/Units/unit_visual.tscn")
 
 func _ready() -> void:
 	add_to_group("units")
@@ -190,28 +191,15 @@ func setup_model() -> void:
 		model = Node3D.new()
 		model.name = "Model"
 		add_child(model)
-	var capsule_mesh := CapsuleMesh.new()
-	capsule_mesh.height = 2.0
-	capsule_mesh.radius = 0.4
-	var mesh_instance := MeshInstance3D.new()
-	mesh_instance.name = "StandardCapsule"
-	mesh_instance.mesh = capsule_mesh
-	mesh_instance.position.y = 1.0
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = get_team_display_color()
-	mat.metallic = 0.15
-	mat.roughness = 0.48
-	if team == 1:
-		mat.emission_enabled = true
-		mat.emission = mat.albedo_color
-		mat.emission_energy_multiplier = 0.28
-	mesh_instance.material_override = mat
-	_star_upgrade_base_material = mat
-	model.add_child(mesh_instance)
+	unit_visual = UNIT_VISUAL_SCENE.instantiate() as UnitVisual
+	unit_visual.configure(get_team_display_color())
+	model.add_child(unit_visual)
+	animation_player = unit_visual.animation_player
 
 	model_base_scale = Vector3.ONE
 	model.scale = model_base_scale
 	model.rotation = Vector3.ZERO
+	rotation.y = PI if team == 1 else 0.0
 	setup_team_indicator()
 
 func get_team_display_color() -> Color:
@@ -222,23 +210,8 @@ func get_team_display_color() -> Color:
 	return saturated.lerp(Color("#ff4b5f"), 0.28)
 
 func _play_star_upgrade_effect() -> void:
-	var capsule := model.get_node_or_null("StandardCapsule") as MeshInstance3D if model else null
-	if capsule:
-		if _star_upgrade_tween and _star_upgrade_tween.is_running():
-			_star_upgrade_tween.kill()
-		var shader_material := ShaderMaterial.new()
-		shader_material.shader = STAR_EVOLUTION_SHADER
-		shader_material.set_shader_parameter("base_color", get_team_display_color())
-		shader_material.set_shader_parameter("burst_color", Color("#ffe28a") if team == 0 else Color("#ff7588"))
-		shader_material.set_shader_parameter("flash_strength", 0.0)
-		capsule.material_override = shader_material
-		_star_upgrade_tween = create_tween()
-		_star_upgrade_tween.tween_property(shader_material, "shader_parameter/flash_strength", 1.0, 0.16)
-		_star_upgrade_tween.tween_property(shader_material, "shader_parameter/flash_strength", 0.0, 0.72)
-		_star_upgrade_tween.tween_callback(func():
-			if is_instance_valid(capsule) and capsule.material_override == shader_material:
-				capsule.material_override = _star_upgrade_base_material
-		)
+	if unit_visual:
+		unit_visual.flash_upgrade(Color("#ffe28a") if team == 0 else Color("#ff7588"))
 
 	var burst := GPUParticles3D.new()
 	burst.name = "StarEvolutionBurst"
@@ -480,8 +453,6 @@ func setup_timers() -> void:
 	attack_timer.wait_time = 1.0 / get_effective_attack_speed()
 	attack_timer.timeout.connect(_on_attack_timer_timeout)
 	
-	if has_node("AnimationPlayer"):
-		animation_player = get_node("AnimationPlayer")
 
 func get_max_health() -> float:
 	var star_multiplier: float = stats.get_star_multiplier(star_level)
@@ -945,12 +916,8 @@ func perform_attack() -> void:
 		check_attack_or_move()
 		return
 	
-	look_at(current_target.global_position, Vector3.UP)
-	
-	if animation_player and animation_player.has_animation("attack"):
-		animation_player.play("attack")
-	else:
-		animate_attack()
+	_face_target()
+	unit_visual.play_attack(stats.attack_range > 1, 1.0 / get_effective_attack_speed())
 	
 	var damage: float = get_attack_damage()
 	if not first_attack_used:
@@ -970,13 +937,13 @@ func perform_attack() -> void:
 	
 	check_attack_or_move()
 
-func animate_attack() -> void:
-	if not model:
+func _face_target() -> void:
+	if not is_instance_valid(current_target):
 		return
-	var tween: Tween = create_tween()
-	var original_pos: Vector3 = model.position
-	tween.tween_property(model, "position", original_pos + Vector3(0, 0.3, 0), 0.15)
-	tween.tween_property(model, "position", original_pos, 0.15)
+	var offset := current_target.global_position - global_position
+	# O manequim olha para +Z, igual ao movimento; evita virar de costas ao atacar.
+	if Vector2(offset.x, offset.z).length_squared() > 0.0001:
+		rotation.y = atan2(offset.x, offset.z)
 
 func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.DamageType = UnitStats.DamageType.PHYSICAL) -> void:
 	if current_state == State.DEAD:
@@ -1047,26 +1014,8 @@ func heal(amount: float, healer: BaseUnit3D = null) -> float:
 	return healed_amount
 
 func flash_damage() -> void:
-	if not model:
-		return
-	
-	var meshes: Array = get_all_mesh_instances(model)
-	for mesh in meshes:
-		if mesh.material_override:
-			var mat: StandardMaterial3D = mesh.material_override as StandardMaterial3D
-			var original_color: Color = mat.albedo_color
-			mat.albedo_color = Color.RED
-			await get_tree().create_timer(0.1).timeout
-			if is_instance_valid(mat):
-				mat.albedo_color = original_color
-
-func get_all_mesh_instances(node: Node) -> Array:
-	var meshes: Array = []
-	if node is MeshInstance3D:
-		meshes.append(node)
-	for child in node.get_children():
-		meshes.append_array(get_all_mesh_instances(child))
-	return meshes
+	if unit_visual:
+		unit_visual.flash_damage()
 
 func add_mana(amount: float) -> void:
 	# Não ganhar mana se não estiver em combate
@@ -1089,6 +1038,8 @@ func cast_ability() -> void:
 		return
 	
 	current_state = State.CASTING
+	_face_target()
+	unit_visual.play_cast()
 	current_mana = 0.0
 	update_mana_bar()
 	
@@ -1411,38 +1362,41 @@ func _apply_ability_healing() -> void:
 		allies[i].heal(stats.ability_heal, self)
 
 func die() -> void:
+	if current_state == State.DEAD:
+		return
 	current_state = State.DEAD
 	current_health = 0
 	attack_timer.stop()
-	
-	print("%s morreu!" % stats.unit_name)
-	
-	# Limpar referências
+	velocity = Vector3.ZERO
+	collision_layer = 0
+	collision_mask = 0
+	if navigation_agent:
+		navigation_agent.set_velocity(Vector3.ZERO)
+		navigation_agent.avoidance_enabled = false
+	if ui_sprite:
+		ui_sprite.hide()
+	_death_generation += 1
+	var generation := _death_generation
+	var death_duration := unit_visual.play_death()
 	current_target = null
-	
-	# Notificar todas as unidades que estavam mirando nesta
-	var all_units: Array = get_tree().get_nodes_in_group("units")
-	for unit in all_units:
+	for unit in get_tree().get_nodes_in_group("units"):
 		if unit is BaseUnit3D and unit.current_target == self:
 			unit.current_target = null
-	
+	# A morte lógica é imediata; apenas o corpo espera a animação terminar.
 	died.emit(self)
-	
+	await get_tree().create_timer(death_duration).timeout
+	# O fim da rodada pode reviver a unidade antes de a animação terminar.
+	if generation != _death_generation or current_state != State.DEAD:
+		return
 	if team == 0:
 		visible = false
 		process_mode = Node.PROCESS_MODE_DISABLED
-		collision_layer = 0 
-		collision_mask = 0
-	else: 
-		var tween: Tween = create_tween()
-		tween.set_parallel(true)
-		if model:
-			tween.tween_property(model, "scale", Vector3.ZERO, 0.5)
-		tween.tween_property(self, "position:y", position.y - 2, 0.5)
-		tween.chain().tween_callback(queue_free)
-	
+	else:
+		queue_free()
+
 
 func revive_at_position(world_pos: Vector3) -> void:
+	_death_generation += 1
 	current_state = State.IDLE
 	current_health = get_max_health()
 	current_mana = stats.starting_mana
@@ -1455,6 +1409,11 @@ func revive_at_position(world_pos: Vector3) -> void:
 	collision_mask = 1
 	global_position = world_pos
 	combat_ground_height = world_pos.y
+	if navigation_agent:
+		navigation_agent.avoidance_enabled = true
+	if ui_sprite:
+		ui_sprite.show()
+	unit_visual.reset_pose()
 	
 	if model:
 		model.scale = model_base_scale
@@ -1471,6 +1430,8 @@ func update_mana_bar() -> void:
 	mana_changed.emit(current_mana, stats.max_mana)
 
 func _process(delta: float) -> void:
+	if unit_visual:
+		unit_visual.update_locomotion(current_state == State.MOVING, get_movement_speed(), current_state == State.IDLE)
 	if current_state == State.DEAD or current_state == State.IDLE:
 		_health_regen_accumulator = 0.0
 		return

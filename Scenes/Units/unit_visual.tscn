@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_visual.gd" id="1_visual"]
+[ext_resource type="PackedScene" path="res://Assets/Models/UAL1_Standard.glb" id="2_model"]
+
+[node name="UnitVisual" type="Node3D"]
+script = ExtResource("1_visual")
+
+[node name="Character" parent="." instance=ExtResource("2_model")]
+scale = Vector3(1.0934, 1.0934, 1.0934)

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://c6mvx4e6rlttu"
-path="res://.godot/imported/Bonecao_player.glb-af58c81182a905571394d2e311695de5.scn"
+uid="uid://cuk51xyj368xk"
+path="res://.godot/imported/UAL1_Standard.glb-75fc64d141472efb073c3b119d1a5393.scn"
 
 [deps]
 
-source_file="res://Assets/Models/Bonecao_player.glb"
-dest_files=["res://.godot/imported/Bonecao_player.glb-af58c81182a905571394d2e311695de5.scn"]
+source_file="res://Assets/Models/UAL1_Standard.glb"
+dest_files=["res://.godot/imported/UAL1_Standard.glb-75fc64d141472efb073c3b119d1a5393.scn"]
 
 [params]
 
@@ -37,6 +37,12 @@ import_script/path=""
 materials/extract=0
 materials/extract_format=0
 materials/extract_path=""
-_subresources={}
+_subresources={
+"nodes": {
+"PATH:Armature/Skeleton3D": {
+"retarget/bone_map": Resource("res://Assets/Models/UAL1_HumanoidBoneMap.tres")
+}
+}
+}
 gltf/naming_version=2
 gltf/embedded_image_handling=1

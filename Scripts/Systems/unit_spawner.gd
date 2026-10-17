@@ -91,7 +91,7 @@ static func spawn_unit_from_stats(unit_stats: UnitStats, star_level: int = 1, te
 	# Validar star level
 	star_level = clampi(star_level, 1, 4)
 	
-	# As unidades usam o mesmo corpo placeholder até a arte 3D estar pronta.
+	# Corpo animado compartilhado UAL1; stats e identidade continuam por unidade.
 	var unit: BaseUnit3D = BASE_UNIT_3D_SCENE.instantiate() as BaseUnit3D
 	
 	if not unit:

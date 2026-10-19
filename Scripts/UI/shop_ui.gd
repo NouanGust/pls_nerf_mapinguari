@@ -14,6 +14,7 @@ var original_position_y: float = 0.0
 var shop_tween: Tween
 var owned_star_counts: Dictionary = {}
 var upgrades_deferred: bool = false
+var _tooltip_origin := Vector2.ZERO
 @onready var stats_tooltip: PanelContainer = $"../StatsTooltip"
 @onready var shop_toggle_button: Button = $"../ShopLabel"
 @onready var lock_button: Button = $"../ControlsContainer/LockButton"
@@ -21,10 +22,14 @@ var upgrades_deferred: bool = false
 const UNIT_CARD_SCENE := preload("res://Scenes/UI/Unit_card.tscn")
 
 func _ready() -> void:
+	clip_contents = false
 	await get_tree().process_frame
 	original_position_y = position.y
 	hidden_position_y = get_parent_control().size.y + 18.0
 	setup_shop_slots()
+	resized.connect(_fit_cards)
+	get_viewport().size_changed.connect(_hide_tooltip)
+	_fit_cards()
 	if shop_system:
 		_on_shop_refreshed(shop_system.current_units)
 	stats_tooltip.hide()
@@ -55,6 +60,28 @@ func setup_shop_slots() -> void:
 		unit_cards.append(card)
 		card.hover_started.connect(_on_card_hover_started)
 		card.hover_ended.connect(_on_card_hover_ended)
+
+func _fit_cards() -> void:
+	custom_minimum_size.x = 0.0
+	var card_width := maxf(100.0, (size.x - 40.0) / 5.0)
+	for card in unit_cards:
+		card.fit_card(card_width)
+
+func fit_shop(rectangle: Rect2) -> void:
+	if shop_tween and shop_tween.is_running():
+		shop_tween.kill()
+	original_position_y = rectangle.position.y
+	hidden_position_y = get_parent_control().size.y + 18.0
+	custom_minimum_size.x = 0.0
+	for card in unit_cards:
+		card.fit_card(maxf(100.0, (rectangle.size.x - 40.0) / 5.0))
+	ResponsiveLayout.place(self, rectangle)
+	_fit_cards()
+	position.y = original_position_y if is_shop_visible else hidden_position_y
+	modulate.a = 1.0 if is_shop_visible else 0.0
+
+func _hide_tooltip() -> void:
+	stats_tooltip.hide()
 
 func set_shop_system(system: ShopSystem) -> void:
 	shop_system = system
@@ -119,8 +146,17 @@ func _on_lock_changed(is_locked: bool) -> void:
 
 func _on_card_hover_started(stats: UnitStats, card_pos: Vector2) -> void:
 	update_tooltip_labels(stats)
-	stats_tooltip.global_position = card_pos + Vector2(0, -180)
+	_tooltip_origin = card_pos
 	stats_tooltip.show()
+	_fit_tooltip.call_deferred()
+
+func _fit_tooltip() -> void:
+	var viewport_size := get_viewport_rect().size
+	stats_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	stats_tooltip.custom_minimum_size.x = minf(320.0, viewport_size.x - 24.0)
+	stats_tooltip.get_node("VBoxContainer").size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stats_tooltip.reset_size()
+	ResponsiveLayout.clamp_popup(stats_tooltip, _tooltip_origin - Vector2(0, stats_tooltip.size.y + 12.0), viewport_size)
 
 func _on_card_hover_ended() -> void:
 	stats_tooltip.hide()
@@ -134,15 +170,16 @@ func update_tooltip_labels(stats: UnitStats) -> void:
 		v_box.get_node("Tooltip_name").text += "\nEvolui para %d★%s" % [upgrade_star, " no próximo round" if upgrades_deferred else " ao comprar"]
 	v_box.get_node("Tooltip_hp").text = "Vida: %s" %[str(stats.max_health)]
 	
-	var is_ranged = stats.attack_range > 2.5
-	v_box.get_node("Tooltip_range").text = "Tipo: " + ("Distância" if is_ranged else "Corpo a Corpo")
+	var attack_range := stats.get_attack_range_hexes()
+	var attack_type := "Distância" if attack_range > 1 else "Corpo a corpo"
+	v_box.get_node("Tooltip_range").text = "%s · alcance %d" % [attack_type, attack_range]
 	if stats.is_stationary:
-		v_box.get_node("Tooltip_range").text = "Planta imóvel · alcance %d" % stats.attack_range
+		v_box.get_node("Tooltip_range").text = "Planta imóvel · %s · alcance %d" % [attack_type, attack_range]
 	
 	var dmg_text = "Físico" if stats.ability_damage_type == 0 else "Mágico"
 	v_box.get_node("Tooltip_type").text = "Dano: %s" %[dmg_text]
 	if stats.passive_aura_effect == "power":
-		v_box.get_node("Tooltip_type").text += "\nAura: +%d%% ataque · raio %.0fm" % [roundi(stats.passive_aura_power * 100.0), stats.passive_aura_range]
+		v_box.get_node("Tooltip_type").text += "\nAura: +%d%% ataque · raio de %d hexes" % [roundi(stats.passive_aura_power * 100.0), stats.passive_aura_range]
 
 func mark_slot_as_sold(slot_index: int) -> void:
 	if slot_index >= 0 and slot_index < unit_cards.size():

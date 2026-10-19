@@ -115,7 +115,7 @@ static func create_hit_particles(position: Vector3, color: Color) -> void:
 	scene_root.add_child(particles)
 	
 	# Auto-destruir
-	await Engine.get_main_loop().create_timer(particles.lifetime).timeout
+	await Engine.get_main_loop().create_timer(particles.lifetime, false).timeout
 	particles.queue_free()
 
 ## Indicador de status
@@ -143,6 +143,6 @@ static func create_status_indicator(unit: Node3D, status: String, duration: floa
 	unit.add_child(label)
 	
 	# Remover após duração
-	await Engine.get_main_loop().create_timer(duration).timeout
+	await Engine.get_main_loop().create_timer(duration, false).timeout
 	if is_instance_valid(label):
 		label.queue_free()

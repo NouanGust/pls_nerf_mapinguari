@@ -3,13 +3,11 @@ extends Node
 
 ## Patamares por identidade: individuais, pares e composições de três ou mais.
 ## Cada unit_id conta uma única vez, independentemente das estrelas ou cópias.
+## Apenas uma origem e até duas classes por unidade; tipos não ativam bônus.
 const RULES: Array[Dictionary] = [
 	{"field": "origins", "name": "Amazônico", "thresholds": [3, 6], "effects": [
 		{"text": "Regenera 4 de vida por segundo", "bonuses": {"health_regen": 4.0}},
 		{"text": "Regenera 8 de vida por segundo", "bonuses": {"health_regen": 8.0}},
-	]},
-	{"field": "origins", "name": "Aquático", "thresholds": [1], "effects": [
-		{"text": "Começa o combate com escudo de 8% da vida", "bonuses": {"start_shield_pct": 0.08}},
 	]},
 	{"field": "origins", "name": "Caatinga", "thresholds": [2, 4], "effects": [
 		{"text": "Recebe 8% menos dano", "bonuses": {"damage_reduction_pct": 0.08}},
@@ -28,12 +26,11 @@ const RULES: Array[Dictionary] = [
 		{"text": "Regenera 8/s e cura de habilidades +15%", "bonuses": {"health_regen": 8.0, "healing_power_pct": 0.15}},
 	]},
 	{"field": "origins", "name": "Pantaneiro", "thresholds": [3, 5], "effects": [
-		{"text": "+8% de vida máxima e cura recebida", "bonuses": {"max_health_pct": 0.08, "healing_received_pct": 0.15}},
-		{"text": "+15% de vida máxima e cura recebida", "bonuses": {"max_health_pct": 0.15, "healing_received_pct": 0.30}},
+		{"text": "+8% de vida máxima e +15% de cura recebida", "bonuses": {"max_health_pct": 0.08, "healing_received_pct": 0.15}},
+		{"text": "+15% de vida máxima e +30% de cura recebida", "bonuses": {"max_health_pct": 0.15, "healing_received_pct": 0.30}},
 	]},
-	{"field": "origins", "name": "Sertanejo", "thresholds": [3, 5], "effects": [
+	{"field": "origins", "name": "Sertanejo", "thresholds": [1], "effects": [
 		{"text": "Com pouca vida, recebe 10% menos dano", "bonuses": {"low_health_resistance_pct": 0.10}},
-		{"text": "Com pouca vida, recebe 20% menos dano", "bonuses": {"low_health_resistance_pct": 0.20}},
 	]},
 	{"field": "origins", "name": "Urbano", "thresholds": [2, 4], "effects": [
 		{"text": "+10% de velocidade de ataque; primeiro golpe +15%", "bonuses": {"attack_speed_pct": 0.10, "first_attack_bonus_pct": 0.15}},
@@ -56,15 +53,15 @@ const RULES: Array[Dictionary] = [
 		{"text": "+16% de dano causado", "bonuses": {"damage_pct": 0.16}},
 	]},
 	{"field": "classes", "name": "Encantado", "thresholds": [2, 4], "effects": [
-		{"text": "+15% de poder de habilidade e cura", "bonuses": {"healing_power_pct": 0.15}},
-		{"text": "+30% de poder de habilidade e cura", "bonuses": {"healing_power_pct": 0.30}},
+		{"text": "+15% de cura realizada", "bonuses": {"healing_power_pct": 0.15}},
+		{"text": "+30% de cura realizada", "bonuses": {"healing_power_pct": 0.30}},
 	]},
 	{"field": "classes", "name": "Metamorfo", "thresholds": [1], "effects": [
 		{"text": "20% de chance de esquivar do primeiro golpe", "bonuses": {"dodge_first_hit_chance": 0.20}},
 	]},
 	{"field": "classes", "name": "Místico", "thresholds": [2, 4], "effects": [
-		{"text": "+12% de poder de habilidade e geração de mana", "bonuses": {"healing_power_pct": 0.12, "mana_generation_pct": 0.10}},
-		{"text": "+24% de poder de habilidade e geração de mana", "bonuses": {"healing_power_pct": 0.24, "mana_generation_pct": 0.20}},
+		{"text": "+12% de cura realizada e +10% de geração de mana", "bonuses": {"healing_power_pct": 0.12, "mana_generation_pct": 0.10}},
+		{"text": "+24% de cura realizada e +20% de geração de mana", "bonuses": {"healing_power_pct": 0.24, "mana_generation_pct": 0.20}},
 	]},
 	{"field": "classes", "name": "Protetor da Mata", "thresholds": [2, 4], "effects": [
 		{"text": "+12 de armadura", "bonuses": {"armor_flat": 12.0}},
@@ -77,14 +74,6 @@ const RULES: Array[Dictionary] = [
 	{"field": "classes", "name": "Tank", "thresholds": [3, 6], "effects": [
 		{"text": "+10% de vida máxima e 10 de armadura", "bonuses": {"max_health_pct": 0.10, "armor_flat": 10.0}},
 		{"text": "+20% de vida máxima e 20 de armadura", "bonuses": {"max_health_pct": 0.20, "armor_flat": 20.0}},
-	]},
-	{"field": "affinities", "name": "Fauna", "thresholds": [3, 6], "effects": [
-		{"text": "+10% de velocidade de ataque e movimento", "bonuses": {"attack_speed_pct": 0.10, "move_speed_pct": 0.10}},
-		{"text": "+20% de velocidade; aliados focados causam +10%", "bonuses": {"attack_speed_pct": 0.20, "move_speed_pct": 0.20, "focus_fire_damage_pct": 0.10}},
-	]},
-	{"field": "affinities", "name": "Flora", "thresholds": [3, 6], "effects": [
-		{"text": "+15% de cura e escudos recebidos", "bonuses": {"healing_received_pct": 0.15, "shield_received_pct": 0.15}},
-		{"text": "+30% de cura e escudos; 15% de chance de enraizar", "bonuses": {"healing_received_pct": 0.30, "shield_received_pct": 0.30, "root_on_hit_chance": 0.15}},
 	]},
 ]
 
@@ -132,7 +121,7 @@ func update_synergies(units: Array) -> Dictionary:
 					unit_names.append(unit_stats.unit_name)
 			results[team_id].append({
 				"name": tag,
-				"category": "Origem" if field == "origins" else ("Classe" if field == "classes" else "Afinidade"),
+				"category": "Origem" if field == "origins" else "Classe",
 				"count": count,
 				"tier": tier_index + 1,
 				"threshold": next_threshold,

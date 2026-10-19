@@ -12,15 +12,19 @@ const METRICS: Array[Dictionary] = [
 var _entries: Array[Dictionary] = []
 var _selected_metric: StringName = &"damage_dealt"
 var _list: VBoxContainer
-var _panel: PanelContainer
+var _panel: Panel
 var _tabs: Array[Button] = []
 var _round_label: Label
 var _result_label: Label
 var _legend_label: Label
 var _continue_button: Button
+var _tabs_container: BoxContainer
+var _scroll: ScrollContainer
+var _divider: ColorRect
+var _entrance_tween: Tween
 
-func set_return_to_menu() -> void:
-	_result_label.text = "FIM DE JOGO"
+func set_return_to_menu(region_completed: bool = false) -> void:
+	_result_label.text = "REGIÃO CONCLUÍDA" if region_completed else "FIM DE JOGO"
 	_continue_button.text = "VOLTAR AO INÍCIO"
 
 func _ready() -> void:
@@ -35,7 +39,7 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED and is_instance_valid(_panel):
 		_fit_panel()
 
-func show_report(round_number: int, player_won: bool, entries: Array[Dictionary], is_draw: bool = false) -> void:
+func show_report(round_number: int, player_won: bool, entries: Array[Dictionary], is_draw: bool = false, draw_reason: String = "") -> void:
 	_entries = entries.duplicate(true)
 	_selected_metric = &"damage_dealt"
 	_round_label.text = "RELATÓRIO DE COMBATE · TURNO %d" % round_number
@@ -43,9 +47,14 @@ func show_report(round_number: int, player_won: bool, entries: Array[Dictionary]
 	var result_color := Color("#91c9d8") if is_draw else (Color("#e8cf83") if player_won else Color("#d98272"))
 	_result_label.add_theme_color_override("font_color", result_color)
 	_legend_label.text = "%d unidades · ambos os times" % _entries.size()
+	if is_draw and not draw_reason.is_empty():
+		_legend_label.text = draw_reason
+	_legend_label.tooltip_text = _legend_label.text
 	visible = true
 	_render_rows()
+	_fit_panel()
 	_play_entrance()
+	_continue_button.grab_focus()
 
 func _build_interface() -> void:
 	var dim := ColorRect.new()
@@ -55,12 +64,15 @@ func _build_interface() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
 
-	_panel = PanelContainer.new()
+	# Panel não herda o tamanho mínimo dos textos/lista. Assim o conteúdo
+	# nunca aumenta o modal além da janela durante a ordenação dos controles.
+	_panel = Panel.new()
 	var panel := _panel
 	panel.name = "ReportPanel"
 	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	panel.size = Vector2(660, 700)
-	panel.custom_minimum_size = Vector2(420, 440)
+	panel.custom_minimum_size = Vector2.ZERO
+	panel.clip_contents = true
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color("#172b30")
 	panel_style.border_color = Color("#77b3ad")
@@ -73,30 +85,37 @@ func _build_interface() -> void:
 	panel.add_theme_stylebox_override("panel", panel_style)
 	add_child(panel)
 
-	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 10)
-	panel.add_child(content)
-
 	_round_label = _make_label("RELATÓRIO DE COMBATE", 21, Color("#fff0cc"))
 	_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	content.add_child(_round_label)
+	_round_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_round_label.max_lines_visible = 2
+	_round_label.clip_text = true
+	panel.add_child(_round_label)
 
 	_result_label = _make_label("VITÓRIA", 27, Color("#f2d77e"))
 	_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	content.add_child(_result_label)
+	_result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_result_label.max_lines_visible = 1
+	_result_label.clip_text = true
+	panel.add_child(_result_label)
 
 	_legend_label = _make_label("0 unidades · ambos os times", 12, Color("#aab9b8"))
 	_legend_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	content.add_child(_legend_label)
+	_legend_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_legend_label.max_lines_visible = 1
+	_legend_label.clip_text = true
+	panel.add_child(_legend_label)
 
 	var divider := ColorRect.new()
+	_divider = divider
 	divider.custom_minimum_size = Vector2(0, 2)
 	divider.color = Color("#3c696b")
-	content.add_child(divider)
+	panel.add_child(divider)
 
-	var tabs := HBoxContainer.new()
+	var tabs := BoxContainer.new()
+	_tabs_container = tabs
 	tabs.add_theme_constant_override("separation", 8)
-	content.add_child(tabs)
+	panel.add_child(tabs)
 	var tab_group := ButtonGroup.new()
 	for metric in METRICS:
 		var tab := Button.new()
@@ -112,25 +131,23 @@ func _build_interface() -> void:
 		_tabs.append(tab)
 
 	var scroll := ScrollContainer.new()
+	_scroll = scroll
 	scroll.name = "UnitListScroll"
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	content.add_child(scroll)
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	panel.add_child(scroll)
 	_list = VBoxContainer.new()
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.add_theme_constant_override("separation", 7)
 	scroll.add_child(_list)
 
-	var footer := HBoxContainer.new()
-	footer.alignment = BoxContainer.ALIGNMENT_CENTER
-	content.add_child(footer)
 	var continue_button := Button.new()
 	_continue_button = continue_button
 	continue_button.text = "CONTINUAR"
 	continue_button.custom_minimum_size = Vector2(180, 42)
 	_style_button(continue_button, true)
 	continue_button.pressed.connect(_on_continue_pressed)
-	footer.add_child(continue_button)
+	panel.add_child(continue_button)
 
 func _on_metric_selected(metric: StringName) -> void:
 	_selected_metric = metric
@@ -197,6 +214,9 @@ func _make_unit_row(entry: Dictionary, maximum: float) -> Control:
 	info.add_child(title_line)
 	var unit_name := _make_label(str(entry.get("name", "Unidade")), 14, Color("#f0e4c9"))
 	unit_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	unit_name.clip_text = true
+	unit_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	unit_name.tooltip_text = unit_name.text
 	title_line.add_child(unit_name)
 	var team_label := _make_label("ALIADO" if int(entry.get("team", 0)) == 0 else "INIMIGO", 10,
 		Color("#70c8b2") if int(entry.get("team", 0)) == 0 else Color("#d78f84"))
@@ -269,18 +289,51 @@ func _play_entrance() -> void:
 	_panel.pivot_offset = _panel.size * 0.5
 	_panel.scale = Vector2(0.96, 0.96)
 	modulate.a = 0.0
+	if _entrance_tween and _entrance_tween.is_running():
+		_entrance_tween.kill()
 	var tween := create_tween().set_parallel(true)
+	_entrance_tween = tween
 	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_property(self, "modulate:a", 1.0, 0.22)
 	tween.tween_property(_panel, "scale", Vector2.ONE, 0.24)
 
 func _fit_panel() -> void:
-	if not is_instance_valid(_panel):
+	if not is_instance_valid(_panel) or not is_instance_valid(_continue_button):
 		return
 	var viewport_size := get_viewport_rect().size
+	if _entrance_tween and _entrance_tween.is_running():
+		_entrance_tween.kill()
+		_panel.scale = Vector2.ONE
+		modulate.a = 1.0
+	if _tabs_container:
+		_tabs_container.vertical = viewport_size.x < 540.0
 	_panel.size = Vector2(minf(660.0, viewport_size.x - 28.0), minf(700.0, viewport_size.y - 28.0))
 	_panel.position = (viewport_size - _panel.size) * 0.5
 	_panel.pivot_offset = _panel.size * 0.5
+	var inner_width := _panel.size.x - 38.0
+	_place(_round_label, Rect2(19, 12, inner_width, 52))
+	_place(_result_label, Rect2(19, 64, inner_width, 38))
+	_place(_legend_label, Rect2(19, 104, inner_width, 24))
+	_place(_divider, Rect2(19, 136, inner_width, 2))
+	var tabs_height := 130.0 if _tabs_container.vertical else 38.0
+	_place(_tabs_container, Rect2(19, 148, inner_width, tabs_height))
+	var list_top := 158.0 + tabs_height
+	# Rolagem confinada à lista, independente da quantidade de participantes.
+	_place(_scroll, Rect2(19, list_top, inner_width, maxf(0.0, _panel.size.y - list_top - 70.0)))
+	var button_width := minf(240.0, inner_width)
+	_place(_continue_button, Rect2((_panel.size.x - button_width) * 0.5, _panel.size.y - 56.0, button_width, 40))
+
+func _place(control: Control, rect: Rect2) -> void:
+	control.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	control.position = rect.position
+	control.size = rect.size
 
 func _on_continue_pressed() -> void:
+	if _continue_button.disabled:
+		return
+	_continue_button.disabled = true
 	continue_requested.emit()
+
+func _unhandled_input(_event: InputEvent) -> void:
+	if visible:
+		get_viewport().set_input_as_handled()

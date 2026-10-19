@@ -7,6 +7,7 @@ signal unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: String
 signal unit_returned_to_shop(unit_stats: UnitStats)
 signal unit_placed_on_bench(unit: BaseUnit3D, source: String, source_index: int)
 signal unit_sold(unit: BaseUnit3D, source: String, source_index: int)
+signal drag_finished
 
 var board: Board3D
 var camera: Camera3D
@@ -172,6 +173,7 @@ func stop_drag() -> void:
 		ghost_unit = null
 		
 	current_hiver_cell = Vector2i(-1, -1)
+	drag_finished.emit()
 
 func cancel_drag() -> void:
 	if not is_dragging:
@@ -230,7 +232,7 @@ func _highlight_attack_range(center: Vector2i) -> void:
 	var unit := dragging_unit_data.get("unit_instance") as BaseUnit3D
 	if not is_instance_valid(unit) or not unit.stats:
 		return
-	var range_in_world := float(unit.stats.attack_range) * 2.0 + 0.5
+	var range_in_world := unit.get_attack_range_meters()
 	for row in board.rows:
 		for col in board.columns:
 			var candidate := Vector2i(col, row)

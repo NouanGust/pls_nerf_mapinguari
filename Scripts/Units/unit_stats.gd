@@ -78,6 +78,7 @@ enum DamageType {
 @export_group("Synergies")
 @export var origins: Array[String] = []
 @export var classes: Array[String] = []
+## Tipo descritivo (Fauna/Flora); não concede nem conta como sinergia.
 @export var affinities: Array[String] = []
 
 ## Habitats informativos, separados de origens que podem ativar sinergias.
@@ -119,7 +120,8 @@ enum DamageType {
 @export_group("Special Effects")
 @export var on_death_effect: String = ""
 @export var on_spawn_effect: String = ""
-@export var passive_aura_range: float = 0.0
+## Raio em passos entre hexes, não em metros. Zero desativa a área.
+@export_range(0, 8, 1) var passive_aura_range: int = 0
 @export var passive_aura_effect: String = ""
 ## Fração de dano de ataque adicional; auras iguais usam apenas o maior valor.
 @export var passive_aura_power: float = 0.0
@@ -148,13 +150,23 @@ func get_tier_color() -> Color:
 		_: return Color.WHITE
 
 func is_valid() -> bool:
-	return not unit_name.is_empty() and not unit_id.is_empty()
+	if unit_name.is_empty() or unit_id.is_empty():
+		return false
+	if origins.size() != 1 or classes.is_empty() or classes.size() > 2:
+		return false
+	if origins[0].is_empty() or classes[0].is_empty():
+		return false
+	return classes.size() == 1 or (not classes[1].is_empty() and classes[0] != classes[1])
 
 func has_origin(origin_name: String) -> bool:
 	return origins.has(origin_name)
 
 func has_class(class_label: String) -> bool:
 	return classes.has(class_label)
+
+func get_attack_range_hexes() -> int:
+	# A classe também protege cadastros futuros com flag de IA inconsistente.
+	return 1 if is_tank or has_class("Tank") else maxi(attack_range, 1)
 
 func has_affinity(affinity_name: String) -> bool:
 	return affinities.has(affinity_name)

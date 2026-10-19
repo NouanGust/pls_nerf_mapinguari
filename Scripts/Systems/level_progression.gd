@@ -1,6 +1,7 @@
 extends RefCounted
 
-## A mesma curva rege o jogador e o adversário. XP excedente é descartado no teto.
+## Curva exclusiva do jogador. O inimigo usa os marcos de region_rosters.gd.
+## XP excedente é descartado no teto.
 const MAX_LEVEL: int = 9
 const ROUND_XP: int = 2
 const PURCHASE_XP: int = 4

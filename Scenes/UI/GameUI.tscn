@@ -9,7 +9,6 @@
 [ext_resource type="Script" uid="uid://bp57d1d7t4y8l" path="res://Scripts/UI/game_ui.gd" id="4_game_ui"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_intyv"]
-texture = ExtResource("2_npa51")
 texture_margin_left = 16.0
 texture_margin_top = 16.0
 texture_margin_right = 16.0
@@ -19,6 +18,30 @@ expand_margin_top = 10.0
 expand_margin_right = 10.0
 expand_margin_bottom = 10.0
 region_rect = Rect2(0, 352, 160, 48)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_ikj5o"]
+texture = ExtResource("3_intyv")
+texture_margin_left = 18.0
+texture_margin_top = 18.0
+texture_margin_right = 18.0
+texture_margin_bottom = 18.0
+region_rect = Rect2(128, 0, 96, 64)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_4efff"]
+texture = ExtResource("3_intyv")
+texture_margin_left = 16.0
+texture_margin_top = 16.0
+texture_margin_right = 16.0
+texture_margin_bottom = 16.0
+region_rect = Rect2(224, 0, 96, 64)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_78ss0"]
+texture = ExtResource("3_intyv")
+texture_margin_left = 18.0
+texture_margin_top = 18.0
+texture_margin_right = 18.0
+texture_margin_bottom = 18.0
+region_rect = Rect2(224, 0, 96, 64)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_panel"]
 content_margin_left = 8.0
@@ -248,20 +271,25 @@ text = "Cerrado · Inimigo nível 1 · XP 0/2"
 horizontal_alignment = 1
 
 [node name="SynergyToggleButton" type="Button" parent="Control" unique_id=1960782639]
+texture_filter = 1
 layout_mode = 0
-offset_left = 18.0
-offset_top = 82.0
-offset_right = 160.0
-offset_bottom = 116.0
+offset_left = 17.0
+offset_top = 103.0
+offset_right = 159.0
+offset_bottom = 162.0
 tooltip_text = "Mostrar sinergias ativas e inativas"
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_styles/normal = SubResource("StyleBoxTexture_ikj5o")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_4efff")
+theme_override_styles/hover = SubResource("StyleBoxTexture_78ss0")
 text = "Sinergias · 0"
 
 [node name="SynergyPanel" type="PanelContainer" parent="Control" unique_id=951990027]
 layout_mode = 0
-offset_left = 18.0
-offset_top = 122.0
-offset_right = 268.0
-offset_bottom = 542.0
+offset_left = 15.0
+offset_top = 169.0
+offset_right = 265.0
+offset_bottom = 589.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_synergy_panel")
 
 [node name="ScrollContainer" type="ScrollContainer" parent="Control/SynergyPanel" unique_id=1853953061]

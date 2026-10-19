@@ -1,33 +1,28 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dj7lgyohwo0eu"]
 
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-
-[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/tatu_bola.png" id="2_splash_art"]
+[ext_resource type="Texture2D" uid="uid://bs4hvadqgekc3" path="res://Assets/Units/SplashArts/tatu_bola.png" id="2_splash_art"]
 
 [resource]
 script = ExtResource("1_stats")
-icon = ExtResource("2_splash_art")
 unit_name = "Tatu-bola-do-nordeste"
 unit_id = "tatu_bola"
 description = "Pequeno defensor da Caatinga, protegido por sua carapaça móvel."
 lore = "Quando ameaçado, fecha-se em uma esfera quase impenetrável."
-tier = 1
-cost = 1
-max_health = 700
+icon = ExtResource("2_splash_art")
+max_health = 600
 attack_damage = 35
 attack_speed = 0.8
-attack_range = 1
-armor = 35
+armor = 25
 magic_resist = 20.0
 movement_speed = 175.0
 max_mana = 90
-mana_when_hit = 10
-origins = Array[String](["Caatinga", "Sertanejo"])
+mana_when_hit = 8
+origins = Array[String](["Caatinga"])
 classes = Array[String](["Tank", "Protetor da Mata"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Caatinga", "Cerrado"])
 ability_name = "Carapaça Fechada"
-ability_description = "Fecha a carapaça e renova um escudo próprio de 160 até ser consumido."
-ability_duration = 0
+ability_description = "Fecha a carapaça e renova um escudo próprio de 110. Não ganha mana enquanto estiver protegido."
+ability_shield = 110
 is_tank = true
-ability_shield = 160

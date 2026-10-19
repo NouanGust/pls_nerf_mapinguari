@@ -421,7 +421,7 @@ func create_comadre_fulozinha() -> void:
 	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	unit.prefers_backline = true
-	unit.passive_aura_range = 3.0
+	unit.passive_aura_range = 2
 	unit.passive_aura_effect = "Aliados próximos ganham +15% velocidade de ataque"
 	
 	save_unit(unit, "comadre_fulozinha")
@@ -466,7 +466,7 @@ func create_boiuna() -> void:
 	
 	unit.target_priority = UnitStats.TargetPriority.RANDOM
 	unit.is_ranged = true
-	unit.passive_aura_range = 4.0
+	unit.passive_aura_range = 2
 	unit.passive_aura_effect = "Unidades Aquáticas ganham +50% resistência mágica"
 	
 	save_unit(unit, "boiuna")
@@ -508,7 +508,7 @@ func create_mae_dagua() -> void:
 	unit.target_priority = UnitStats.TargetPriority.LOWEST_HP
 	unit.is_ranged = true
 	unit.prefers_backline = true
-	unit.passive_aura_range = 5.0
+	unit.passive_aura_range = 3
 	unit.passive_aura_effect = "Aliados próximos regeneram 3% HP/segundo"
 	
 	save_unit(unit, "mae_dagua")
@@ -628,7 +628,7 @@ func create_tutu_maramba() -> void:
 	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_tank = true
 	unit.stun_resist = 1.0
-	unit.passive_aura_range = 3.0
+	unit.passive_aura_range = 2
 	unit.passive_aura_effect = "Inimigos próximos perdem 30% velocidade de ataque"
 	
 	save_unit(unit, "tutu_maramba")

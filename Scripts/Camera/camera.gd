@@ -38,6 +38,8 @@ var _current_yaw: float = 0.0
 var _target_yaw: float = 0.0
 var _current_elevation: float = 0.0
 var _target_elevation: float = 0.0
+var _settings_auto_orbit: bool = false
+var _last_fitted_distance: float = 20.0
 
 func _ready() -> void:
 	if not camera:
@@ -51,6 +53,35 @@ func _ready() -> void:
 	var start_automatically := auto_orbit_enabled
 	reset_view(true)
 	auto_orbit_enabled = start_automatically
+	_settings_auto_orbit = GameSettings.auto_orbit
+	set_auto_orbit(GameSettings.auto_orbit)
+	mouse_sensitivity = GameSettings.mouse_sensitivity
+	GameSettings.settings_changed.connect(_apply_settings)
+	get_viewport().size_changed.connect(_refit_view)
+
+func _refit_view() -> void:
+	if not is_instance_valid(_board):
+		return
+	var zoom_ratio := target_distance / maxf(_last_fitted_distance, 1.0)
+	_last_fitted_distance = _get_fitted_distance()
+	target_distance = clampf(_last_fitted_distance * zoom_ratio, min_zoom, maxf(max_zoom, _last_fitted_distance))
+	current_distance = target_distance
+	_update_transform()
+
+func _board_screen_rect() -> Rect2:
+	var viewport_size := get_viewport().get_visible_rect().size
+	# Ocultar o HUD não altera zoom nem deslocamento da projeção. A mesma
+	# área de referência é usada até que a janela seja redimensionada.
+	return ResponsiveLayout.battle_metrics(viewport_size)["board_rect"]
+
+func _apply_settings() -> void:
+	mouse_sensitivity = GameSettings.mouse_sensitivity
+	if _settings_auto_orbit != GameSettings.auto_orbit:
+		_settings_auto_orbit = GameSettings.auto_orbit
+		set_auto_orbit(_settings_auto_orbit)
+
+func cancel_manual_orbit() -> void:
+	_manual_orbit = false
 
 func focus_on_board(board: Board3D) -> void:
 	if not is_instance_valid(board):
@@ -66,7 +97,8 @@ func reset_view(immediate: bool = false) -> void:
 	_manual_orbit = false
 	_target_yaw = deg_to_rad(initial_yaw_degrees)
 	_target_elevation = deg_to_rad(clampf(initial_elevation_degrees, min_elevation, max_elevation))
-	target_distance = clampf(initial_distance if initial_distance > 0.0 else _get_fitted_distance(), min_zoom, max_zoom)
+	_last_fitted_distance = _get_fitted_distance()
+	target_distance = clampf(initial_distance if initial_distance > 0.0 else _last_fitted_distance, min_zoom, maxf(max_zoom, _last_fitted_distance))
 	if immediate:
 		_current_yaw = _target_yaw
 		_current_elevation = _target_elevation
@@ -115,10 +147,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				_manual_orbit = true
 				get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_WHEEL_UP:
-				target_distance = clampf(target_distance - zoom_speed, min_zoom, max_zoom)
+				target_distance = clampf(target_distance - zoom_speed, min_zoom, maxf(max_zoom, _last_fitted_distance))
 				get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_WHEEL_DOWN:
-				target_distance = clampf(target_distance + zoom_speed, min_zoom, max_zoom)
+				target_distance = clampf(target_distance + zoom_speed, min_zoom, maxf(max_zoom, _last_fitted_distance))
 				get_viewport().set_input_as_handled()
 
 func _process(delta: float) -> void:
@@ -154,6 +186,16 @@ func _update_transform() -> void:
 	)
 	global_position = look_at_position + direction * current_distance
 	look_at(look_at_position, Vector3.UP)
+	# Desloca a projeção para o espaço livre entre o HUD e o banco.
+	var viewport_size := get_viewport().get_visible_rect().size
+	var center := _board_screen_rect().get_center()
+	var tan_vertical := tan(deg_to_rad(fov * 0.5))
+	var tan_horizontal := tan_vertical * viewport_size.x / maxf(viewport_size.y, 1.0)
+	camera.position = Vector3(
+		-(2.0 * center.x / viewport_size.x - 1.0) * current_distance * tan_horizontal,
+		-(1.0 - 2.0 * center.y / viewport_size.y) * current_distance * tan_vertical,
+		0.0
+	)
 
 func _get_fitted_distance() -> float:
 	if not is_instance_valid(_board):
@@ -163,6 +205,9 @@ func _get_fitted_distance() -> float:
 	var aspect_ratio := viewport_size.x / maxf(viewport_size.y, 1.0)
 	var tan_vertical := tan(deg_to_rad(fov * 0.5))
 	var tan_horizontal := tan_vertical * maxf(aspect_ratio, 0.1)
+	var available := _board_screen_rect().size
+	tan_horizontal *= available.x / maxf(viewport_size.x, 1.0)
+	tan_vertical *= available.y / maxf(viewport_size.y, 1.0)
 	var backward := Vector3(sin(_target_yaw) * cos(_target_elevation), sin(_target_elevation), cos(_target_yaw) * cos(_target_elevation))
 	var right := Vector3(cos(_target_yaw), 0.0, -sin(_target_yaw))
 	var up := backward.cross(right)

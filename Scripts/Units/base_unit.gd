@@ -23,7 +23,10 @@ var current_state: State = State.IDLE
 var current_target: BaseUnit3D = null
 var invested_gold: int = 0
 var synergy_bonuses: Dictionary = {}
-var current_shield: float = 0.0
+var current_shield: float = 0.0:
+	set(value):
+		current_shield = maxf(value, 0.0)
+		update_stats_display()
 var enemies_defeated: int = 0
 var first_attack_used: bool = false
 var first_hit_checked: bool = false
@@ -36,7 +39,9 @@ var _health_regen_accumulator: float = 0.0
 var _burn_generation: int = 0
 var _burn_expires_at_msec: int = 0
 var _rooted_target_timer := 0.0
-var _aura_ring: MeshInstance3D
+var _aura_indicator: Node3D
+var _aura_center := Vector2i(-1, -1)
+var _aura_radius: int = -1
 
 ## Posição no Board
 var board_position: Vector2i = Vector2i.ZERO
@@ -55,6 +60,7 @@ var _star_upgrade_effect_pending: bool = false
 
 ## UI 3D
 var health_bar_3d: ProgressBar
+var shield_bar_3d: ProgressBar
 var mana_bar_3d: ProgressBar
 var name_label: Label
 var hp_label: Label
@@ -138,7 +144,7 @@ func move_direct_to_target() -> void:
 		rotation.y = lerp_angle(rotation.y, target_rotation, 0.15)
 	
 	# Verificar se chegou perto o suficiente para atacar
-	if planar_offset.length() <= (stats.attack_range * 2.0 + 0.5):
+	if planar_offset.length() <= get_attack_range_meters():
 		if debug_movement:
 			print("%s chegou no range de ataque!" % stats.unit_name)
 		current_state = State.IDLE
@@ -209,27 +215,71 @@ func setup_model() -> void:
 	setup_aura_indicator()
 
 func setup_aura_indicator() -> void:
-	if _aura_ring:
-		_aura_ring.queue_free()
-		_aura_ring = null
-	if stats.passive_aura_power <= 0.0:
+	if is_instance_valid(_aura_indicator):
+		_aura_indicator.queue_free()
+		_aura_indicator = null
+	_aura_center = Vector2i(-1, -1)
+	_aura_radius = -1
+	if stats.passive_aura_effect != "power" or stats.passive_aura_power <= 0.0 or stats.passive_aura_range <= 0:
 		return
-	_aura_ring = MeshInstance3D.new()
-	_aura_ring.name = "PowerAura"
-	var ring := TorusMesh.new()
-	ring.inner_radius = stats.passive_aura_range - 0.035
-	ring.outer_radius = stats.passive_aura_range
-	_aura_ring.mesh = ring
-	_aura_ring.position.y = 0.04
-	_aura_ring.scale.y = 0.1
+	_aura_indicator = Node3D.new()
+	_aura_indicator.name = "HexPowerAura"
+	_aura_indicator.top_level = true
+	_aura_indicator.visible = false
+	add_child(_aura_indicator)
+
+func _update_aura_indicator() -> void:
+	if not is_instance_valid(_aura_indicator):
+		return
+	# A área também orienta a preparação; o bônus continua exclusivo do combate.
+	_aura_indicator.visible = visible and current_state != State.DEAD
+	if not _aura_indicator.visible:
+		return
+	var board := _get_combat_board()
+	if not board:
+		_aura_indicator.hide()
+		return
+	var center := board.get_grid_position(board.to_local(global_position))
+	if not board.get_cell(center):
+		_aura_indicator.hide()
+		return
+	# Os hexes ficam no chão, sem acompanhar a rotação/animação da unidade.
+	_aura_indicator.global_transform = Transform3D.IDENTITY
+	if center == _aura_center and _aura_radius == stats.passive_aura_range:
+		return
+	_aura_center = center
+	_aura_radius = stats.passive_aura_range
+	for child in _aura_indicator.get_children():
+		_aura_indicator.remove_child(child)
+		child.queue_free()
+	var outline := _make_aura_hex_outline(board.get_hex_radius() * 0.9)
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.35, 0.9, 0.55, 0.3) if team == 0 else Color(1.0, 0.4, 0.45, 0.3)
+	material.albedo_color = Color(0.35, 0.9, 0.55, 0.5) if team == 0 else Color(1.0, 0.4, 0.45, 0.5)
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_aura_ring.material_override = material
-	_aura_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_aura_ring.visible = false
-	add_child(_aura_ring)
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	for cell in board.get_cells_in_hex_radius(center, stats.passive_aura_range):
+		var marker := MeshInstance3D.new()
+		marker.mesh = outline
+		marker.material_override = material
+		marker.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_aura_indicator.add_child(marker)
+		marker.position = board.get_cell_world_position(cell) + Vector3.UP * 0.11
+
+func _make_aura_hex_outline(radius: float) -> ImmediateMesh:
+	var mesh := ImmediateMesh.new()
+	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	var inner_radius := maxf(0.0, radius - 0.04)
+	for side in 6:
+		var a := TAU * float(side) / 6.0
+		var b := TAU * float(side + 1) / 6.0
+		var direction_a := Vector3(sin(a), 0.0, cos(a))
+		var direction_b := Vector3(sin(b), 0.0, cos(b))
+		for vertex in [direction_a * radius, direction_a * inner_radius, direction_b * radius,
+				direction_b * radius, direction_a * inner_radius, direction_b * inner_radius]:
+			mesh.surface_add_vertex(vertex)
+	mesh.surface_end()
+	return mesh
 
 func get_team_display_color() -> Color:
 	var tier_color := stats.get_tier_color()
@@ -351,6 +401,11 @@ func setup_stats_display() -> void:
 
 	health_bar_3d = _make_unit_bar("HealthBar", Rect2(9, 38, 126, 8), Color("#65bf69"))
 	root.add_child(health_bar_3d)
+	# Faixa ciano separada da vida: nunca confunde escudo com cura.
+	shield_bar_3d = _make_unit_bar("ShieldBar", Rect2(9, 46, 126, 3), Color("#74e6f5"))
+	shield_bar_3d.add_theme_stylebox_override("background", StyleBoxEmpty.new())
+	shield_bar_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(shield_bar_3d)
 	mana_bar_3d = _make_unit_bar("ManaBar", Rect2(9, 50, 126, 6), stats.get_tier_color())
 	root.add_child(mana_bar_3d)
 
@@ -407,6 +462,13 @@ func update_stats_display() -> void:
 	var hp_percent := current_health / maxf(get_max_health(), 1.0)
 	hp_label.text = "HP %d" % int(current_health)
 	mana_label.text = "MP %.0f%%" % (mana_percent * 100.0)
+	if has_active_shield():
+		mana_label.text = "ESC %d" % ceili(current_shield)
+	if is_instance_valid(shield_bar_3d):
+		shield_bar_3d.visible = has_active_shield()
+		shield_bar_3d.max_value = maxf(get_max_health(), current_shield)
+		shield_bar_3d.value = current_shield
+	mana_bar_3d.modulate = Color(0.45, 0.45, 0.45) if has_active_shield() else Color.WHITE
 	health_bar_3d.value = current_health
 	mana_bar_3d.value = current_mana
 	var health_fill := health_bar_3d.get_theme_stylebox("fill") as StyleBoxFlat
@@ -418,6 +480,8 @@ func update_stats_display() -> void:
 		health_fill.bg_color = Color("#d85852")
 
 	mana_label.add_theme_color_override("font_color", Color("#f5da80") if mana_percent >= 1.0 else Color("#c5ddff"))
+	if has_active_shield():
+		mana_label.add_theme_color_override("font_color", Color("#74e6f5"))
 
 
 
@@ -490,7 +554,7 @@ func get_max_health() -> float:
 func get_attack_damage() -> float:
 	var star_multiplier: float = stats.get_star_multiplier(star_level)
 	var base_damage: float = stats.attack_damage * star_multiplier
-	if Time.get_ticks_msec() < attack_weakened_until_msec:
+	if BattleClock.now_msec() < attack_weakened_until_msec:
 		base_damage *= attack_damage_multiplier
 	
 	for buff in active_buffs:
@@ -499,7 +563,7 @@ func get_attack_damage() -> float:
 	
 	var damage_multiplier := 1.0 + float(synergy_bonuses.get("damage_pct", 0.0)) + get_power_aura_bonus()
 	if is_instance_valid(current_target):
-		if current_target.marked_team == team and Time.get_ticks_msec() < current_target.mark_expires_at_msec:
+		if current_target.marked_team == team and BattleClock.now_msec() < current_target.mark_expires_at_msec:
 			damage_multiplier += float(synergy_bonuses.get("marked_target_damage_pct", 0.0))
 		if _has_ally_focusing_target(current_target):
 			damage_multiplier += float(synergy_bonuses.get("focus_fire_damage_pct", 0.0))
@@ -508,6 +572,12 @@ func get_attack_damage() -> float:
 func get_power_aura_bonus() -> float:
 	if not is_inside_tree() or not visible or current_state in [State.IDLE, State.DEAD]:
 		return 0.0
+	var board := _get_combat_board()
+	if not board:
+		return 0.0
+	var target_cell := board.get_grid_position(board.to_local(global_position))
+	if not board.get_cell(target_cell):
+		return 0.0
 	var bonus := 0.0
 	var ally_group := "player_units" if team == 0 else "enemy_units"
 	for source: BaseUnit3D in get_tree().get_nodes_in_group(ally_group):
@@ -515,8 +585,8 @@ func get_power_aura_bonus() -> float:
 			continue
 		if source.stats.passive_aura_effect != "power":
 			continue
-		var distance := Vector2(global_position.x, global_position.z).distance_to(Vector2(source.global_position.x, source.global_position.z))
-		if distance <= source.stats.passive_aura_range:
+		var source_cell := board.get_grid_position(board.to_local(source.global_position))
+		if source.stats.passive_aura_range > 0 and board.get_cell(source_cell) and board.get_hex_distance(source_cell, target_cell) <= source.stats.passive_aura_range:
 			bonus = maxf(bonus, source.stats.passive_aura_power)
 	return bonus
 
@@ -544,21 +614,21 @@ func _has_ally_focusing_target(target: BaseUnit3D) -> bool:
 
 func get_effective_attack_speed() -> float:
 	var speed := stats.attack_speed * (1.0 + float(synergy_bonuses.get("attack_speed_pct", 0.0)))
-	if Time.get_ticks_msec() < slowed_until_msec:
+	if BattleClock.now_msec() < slowed_until_msec:
 		speed *= 0.7
 	return maxf(speed, 0.1)
 
 func apply_slow(duration: float) -> void:
 	var resistance := clampf(float(synergy_bonuses.get("control_resist_pct", 0.0)), 0.0, 0.9)
 	var adjusted_duration := duration * (1.0 - resistance)
-	slowed_until_msec = maxi(slowed_until_msec, Time.get_ticks_msec() + int(adjusted_duration * 1000.0))
+	slowed_until_msec = maxi(slowed_until_msec, BattleClock.now_msec() + int(adjusted_duration * 1000.0))
 	if attack_timer:
 		attack_timer.wait_time = 1.0 / get_effective_attack_speed()
 
 func apply_attack_weakness(duration: float, damage_multiplier: float = 0.7) -> void:
 	if current_state == State.DEAD or duration <= 0.0:
 		return
-	var now := Time.get_ticks_msec()
+	var now := BattleClock.now_msec()
 	if now >= attack_weakened_until_msec:
 		attack_damage_multiplier = 1.0
 	attack_damage_multiplier = minf(attack_damage_multiplier, clampf(damage_multiplier, 0.0, 1.0))
@@ -596,7 +666,7 @@ func find_target() -> void:
 	# Uma planta escolhe entre alvos que consegue alcançar sem sair da casa.
 	if stats.is_stationary and not enemies.is_empty():
 		enemies = enemies.filter(func(e):
-			return Vector2(global_position.x, global_position.z).distance_to(Vector2(e.global_position.x, e.global_position.z)) <= stats.attack_range * 2.0 + 0.5
+			return is_target_in_attack_range(e)
 		)
 		if enemies.is_empty():
 			current_target = null
@@ -656,7 +726,7 @@ func find_target() -> void:
 					weakest = enemy
 			current_target = weakest
 			current_target.marked_team = team
-			current_target.mark_expires_at_msec = Time.get_ticks_msec() + 3000
+			current_target.mark_expires_at_msec = BattleClock.now_msec() + 3000
 		print("%s mirando em %s" % [stats.unit_name, current_target.stats.unit_name])
 		check_attack_or_move()
 	else:
@@ -709,6 +779,19 @@ func get_closest_enemy(enemies: Array) -> BaseUnit3D:
 	
 	return closest
 
+func get_attack_range_meters() -> float:
+	return float(stats.get_attack_range_hexes()) * 2.0 + 0.5
+
+func is_target_in_attack_range(target: BaseUnit3D) -> bool:
+	if not is_instance_valid(target) or target.is_queued_for_deletion() or target.current_state == State.DEAD or not target.visible:
+		return false
+	return Vector2(global_position.x, global_position.z).distance_to(
+		Vector2(target.global_position.x, target.global_position.z)
+	) <= get_attack_range_meters()
+
+func has_pending_combat_effects() -> bool:
+	return current_state == State.CASTING or BattleClock.now_msec() < _burn_expires_at_msec
+
 func check_attack_or_move() -> void:
 	if current_state == State.DEAD or current_state == State.CASTING:
 		return
@@ -729,8 +812,7 @@ func check_attack_or_move() -> void:
 	var distance := Vector2(global_position.x, global_position.z).distance_to(
 		Vector2(current_target.global_position.x, current_target.global_position.z)
 	)
-	var attack_range_meters: float = stats.attack_range * 2.0
-	var range_threshold: float = attack_range_meters + 0.5
+	var range_threshold := get_attack_range_meters()
 	
 	if debug_movement:
 		print("%s: dist=%.2fm, range=%.2fm" % [
@@ -921,7 +1003,7 @@ func get_movement_speed() -> float:
 	if stats.is_stationary:
 		return 0.0
 	var speed := stats.movement_speed / 100.0 * (1.0 + float(synergy_bonuses.get("move_speed_pct", 0.0)))
-	if Time.get_ticks_msec() < slowed_until_msec:
+	if BattleClock.now_msec() < slowed_until_msec:
 		speed *= 0.7
 	return speed
 
@@ -991,13 +1073,14 @@ func perform_attack() -> void:
 	var target_distance := Vector2(global_position.x, global_position.z).distance_to(
 		Vector2(current_target.global_position.x, current_target.global_position.z)
 	)
-	if target_distance > float(stats.attack_range) * 2.0 + 0.5:
+	if target_distance > get_attack_range_meters():
 		check_attack_or_move()
 		return
 	
 	_face_target()
-	unit_visual.play_attack(stats.attack_range > 1, 1.0 / get_effective_attack_speed())
-	if stats.is_stationary:
+	var ranged_attack := stats.get_attack_range_hexes() > 1
+	unit_visual.play_attack(ranged_attack, 1.0 / get_effective_attack_speed())
+	if stats.is_stationary and ranged_attack:
 		_show_plant_projectile(current_target.global_position)
 	
 	var damage: float = get_attack_damage()
@@ -1068,6 +1151,7 @@ func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.Dam
 	var actual_damage: float = amount * (1.0 - mitigation) * (1.0 - clampf(extra_reduction, 0.0, 0.8))
 	if actual_damage <= 0.0:
 		return
+	var was_shielded := has_active_shield()
 	var shield_absorbed := minf(current_shield, actual_damage)
 	current_shield -= shield_absorbed
 	var health_damage := actual_damage - shield_absorbed
@@ -1083,7 +1167,9 @@ func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.Dam
 		CombatFeedback.create_hit_particles(global_position, Color.RED)
 	
 	flash_damage()
-	add_mana(stats.mana_when_hit)
+	# O golpe que quebra o escudo também não gera mana.
+	if not was_shielded and current_health > 0.0:
+		add_mana(stats.mana_when_hit)
 	if float(synergy_bonuses.get("root_on_hit_chance", 0.0)) > 0.0 and is_instance_valid(attacker) and randf() < float(synergy_bonuses.get("root_on_hit_chance", 0.0)):
 		attacker.apply_slow(1.0)
 	
@@ -1101,7 +1187,7 @@ func heal(amount: float, healer: BaseUnit3D = null) -> float:
 	var heal_multiplier := 1.0 + float(synergy_bonuses.get("healing_received_pct", 0.0))
 	if is_instance_valid(healer):
 		heal_multiplier *= 1.0 + float(healer.synergy_bonuses.get("healing_power_pct", 0.0))
-	if Time.get_ticks_msec() < _burn_expires_at_msec:
+	if BattleClock.now_msec() < _burn_expires_at_msec:
 		heal_multiplier *= 0.4
 	var healed_amount := minf(amount * heal_multiplier, maxf(get_max_health() - current_health, 0.0))
 	if healed_amount <= 0.0:
@@ -1117,9 +1203,12 @@ func flash_damage() -> void:
 	if unit_visual:
 		unit_visual.flash_damage()
 
+func has_active_shield() -> bool:
+	return current_shield > 0.0
+
 func add_mana(amount: float) -> void:
-	# Não ganhar mana se não estiver em combate
-	if current_state == State.IDLE:
+	# Centraliza o bloqueio para ataques, golpes recebidos, regeneração e aliados.
+	if current_state in [State.IDLE, State.DEAD, State.CASTING] or has_active_shield() or amount <= 0.0:
 		return
 	
 	var adjusted_amount := amount * (1.0 + float(synergy_bonuses.get("mana_generation_pct", 0.0)))
@@ -1130,7 +1219,7 @@ func add_mana(amount: float) -> void:
 		cast_ability()
 
 func cast_ability() -> void:
-	if not stats.ability_name or current_state == State.DEAD:
+	if not stats.ability_name or current_state in [State.DEAD, State.CASTING] or has_active_shield():
 		return
 	
 	# IMPORTANTE: Não usar habilidade se não estiver em combate
@@ -1153,7 +1242,7 @@ func cast_ability() -> void:
 	
 	apply_ability_effect()
 	
-	await get_tree().create_timer(0.5).timeout
+	await get_tree().create_timer(0.5, false).timeout
 	# O ataque pode ter retomado (ou a unidade pode ter morrido) enquanto a
 	# habilidade aguardava. Só encerra o estado se ainda for esta conjuração.
 	if current_state == State.CASTING:
@@ -1200,7 +1289,7 @@ func _apply_ability_energy() -> void:
 	var allies: Array = get_tree().get_nodes_in_group(ally_group).filter(func(ally):
 		if not is_instance_valid(ally) or ally == self or not ally.visible:
 			return false
-		if ally.current_state not in [State.MOVING, State.ATTACKING, State.ROOTED] or ally.current_mana >= ally.stats.max_mana:
+		if ally.current_state not in [State.MOVING, State.ATTACKING, State.ROOTED] or ally.has_active_shield() or ally.current_mana >= ally.stats.max_mana:
 			return false
 		var distance := Vector2(global_position.x, global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
 		return distance <= maxf(stats.ability_range, stats.attack_range * 2.0)
@@ -1225,10 +1314,15 @@ func _cast_anhanga_roar() -> void:
 			CombatFeedback.create_hit_particles(enemy.global_position, Color("#8ee58b"))
 
 func _cast_papa_figo() -> void:
-	if is_instance_valid(current_target) and current_target.current_state != State.DEAD:
-		current_target.take_damage(stats.ability_damage, self, stats.ability_damage_type)
-		current_target.apply_attack_weakness(stats.ability_duration if stats.ability_duration > 0.0 else 5.0, 0.75)
-		CombatFeedback.create_hit_particles(current_target.global_position, Color("#b8e8ff"))
+	# take_damage pode matar o alvo e limpar current_target imediatamente.
+	# Guarda o alvo e a posição antes do dano, sem consultar novamente o alvo da IA.
+	var target := current_target
+	if is_instance_valid(target) and not target.is_queued_for_deletion() and target.current_state != State.DEAD:
+		var impact_position := target.global_position
+		target.take_damage(stats.ability_damage, self, stats.ability_damage_type)
+		if is_instance_valid(target) and not target.is_queued_for_deletion() and target.current_state != State.DEAD and current_state == State.CASTING:
+			target.apply_attack_weakness(stats.ability_duration if stats.ability_duration > 0.0 else 5.0, 0.75)
+		CombatFeedback.create_hit_particles(impact_position, Color("#b8e8ff"))
 	_apply_ability_healing()
 
 func _cast_teiniagua_orb() -> void:
@@ -1419,21 +1513,21 @@ func _create_burning_hex(board: Board3D, cell: Vector2i, duration: float) -> voi
 	flames.draw_pass_1 = spark_mesh
 	flames.position.y = 0.18
 	fire_effect.add_child(flames)
-	get_tree().create_timer(duration).timeout.connect(fire_effect.queue_free)
+	get_tree().create_timer(duration, false).timeout.connect(fire_effect.queue_free)
 
 func apply_burn(duration: float, source: BaseUnit3D, damage_per_tick: float) -> void:
 	if current_state == State.DEAD or duration <= 0.0 or damage_per_tick <= 0.0:
 		return
 	_burn_generation += 1
 	var generation := _burn_generation
-	_burn_expires_at_msec = Time.get_ticks_msec() + int(duration * 1000.0)
+	_burn_expires_at_msec = BattleClock.now_msec() + int(duration * 1000.0)
 	CombatFeedback.create_status_indicator(self, "QUEIMADO", duration)
 	_run_burn_ticks(generation, duration, source, damage_per_tick)
 
 func _run_burn_ticks(generation: int, duration: float, source: BaseUnit3D, damage_per_tick: float) -> void:
 	var elapsed := 0.0
 	while elapsed < duration and current_state != State.DEAD:
-		await get_tree().create_timer(0.5).timeout
+		await get_tree().create_timer(0.5, false).timeout
 		if generation != _burn_generation or current_state == State.DEAD:
 			return
 		elapsed += 0.5
@@ -1466,6 +1560,7 @@ func die() -> void:
 		return
 	current_state = State.DEAD
 	current_health = 0
+	current_shield = 0.0
 	attack_timer.stop()
 	velocity = Vector3.ZERO
 	collision_layer = 0
@@ -1484,7 +1579,7 @@ func die() -> void:
 			unit.current_target = null
 	# A morte lógica é imediata; apenas o corpo espera a animação terminar.
 	died.emit(self)
-	await get_tree().create_timer(death_duration).timeout
+	await get_tree().create_timer(death_duration, false).timeout
 	# O fim da rodada pode reviver a unidade antes de a animação terminar.
 	if generation != _death_generation or current_state != State.DEAD:
 		return
@@ -1500,6 +1595,7 @@ func revive_at_position(world_pos: Vector3) -> void:
 	current_state = State.IDLE
 	current_health = get_max_health()
 	current_mana = stats.starting_mana
+	current_shield = 0.0
 	current_target = null
 	velocity = Vector3.ZERO
 	
@@ -1530,8 +1626,7 @@ func update_mana_bar() -> void:
 	mana_changed.emit(current_mana, stats.max_mana)
 
 func _process(delta: float) -> void:
-	if _aura_ring:
-		_aura_ring.visible = visible and current_state not in [State.IDLE, State.DEAD]
+	_update_aura_indicator()
 	if unit_visual:
 		unit_visual.update_locomotion(current_state == State.MOVING, get_movement_speed(), current_state == State.IDLE)
 	if current_state == State.DEAD or current_state == State.IDLE:

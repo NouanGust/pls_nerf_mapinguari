@@ -1,79 +1,118 @@
 # Sinergias e elenco — Folchess
 
-Atualizado em **16/10/2026**. Este documento descreve as regras implementadas em `Scripts/Systems/synergy_system.gd` e os **45 recursos de unidade**. Substitui a proposta anterior de ativação universal com duas unidades.
+Atualizado em **19/10/2026**. Fonte: `Scripts/Systems/synergy_system.gd` e os 45 recursos em `resources/units`.
 
 ## Regras de ativação
 
-- Só contam unidades visíveis e vivas no campo; reservas ficam fora da contagem.
-- Cada `unit_id` conta uma vez por equipe, mesmo com várias cópias ou estrelas diferentes.
-- Uma unidade contribui para todas as suas origens, classes e afinidades. Origem Aquático e classe Aquático são grupos separados.
-- Cada regra aplica apenas o bônus do maior patamar alcançado, sem somar os patamares anteriores. Os bônus continuam compartilhados pela equipe.
-- Grupos com patamar **1** ativam com qualquer uma de suas unidades; levar outra portadora não duplica o efeito. Não são exclusivos de uma espécie.
-- A interface mostra apenas grupos representados no campo, incluindo os inativos; o tooltip lista todos os patamares e integrantes.
+- Cada unidade possui **uma origem e uma ou duas classes**, totalizando no máximo três sinergias.
+- Fauna e Flora permanecem como tipos informativos, sem contagem, efeitos ou entradas no painel de sinergias.
+- Só contam unidades visíveis e vivas no campo. Banco não conta; cada `unit_id` conta uma vez por equipe, independentemente das cópias e estrelas.
+- Cada sinergia aplica somente o maior patamar alcançado. Os bônus continuam compartilhados pela equipe.
+- O painel mostra apenas grupos representados no campo, ativos ou inativos; o tooltip lista os integrantes disponíveis.
+- Aquático é apenas classe. A antiga origem Aquático foi removida para evitar duas classificações com o mesmo nome.
+- Sertanejo passa a ser uma origem exclusiva de Pé-de-Garrafa, ativada com uma unidade; Metamorfo também mantém ativação individual.
+- Todos os patamares abaixo são alcançáveis com espécies diferentes. Habitats/biomas não concedem origens extras.
 
-## Patamares implementados
+## Patamares e distribuição
 
-| Categoria | Sinergia | Patamares | Unidades no elenco | Custo 1–2 | Efeitos por patamar |
+| Categoria | Sinergia | Patamares | Elenco | Custo 1–2 | Efeitos |
 | --- | --- | --- | ---: | ---: | --- |
-| Origem | Amazônico | 3/6 | 13 | 2 | **3:** Regenera 4 de vida por segundo; **6:** Regenera 8 de vida por segundo |
-| Origem | Aquático | 1 | 2 | 0 | **1:** Começa o combate com escudo de 8% da vida |
-| Origem | Caatinga | 2/4 | 4 | 3 | **2:** Recebe 8% menos dano; **4:** Recebe 15% menos dano e resiste a controle |
-| Origem | Cerrado | 2/4 | 4 | 4 | **2:** Ganha 6% de crítico por inimigo derrotado; **4:** Ganha 12% de crítico por inimigo derrotado |
-| Origem | Litorâneo | 2/4 | 9 | 3 | **2:** +10% de velocidade de ataque; **4:** +20% de velocidade de ataque e resistência a controle |
-| Origem | Mata Atlântica | 3/5 | 8 | 5 | **3:** Regenera 4 de vida por segundo; **5:** Regenera 8/s e cura de habilidades +15% |
-| Origem | Pantaneiro | 3/5 | 10 | 4 | **3:** +8% de vida máxima e cura recebida; **5:** +15% de vida máxima e cura recebida |
-| Origem | Sertanejo | 3/5 | 5 | 3 | **3:** Com pouca vida, recebe 10% menos dano; **5:** Com pouca vida, recebe 20% menos dano |
-| Origem | Urbano | 2/4 | 5 | 2 | **2:** +10% de velocidade de ataque; primeiro golpe +15%; **4:** +20% de velocidade de ataque; primeiro golpe +30% |
-| Classe | Aquático | 2/4 | 8 | 4 | **2:** +12 de resistência mágica; **4:** +24 de resistência mágica |
-| Classe | Assombração | 2/4 | 8 | 2 | **2:** Ataques têm 15% de chance de desacelerar; **4:** Ataques têm 30% de chance de desacelerar |
-| Classe | Caçador | 2/4 | 8 | 4 | **2:** Marca o alvo mais ferido; equipe causa +10% de dano; **4:** Marca o alvo mais ferido; equipe causa +20% de dano |
-| Classe | DPS | 2/4 | 11 | 3 | **2:** +8% de dano causado; **4:** +16% de dano causado |
-| Classe | Encantado | 2/4 | 5 | 1 | **2:** +15% de poder de habilidade e cura; **4:** +30% de poder de habilidade e cura |
-| Classe | Metamorfo | 1 | 2 | 0 | **1:** 20% de chance de esquivar do primeiro golpe |
-| Classe | Místico | 2/4 | 8 | 3 | **2:** +12% de poder de habilidade e geração de mana; **4:** +24% de poder de habilidade e geração de mana |
-| Classe | Protetor da Mata | 2/4 | 13 | 4 | **2:** +12 de armadura; **4:** +24 de armadura e regenera 3 de vida/s |
-| Classe | Suporte | 2/4 | 17 | 8 | **2:** +15% de cura e escudos concedidos; **4:** +30% de cura e escudos concedidos |
-| Classe | Tank | 3/6 | 17 | 6 | **3:** +10% de vida máxima e 10 de armadura; **6:** +20% de vida máxima e 20 de armadura |
-| Afinidade | Fauna | 3/6 | 13 | 8 | **3:** +10% de velocidade de ataque e movimento; **6:** +20% de velocidade; aliados focados causam +10% |
-| Afinidade | Flora | 3/6 | 13 | 10 | **3:** +15% de cura e escudos recebidos; **6:** +30% de cura e escudos; 15% de chance de enraizar |
-
-Amazônico começa em três e exige ao menos uma unidade de custo 3 ou mais nesta distribuição; Guaraná e Vitória-régia iniciam o caminho. Metamorfo aparece a partir do custo 3, e a origem Aquático está nas lendas de custo 5. As sinergias individuais têm bônus reduzidos para compensar a ativação com uma só unidade.
+| Origem | Amazônico | 3/6 | 12 | 2 | Regenera 4 de vida por segundo; Regenera 8 de vida por segundo |
+| Origem | Caatinga | 2/4 | 4 | 3 | Recebe 8% menos dano; Recebe 15% menos dano e resiste a controle |
+| Origem | Cerrado | 2/4 | 4 | 4 | Ganha 6% de crítico por inimigo derrotado; Ganha 12% de crítico por inimigo derrotado |
+| Origem | Litorâneo | 2/4 | 5 | 2 | +10% de velocidade de ataque; +20% de velocidade de ataque e resistência a controle |
+| Origem | Mata Atlântica | 3/5 | 7 | 4 | Regenera 4 de vida por segundo; Regenera 8/s e cura de habilidades +15% |
+| Origem | Pantaneiro | 3/5 | 7 | 2 | +8% de vida máxima e +15% de cura recebida; +15% de vida máxima e +30% de cura recebida |
+| Origem | Sertanejo | 1 | 1 | 0 | Com pouca vida, recebe 10% menos dano |
+| Origem | Urbano | 2/4 | 5 | 2 | +10% de velocidade de ataque; primeiro golpe +15%; +20% de velocidade de ataque; primeiro golpe +30% |
+| Classe | Aquático | 2/4 | 8 | 4 | +12 de resistência mágica; +24 de resistência mágica |
+| Classe | Assombração | 2/4 | 7 | 2 | Ataques têm 15% de chance de desacelerar; Ataques têm 30% de chance de desacelerar |
+| Classe | Caçador | 2/4 | 8 | 4 | Marca o alvo mais ferido; equipe causa +10% de dano; Marca o alvo mais ferido; equipe causa +20% de dano |
+| Classe | DPS | 2/4 | 8 | 3 | +8% de dano causado; +16% de dano causado |
+| Classe | Encantado | 2/4 | 5 | 1 | +15% de cura realizada; +30% de cura realizada |
+| Classe | Metamorfo | 1 | 2 | 0 | 20% de chance de esquivar do primeiro golpe |
+| Classe | Místico | 2/4 | 6 | 3 | +12% de cura realizada e +10% de geração de mana; +24% de cura realizada e +20% de geração de mana |
+| Classe | Protetor da Mata | 2/4 | 13 | 4 | +12 de armadura; +24 de armadura e regenera 3 de vida/s |
+| Classe | Suporte | 2/4 | 13 | 8 | +15% de cura e escudos concedidos; +30% de cura e escudos concedidos |
+| Classe | Tank | 3/6 | 17 | 6 | +10% de vida máxima e 10 de armadura; +20% de vida máxima e 20 de armadura |
 
 ## Integrantes por sinergia
 
-- **Origem — Amazônico (3/6):** Alamoa (3g), Anhangá (3g), Boiúna (5g), Caapora (4g), Comadre Fulozinha (4g), Guaraná (1g), Labatut (3g), Mapinguari (3g), Matinta Perera (3g), Onça-pintada (4g), Quibungo (3g), Sumaúma (4g), Vitória-régia (2g).
-- **Origem — Aquático (1):** Boiúna (5g), Mãe-D'Água (5g).
-- **Origem — Caatinga (2/4):** Arara-azul-de-lear (2g), Ararinha-azul (5g), Mandacaru (1g), Tatu-bola-do-nordeste (1g).
-- **Origem — Cerrado (2/4):** Lobo-guará (2g), Tamanduá-bandeira (2g), Pequi (1g), Ipê-amarelo (2g).
-- **Origem — Litorâneo (2/4):** Alamoa (3g), Cabeça-de-Cuia (3g), Mãe-D'Água (5g), Mboi-Guaçu (4g), Mutum-de-alagoas (5g), Palmito-juçara (2g), Pau-brasil (4g), Bromélia (1g), Caranguejo-uçá (2g).
-- **Origem — Mata Atlântica (3/5):** Araucária (4g), Brinco-de-princesa (1g), Mutum-de-alagoas (5g), Palmito-juçara (2g), Pau-brasil (4g), Sabiá-laranjeira (1g), Bromélia (1g), Jararaca (2g).
-- **Origem — Pantaneiro (3/5):** Lobo-guará (2g), Mãe-de-Ouro (3g), Mboi-Guaçu (4g), Minhocão (3g), Onça-pintada (4g), Romãozinho (5g), Tamanduá-bandeira (2g), Teiniaguá (3g), Capivara (1g), Aguapé (2g).
-- **Origem — Sertanejo (3/5):** Arara-azul-de-lear (2g), Ararinha-azul (5g), Mandacaru (1g), Pé-de-Garrafa (5g), Tatu-bola-do-nordeste (1g).
-- **Origem — Urbano (2/4):** Corpo-Seco (4g), Cumacanga (1g), Papa-Figo (2g), Pisadeira (4g), Tutu-Marambá (5g).
-- **Classe — Aquático (2/4):** Alamoa (3g), Cabeça-de-Cuia (3g), Labatut (3g), Mboi-Guaçu (4g), Vitória-régia (2g), Capivara (1g), Caranguejo-uçá (2g), Aguapé (2g).
-- **Classe — Assombração (2/4):** Cabeça-de-Cuia (3g), Corpo-Seco (4g), Cumacanga (1g), Matinta Perera (3g), Papa-Figo (2g), Pé-de-Garrafa (5g), Pisadeira (4g), Tutu-Marambá (5g).
-- **Classe — Caçador (2/4):** Arara-azul-de-lear (2g), Ararinha-azul (5g), Caapora (4g), Lobo-guará (2g), Onça-pintada (4g), Pé-de-Garrafa (5g), Sabiá-laranjeira (1g), Jararaca (2g).
-- **Classe — DPS (2/4):** Arara-azul-de-lear (2g), Boiúna (5g), Caapora (4g), Cabeça-de-Cuia (3g), Corpo-Seco (4g), Cumacanga (1g), Mãe-de-Ouro (3g), Onça-pintada (4g), Pé-de-Garrafa (5g), Teiniaguá (3g), Jararaca (2g).
-- **Classe — Encantado (2/4):** Alamoa (3g), Brinco-de-princesa (1g), Comadre Fulozinha (4g), Mãe-D'Água (5g), Romãozinho (5g).
-- **Classe — Metamorfo (1):** Matinta Perera (3g), Romãozinho (5g).
-- **Classe — Místico (2/4):** Boiúna (5g), Guaraná (1g), Labatut (3g), Mãe-D'Água (5g), Mãe-de-Ouro (3g), Palmito-juçara (2g), Teiniaguá (3g), Pequi (1g).
-- **Classe — Protetor da Mata (2/4):** Anhangá (3g), Araucária (4g), Caapora (4g), Comadre Fulozinha (4g), Mandacaru (1g), Mapinguari (3g), Minhocão (3g), Pau-brasil (4g), Quibungo (3g), Sumaúma (4g), Tamanduá-bandeira (2g), Tatu-bola-do-nordeste (1g), Ipê-amarelo (2g).
-- **Classe — Suporte (2/4):** Alamoa (3g), Ararinha-azul (5g), Brinco-de-princesa (1g), Comadre Fulozinha (4g), Guaraná (1g), Labatut (3g), Lobo-guará (2g), Mãe-D'Água (5g), Mãe-de-Ouro (3g), Mutum-de-alagoas (5g), Palmito-juçara (2g), Papa-Figo (2g), Pisadeira (4g), Romãozinho (5g), Vitória-régia (2g), Bromélia (1g), Aguapé (2g).
-- **Classe — Tank (3/6):** Anhangá (3g), Araucária (4g), Boiúna (5g), Mandacaru (1g), Mapinguari (3g), Mboi-Guaçu (4g), Minhocão (3g), Mutum-de-alagoas (5g), Pau-brasil (4g), Quibungo (3g), Sumaúma (4g), Tamanduá-bandeira (2g), Tatu-bola-do-nordeste (1g), Tutu-Marambá (5g), Capivara (1g), Caranguejo-uçá (2g), Ipê-amarelo (2g).
-- **Afinidade — Fauna (3/6):** Arara-azul-de-lear (2g), Ararinha-azul (5g), Boiúna (5g), Lobo-guará (2g), Mboi-Guaçu (4g), Mutum-de-alagoas (5g), Onça-pintada (4g), Tamanduá-bandeira (2g), Tatu-bola-do-nordeste (1g), Capivara (1g), Sabiá-laranjeira (1g), Jararaca (2g), Caranguejo-uçá (2g).
-- **Afinidade — Flora (3/6):** Araucária (4g), Brinco-de-princesa (1g), Guaraná (1g), Lobo-guará (2g), Mandacaru (1g), Palmito-juçara (2g), Pau-brasil (4g), Sumaúma (4g), Vitória-régia (2g), Bromélia (1g), Pequi (1g), Ipê-amarelo (2g), Aguapé (2g).
+- **Origem — Amazônico:** Guaraná (1g), Vitória-régia (2g), Anhangá (3g), Labatut (3g), Mapinguari (3g), Matinta Perera (3g), Quibungo (3g), Caapora (4g), Comadre Fulozinha (4g), Onça-pintada (4g), Sumaúma (4g), Boiúna (5g).
+- **Origem — Caatinga:** Mandacaru (1g), Tatu-bola-do-nordeste (1g), Arara-azul-de-lear (2g), Ararinha-azul (5g).
+- **Origem — Cerrado:** Pequi (1g), Ipê-amarelo (2g), Lobo-guará (2g), Tamanduá-bandeira (2g).
+- **Origem — Litorâneo:** Bromélia (1g), Caranguejo-uçá (2g), Alamoa (3g), Cabeça-de-Cuia (3g), Mãe-D'Água (5g).
+- **Origem — Mata Atlântica:** Brinco-de-princesa (1g), Sabiá-laranjeira (1g), Jararaca (2g), Palmito-juçara (2g), Araucária (4g), Pau-brasil (4g), Mutum-de-alagoas (5g).
+- **Origem — Pantaneiro:** Capivara (1g), Aguapé (2g), Mãe-de-Ouro (3g), Minhocão (3g), Teiniaguá (3g), Mboi-Guaçu (4g), Romãozinho (5g).
+- **Origem — Sertanejo:** Pé-de-Garrafa (5g).
+- **Origem — Urbano:** Cumacanga (1g), Papa-Figo (2g), Corpo-Seco (4g), Pisadeira (4g), Tutu-Marambá (5g).
+- **Classe — Aquático:** Capivara (1g), Aguapé (2g), Caranguejo-uçá (2g), Vitória-régia (2g), Alamoa (3g), Cabeça-de-Cuia (3g), Labatut (3g), Mboi-Guaçu (4g).
+- **Classe — Assombração:** Cumacanga (1g), Papa-Figo (2g), Cabeça-de-Cuia (3g), Matinta Perera (3g), Corpo-Seco (4g), Pisadeira (4g), Tutu-Marambá (5g).
+- **Classe — Caçador:** Sabiá-laranjeira (1g), Arara-azul-de-lear (2g), Jararaca (2g), Lobo-guará (2g), Caapora (4g), Onça-pintada (4g), Ararinha-azul (5g), Pé-de-Garrafa (5g).
+- **Classe — DPS:** Cumacanga (1g), Arara-azul-de-lear (2g), Jararaca (2g), Mãe-de-Ouro (3g), Teiniaguá (3g), Corpo-Seco (4g), Onça-pintada (4g), Pé-de-Garrafa (5g).
+- **Classe — Encantado:** Brinco-de-princesa (1g), Alamoa (3g), Comadre Fulozinha (4g), Mãe-D'Água (5g), Romãozinho (5g).
+- **Classe — Metamorfo:** Matinta Perera (3g), Romãozinho (5g).
+- **Classe — Místico:** Guaraná (1g), Pequi (1g), Palmito-juçara (2g), Mãe-de-Ouro (3g), Teiniaguá (3g), Boiúna (5g).
+- **Classe — Protetor da Mata:** Mandacaru (1g), Tatu-bola-do-nordeste (1g), Ipê-amarelo (2g), Tamanduá-bandeira (2g), Anhangá (3g), Mapinguari (3g), Minhocão (3g), Quibungo (3g), Araucária (4g), Caapora (4g), Comadre Fulozinha (4g), Pau-brasil (4g), Sumaúma (4g).
+- **Classe — Suporte:** Brinco-de-princesa (1g), Bromélia (1g), Guaraná (1g), Aguapé (2g), Lobo-guará (2g), Palmito-juçara (2g), Papa-Figo (2g), Vitória-régia (2g), Labatut (3g), Pisadeira (4g), Ararinha-azul (5g), Mãe-D'Água (5g), Mutum-de-alagoas (5g).
+- **Classe — Tank:** Capivara (1g), Mandacaru (1g), Tatu-bola-do-nordeste (1g), Caranguejo-uçá (2g), Ipê-amarelo (2g), Tamanduá-bandeira (2g), Anhangá (3g), Mapinguari (3g), Minhocão (3g), Quibungo (3g), Araucária (4g), Mboi-Guaçu (4g), Pau-brasil (4g), Sumaúma (4g), Boiúna (5g), Mutum-de-alagoas (5g), Tutu-Marambá (5g).
 
-## Composições iniciais de exemplo
+## Cadastro completo
 
-Todos os exemplos usam três unidades distintas, ficam disponíveis a partir do nível 3 e custam 4 moedas no total. A partida começa no nível 1, com uma vaga no campo.
+| Unidade | Custo | Origem | Classes |
+| --- | ---: | --- | --- |
+| Brinco-de-princesa | 1 | Mata Atlântica | Suporte, Encantado |
+| Bromélia | 1 | Litorâneo | Suporte |
+| Capivara | 1 | Pantaneiro | Aquático, Tank |
+| Cumacanga | 1 | Urbano | Assombração, DPS |
+| Guaraná | 1 | Amazônico | Místico, Suporte |
+| Mandacaru | 1 | Caatinga | Tank, Protetor da Mata |
+| Pequi | 1 | Cerrado | Místico |
+| Sabiá-laranjeira | 1 | Mata Atlântica | Caçador |
+| Tatu-bola-do-nordeste | 1 | Caatinga | Tank, Protetor da Mata |
+| Aguapé | 2 | Pantaneiro | Aquático, Suporte |
+| Arara-azul-de-lear | 2 | Caatinga | Caçador, DPS |
+| Caranguejo-uçá | 2 | Litorâneo | Aquático, Tank |
+| Ipê-amarelo | 2 | Cerrado | Protetor da Mata, Tank |
+| Jararaca | 2 | Mata Atlântica | Caçador, DPS |
+| Lobo-guará | 2 | Cerrado | Caçador, Suporte |
+| Palmito-juçara | 2 | Mata Atlântica | Suporte, Místico |
+| Papa-Figo | 2 | Urbano | Assombração, Suporte |
+| Tamanduá-bandeira | 2 | Cerrado | Tank, Protetor da Mata |
+| Vitória-régia | 2 | Amazônico | Aquático, Suporte |
+| Alamoa | 3 | Litorâneo | Aquático, Encantado |
+| Anhangá | 3 | Amazônico | Protetor da Mata, Tank |
+| Cabeça-de-Cuia | 3 | Litorâneo | Aquático, Assombração |
+| Labatut | 3 | Amazônico | Aquático, Suporte |
+| Mãe-de-Ouro | 3 | Pantaneiro | Místico, DPS |
+| Mapinguari | 3 | Amazônico | Protetor da Mata, Tank |
+| Matinta Perera | 3 | Amazônico | Assombração, Metamorfo |
+| Minhocão | 3 | Pantaneiro | Protetor da Mata, Tank |
+| Quibungo | 3 | Amazônico | Protetor da Mata, Tank |
+| Teiniaguá | 3 | Pantaneiro | Místico, DPS |
+| Araucária | 4 | Mata Atlântica | Tank, Protetor da Mata |
+| Caapora | 4 | Amazônico | Protetor da Mata, Caçador |
+| Comadre Fulozinha | 4 | Amazônico | Protetor da Mata, Encantado |
+| Corpo-Seco | 4 | Urbano | Assombração, DPS |
+| Mboi-Guaçu | 4 | Pantaneiro | Aquático, Tank |
+| Onça-pintada | 4 | Amazônico | Caçador, DPS |
+| Pau-brasil | 4 | Mata Atlântica | Tank, Protetor da Mata |
+| Pisadeira | 4 | Urbano | Assombração, Suporte |
+| Sumaúma | 4 | Amazônico | Tank, Protetor da Mata |
+| Ararinha-azul | 5 | Caatinga | Caçador, Suporte |
+| Boiúna | 5 | Amazônico | Místico, Tank |
+| Mãe-D'Água | 5 | Litorâneo | Encantado, Suporte |
+| Mutum-de-alagoas | 5 | Mata Atlântica | Tank, Suporte |
+| Pé-de-Garrafa | 5 | Sertanejo | Caçador, DPS |
+| Romãozinho | 5 | Pantaneiro | Encantado, Metamorfo |
+| Tutu-Marambá | 5 | Urbano | Assombração, Tank |
 
-| Composição | Sinergias ativas |
-| --- | --- |
-| Capivara + Sabiá-laranjeira + Jararaca | Fauna (3), Caçador (2) |
-| Guaraná + Pequi + Ipê-amarelo | Flora (3), Cerrado (2), Místico (2) |
-| Tatu-bola + Mandacaru + Arara-azul-de-lear | Caatinga (2), Sertanejo (3), Protetor da Mata (2) |
-| Bromélia + Brinco-de-princesa + Palmito-juçara | Flora (3), Mata Atlântica (3), Litorâneo (2), Suporte (2); composição frágil, sem tanque |
+## Exemplos de composições iniciais
 
-Os números indicam o patamar ativo, não a quantidade total de etiquetas na composição. Todos os patamares cabem no elenco e no limite máximo atual de 9 unidades (uma por nível). O balanceamento de taxas de vitória e duração das lutas ainda requer partidas de teste.
+- Capivara + Aguapé: Aquático (2).
+- Guaraná + Pequi + Ipê-amarelo: Místico (2), Cerrado (2).
+- Tatu-bola + Mandacaru + Arara-azul-de-lear: Caatinga (2), Protetor da Mata (2).
+- Bromélia + Caranguejo-uçá: Litorâneo (2).
+- Brinco-de-princesa + Sabiá-laranjeira + Palmito-juçara: Mata Atlântica (3), Suporte (2).
 
-Veja [BALANCEAMENTO_POOL.md](BALANCEAMENTO_POOL.md) para custos e movimentações do elenco.
+O detalhamento dos ajustes de combate está em [BALANCEAMENTO_COMBATE_2026_10_19.md](BALANCEAMENTO_COMBATE_2026_10_19.md).

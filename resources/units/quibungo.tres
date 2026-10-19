@@ -28,3 +28,5 @@ ability_duration = 3.0
 ability_damage_type = 2
 target_priority = 7
 is_tank = true
+attack_range = 1
+is_ranged = false

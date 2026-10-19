@@ -50,6 +50,26 @@ func _ready() -> void:
 	setup_styles()
 	setup_signals()
 	_setup_upgrade_glow()
+	fit_card(140.0)
+
+func fit_card(width: float) -> void:
+	custom_minimum_size = Vector2(width, 164.0)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_FILL
+	vbox.add_theme_constant_override("separation", 3)
+	name_label.custom_minimum_size.y = 28.0
+	name_label.max_lines_visible = 2
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon_rect.custom_minimum_size = Vector2(maxf(width - 14.0, 40.0), 52.0)
+	for label in [origin_label, class_label, tier_badge]:
+		label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		label.clip_text = true
+		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		label.size_flags_horizontal = Control.SIZE_FILL
+	var sold_label := get_node_or_null("SoldOutOverlay/SoulOutLabel") as Label
+	if sold_label:
+		sold_label.add_theme_font_size_override("font_size", 16)
 
 func _setup_upgrade_glow() -> void:
 	upgrade_material = ShaderMaterial.new()
@@ -145,11 +165,11 @@ func set_unit(stats: UnitStats) -> void:
 	var classes: Array[String] = unit_stats.classes
 	origin_label.text = "Origem: %s" % (" · ".join(origins) if not origins.is_empty() else "—")
 	class_label.text = "Classe: %s" % (" · ".join(classes) if not classes.is_empty() else "—")
-	origin_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	class_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	origin_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	class_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	origin_label.add_theme_font_size_override("font_size", 9)
 	class_label.add_theme_font_size_override("font_size", 9)
-	tooltip_text = "Clique para comprar · arraste para posicionar\nOrigens: %s\nClasses: %s\nAfinidades: %s" % [
+	tooltip_text = "Clique para comprar · arraste para posicionar\nOrigem: %s\nClasses: %s\nTipo (sem sinergia): %s" % [
 		", ".join(origins) if not origins.is_empty() else "—",
 		", ".join(classes) if not classes.is_empty() else "—",
 		", ".join(unit_stats.affinities) if not unit_stats.affinities.is_empty() else "—",

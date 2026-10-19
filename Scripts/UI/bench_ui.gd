@@ -13,15 +13,19 @@ var unit_count: int = 0
 @onready var title_label: Label = get_node_or_null("../BenchTitle") as Label
 
 func _ready() -> void:
+	custom_minimum_size.y = 54.0
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	add_theme_constant_override("separation", 7)
 	_build_slots()
+	resized.connect(_fit_slots)
+	_fit_slots.call_deferred()
 	set_units([])
 
 func _build_slots() -> void:
 	for i in SLOT_COUNT:
 		var slot := PanelContainer.new()
 		slot.custom_minimum_size = SLOT_SIZE
+		slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		slot.mouse_filter = Control.MOUSE_FILTER_STOP
 		slot.tooltip_text = "Espaço vazio do banco"
 		slot.gui_input.connect(_on_slot_gui_input.bind(i))
@@ -56,6 +60,8 @@ func _build_slots() -> void:
 		label.add_theme_font_size_override("font_size", 10)
 		label.add_theme_color_override("font_color", Color("#f4ead5"))
 		label.text = "Vazio"
+		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		label.clip_text = true
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(label)
 
@@ -64,11 +70,21 @@ func _build_slots() -> void:
 		slot_icons.append(icon)
 		slot_labels.append(label)
 
+func _fit_slots() -> void:
+	fit_available_width(get_parent_control().size.x)
+
+func fit_available_width(available_width: float) -> void:
+	var slot_width := maxf(42.0, (available_width - 8.0 * 7.0) / SLOT_COUNT)
+	for slot in slots:
+		slot.custom_minimum_size = Vector2(slot_width, 54.0)
+	if title_label:
+		title_label.clip_text = true
+		title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+
 func set_units(units: Array, combat_active: bool = false) -> void:
 	unit_count = units.size()
 	if title_label:
-		var hint := "vendas liberadas · evolução no próximo round" if combat_active else "arraste unidades para o tabuleiro"
-		title_label.text = "BANCO %d/%d · %s" % [units.size(), SLOT_COUNT, hint]
+		title_label.text = "BANCO %d/%d" % [units.size(), SLOT_COUNT]
 	for i in SLOT_COUNT:
 		var unit: BaseUnit3D = units[i] if i < units.size() else null
 		var style := slots[i].get_theme_stylebox("panel") as StyleBoxFlat
@@ -84,7 +100,7 @@ func set_units(units: Array, combat_active: bool = false) -> void:
 		slot_labels[i].text = stats.unit_name
 		slots[i].tooltip_text = "%s · Tier %d · %d ouro\nArraste para o tabuleiro ou passe o mouse e aperte S para vender" % [stats.unit_name, stats.tier, unit.invested_gold]
 		if combat_active:
-			slots[i].tooltip_text = "%s · %d estrela(s) · %d ouro\nS ou arraste à zona de venda. Evoluções no início do próximo round." % [stats.unit_name, unit.star_level, unit.invested_gold]
+			slots[i].tooltip_text = "%s · %d estrela(s) · %d ouro\nS ou arraste à zona de venda." % [stats.unit_name, unit.star_level, unit.invested_gold]
 		style.border_color = stats.get_tier_color()
 
 func _on_slot_gui_input(event: InputEvent, slot_index: int) -> void:

@@ -29,3 +29,5 @@ is_tank = true
 on_spawn_effect = "forest_leaves"
 tier = 3
 cost = 3
+attack_range = 1
+is_ranged = false

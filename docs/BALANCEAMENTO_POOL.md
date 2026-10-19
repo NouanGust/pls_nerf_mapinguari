@@ -1,5 +1,7 @@
 # Pool e custos — rodada de balanceamento de 16/10/2026
 
+Registro histórico da expansão da pool. Os atributos e sinergias foram revisados em [19/10/2026](BALANCEAMENTO_COMBATE_2026_10_19.md); consulte esse documento e [LEVANTAMENTO_SINERGIAS.md](LEVANTAMENTO_SINERGIAS.md) para as regras atuais.
+
 ## Distribuição
 
 | Custo/tier | Antes | Agora | Elenco atual |

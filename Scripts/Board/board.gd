@@ -267,6 +267,25 @@ func _on_unit_died(unit: Node3D) -> void:
 func get_distance_between_cells(from: Vector2i, to: Vector2i) -> float:
 	return get_cell_world_position(from).distance_to(get_cell_world_position(to))
 
+func get_hex_distance(from: Vector2i, to: Vector2i) -> int:
+	# Converte linhas ímpares deslocadas para coordenadas axiais.
+	var from_q := from.x - floori(float(from.y) * 0.5)
+	var to_q := to.x - floori(float(to.y) * 0.5)
+	var dq := to_q - from_q
+	var dr := to.y - from.y
+	return maxi(absi(dq), maxi(absi(dr), absi(dq + dr)))
+
+func get_cells_in_hex_radius(center: Vector2i, radius: int) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	if not get_cell(center) or radius < 0:
+		return cells
+	for row in rows:
+		for col in columns:
+			var candidate := Vector2i(col, row)
+			if get_hex_distance(center, candidate) <= radius:
+				cells.append(candidate)
+	return cells
+
 
 func get_neighbors(grid_pos: Vector2i, diagonal: bool = false) -> Array[Vector2i]:
 	var neighbors: Array[Vector2i] = []

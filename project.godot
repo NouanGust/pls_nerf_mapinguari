@@ -20,13 +20,24 @@ run/main_scene="res://Scenes/UI/Menu.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://Assets/UI/folchess_icon.svg"
 
+[autoload]
+
+ResponsiveLayout="*res://Scripts/UI/responsive_layout.gd"
+BattleClock="*res://Scripts/Systems/battle_clock.gd"
+GameSettings="*res://Scripts/Systems/game_settings.gd"
+
+[debug]
+
+settings/stdout/print_stdout.release=false
+
 [display]
 
-window/size/viewport_width=1920
-window/size/viewport_height=1080
+window/size/viewport_width=1600
+window/size/viewport_height=900
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [navigation]
 
@@ -35,12 +46,5 @@ window/stretch/mode="canvas_items"
 
 [rendering]
 
-renderer/rendering_method.web="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
 textures/canvas_textures/default_texture_filter=0
-
-[debug]
-
-settings/stdout/print_fps=false
-settings/stdout/verbose_stdout=false
-settings/stdout/print_stdout.release=false
+renderer/rendering_method.mobile="gl_compatibility"

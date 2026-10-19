@@ -23,16 +23,23 @@ var synergy_list: VBoxContainer
 var synergy_row_active_template: PanelContainer
 var synergy_row_inactive_template: PanelContainer
 var spawned_synergy_rows: Array[Control] = []
+var _responsive_ready: bool = false
+var _compact_layout: bool = false
+var _shop_controls: BoxContainer
+var _inspector_tween: Tween
 
 func _ready() -> void:
 	_apply_panel_frames()
 	_apply_button_skins()
 	_build_sell_zone()
 	_bind_synergy_panel()
+	_prepare_responsive_controls()
+	_responsive_ready = true
 	if toggle_button:
 		toggle_button.pressed.connect(toggle_hud)
 	get_viewport().size_changed.connect(_layout_extra_panels)
 	await get_tree().process_frame
+	_layout_extra_panels()
 	_cache_panel_positions()
 	_play_hud_transition(true, true)
 
@@ -107,11 +114,11 @@ func _apply_panel_frames() -> void:
 		var frame := NinePatchRect.new()
 		frame.name = "AtlasFrame"
 		frame.texture = GUI_ATLAS
-		frame.region_rect = Rect2(0, 224, 128, 96)
-		frame.patch_margin_left = 18
-		frame.patch_margin_top = 18
-		frame.patch_margin_right = 18
-		frame.patch_margin_bottom = 18
+		frame.region_rect = Rect2(0, 352, 160, 48)
+		frame.patch_margin_left = 24
+		frame.patch_margin_top = 24
+		frame.patch_margin_right = 24
+		frame.patch_margin_bottom = 24
 		frame.draw_center = false
 		frame.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -209,13 +216,16 @@ func update_synergies(synergies: Array) -> void:
 		var status := "Ativa" if is_active else "Faltam %d" % maxi(int(synergy.threshold) - int(synergy.count), 0)
 		row.tooltip_text = "%s · %s\n%s: %s" % [synergy.name, synergy.category, status, synergy.description]
 		row.tooltip_text += "\nCada unidade diferente conta uma vez."
+		row.tooltip_text += "\nUnidades: %s" % ", ".join(synergy.get("units", []))
 		synergy_list.add_child(row)
 		spawned_synergy_rows.append(row)
 	_fit_synergy_height.call_deferred()
 
 func _fit_synergy_height() -> void:
 	if synergy_panel:
-		synergy_panel.size.y = clampf(spawned_synergy_rows.size() * 58.0 + 16.0, 68.0, 420.0)
+		var metrics := ResponsiveLayout.battle_metrics(get_viewport().get_visible_rect().size)
+		var available := maxf(float(metrics["bench_top"]) - synergy_panel.position.y - 8.0, 68.0)
+		synergy_panel.size.y = clampf(spawned_synergy_rows.size() * 58.0 + 16.0, 68.0, minf(420.0, available))
 
 func _bind_synergy_panel() -> void:
 	synergy_button = hud.get_node_or_null("SynergyToggleButton") as Button
@@ -261,12 +271,111 @@ func _make_info_label(text: String, font_size: int, color: Color) -> Label:
 	return label
 
 func _layout_extra_panels() -> void:
-	if not is_instance_valid(hud):
+	if not is_instance_valid(hud) or not _responsive_ready:
 		return
+	if hud_tween and hud_tween.is_running():
+		hud_tween.kill()
+	if _inspector_tween and _inspector_tween.is_running():
+		_inspector_tween.kill()
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var metrics := ResponsiveLayout.battle_metrics(viewport_size)
+	var compact: bool = metrics["compact"]
+	var top_height: float = metrics["top_height"]
+	var top_width := minf(580.0, viewport_size.x - 206.0)
+	ResponsiveLayout.place(top_bar, Rect2(12, 12, top_width, top_height))
+	var labels := ["GoldLabel", "HealthLabel", "LevelLabel", "RoundLabel"]
+	for i in labels.size():
+		var label := top_bar.get_node(labels[i]) as Label
+		var columns := 2 if compact else 4
+		var width := (top_width - 20.0) / columns
+		ResponsiveLayout.place(label, Rect2(10.0 + (i % columns) * width, 8.0 + floori(float(i) / columns) * 32.0, width, 32.0 if compact else 44.0))
+		label.clip_text = true
+		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	ResponsiveLayout.place(toggle_button, Rect2(viewport_size.x - 68.0, 12.0, 56.0, 44.0))
+	var pause := get_node_or_null("PauseButton") as Button
+	if pause:
+		pause.custom_minimum_size.y = 44.0
+		ResponsiveLayout.place(pause, Rect2(viewport_size.x - 194.0, 12.0, 118.0, 44.0))
+	var warning := get_node_or_null("SaveWarning") as Label
+	if warning:
+		warning.add_theme_font_size_override("font_size", 14)
+		ResponsiveLayout.place(warning, Rect2(12, top_height + 78.0, viewport_size.x - 24.0, 36))
+	ResponsiveLayout.place($Control/BoardCountLabel, Rect2(viewport_size.x * 0.5 - 150.0, top_height + 18.0, 300, 28))
+	ResponsiveLayout.place($Control/RegionLabel, Rect2(160, top_height + 46.0, viewport_size.x - 320, 28))
+	$Control/RegionLabel.clip_text = true
+	$Control/RegionLabel.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	ResponsiveLayout.place(synergy_button, Rect2(12, top_height + 20.0, 142, 34))
+	ResponsiveLayout.place(synergy_panel, Rect2(12, top_height + 62.0, 250, 68))
+	if compact != _compact_layout:
+		synergy_panel.visible = not compact
+	_compact_layout = compact
+	_fit_synergy_height()
+	var shop_height: float = metrics["shop_height"]
+	ResponsiveLayout.place(bottom_bar, Rect2(12, metrics["shop_top"], viewport_size.x - 24.0, shop_height))
+	_shop_controls.vertical = not compact
+	var controls_width := 144.0 if not compact else bottom_bar.size.x - 112.0
+	ResponsiveLayout.place(_shop_controls, Rect2(bottom_bar.size.x - controls_width - 12.0, 10.0 if compact else 28.0, controls_width, 36.0 if compact else 128.0))
+	for button in _shop_controls.get_children():
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.clip_text = true
+	ResponsiveLayout.place($Control/BottomBar/ShopLabel, Rect2(12, 10, 78, 36))
+	var shop := $Control/BottomBar/ShopContainer as ShopUI
+	var shop_left := 12.0 if compact else 102.0
+	var shop_width := minf(880.0, bottom_bar.size.x - shop_left - (12.0 if compact else controls_width + 24.0))
+	shop.fit_shop(Rect2(shop_left, 54.0 if compact else 12.0, shop_width, 166.0))
+	var bench_width := minf(920.0, viewport_size.x - 24.0)
+	var bench := $Control/BenchPanel/BenchContent/BenchSlots as BenchUI
+	bench.fit_available_width(bench_width - 20.0)
+	ResponsiveLayout.place(bench_panel, Rect2((viewport_size.x - bench_width) * 0.5, metrics["bench_top"], bench_width, metrics["bench_height"]))
+	ResponsiveLayout.place(right_bar, Rect2(viewport_size.x - 292.0, top_height + 62.0, 280.0, maxf(float(metrics["bench_top"]) - top_height - 70.0, 100.0)))
 	if is_instance_valid(sell_zone):
-		sell_zone.set_anchors_preset(Control.PRESET_TOP_LEFT)
-		sell_zone.position = Vector2((viewport_size.x - sell_zone.size.x) * 0.5, 18.0)
+		ResponsiveLayout.place(sell_zone, Rect2((viewport_size.x - 250.0) * 0.5, metrics["bench_top"] - 66.0, 250, 58))
+	_cache_panel_positions()
+	if not hud_visible:
+		_set_hidden_positions()
+	hud.visible = hud_visible
+	hud.modulate.a = 1.0 if hud_visible else 0.0
+
+func _prepare_responsive_controls() -> void:
+	var old_controls := $Control/BottomBar/ControlsContainer
+	_shop_controls = BoxContainer.new()
+	_shop_controls.name = "ControlsContainer"
+	_shop_controls.add_theme_constant_override("separation", 8)
+	bottom_bar.remove_child(old_controls)
+	bottom_bar.add_child(_shop_controls)
+	for button in old_controls.get_children():
+		button.reparent(_shop_controls)
+	old_controls.queue_free()
+	var content := right_bar.get_node("VBoxContainer") as VBoxContainer
+	var scroll := ScrollContainer.new()
+	scroll.name = "InspectorScroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right_bar.add_child(scroll)
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.offset_left = 16
+	scroll.offset_right = -16
+	scroll.offset_top = 16
+	scroll.offset_bottom = -16
+	content.reparent(scroll)
+	content.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.alignment = BoxContainer.ALIGNMENT_BEGIN
+	var portrait := content.get_node("Image_container") as TextureRect
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.custom_minimum_size = Vector2(0, 130)
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var close := Button.new()
+	close.text = "Fechar"
+	close.pressed.connect(right_bar.hide)
+	content.add_child(close)
+
+func show_inspector() -> void:
+	_layout_extra_panels()
+	right_bar.show()
+	var destination: Vector2 = visible_positions[right_bar]
+	right_bar.position.x = get_viewport().get_visible_rect().size.x
+	_inspector_tween = create_tween()
+	_inspector_tween.tween_property(right_bar, "position", destination, 0.25)
 
 func _button_style(region: Rect2) -> StyleBoxTexture:
 	var atlas_texture := AtlasTexture.new()

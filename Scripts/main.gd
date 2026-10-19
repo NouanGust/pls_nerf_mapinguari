@@ -2,10 +2,19 @@ extends Node3D
 
 const Progression = preload("res://Scripts/Systems/level_progression.gd")
 const Regions = preload("res://Scripts/Systems/region_rosters.gd")
+const CampaignStore = preload("res://Scripts/Systems/campaign_store.gd")
+const GameOverlay = preload("res://Scripts/UI/game_overlay.gd")
+
+var _overlay: GameOverlay
+var _run_ready: bool = false
+var _save_pending: bool = false
+var _leaving: bool = false
+var _load_failed: bool = false
+var _campaign_state: String = "active"
+var _save_warning: Label
 
 @export_enum("cerrado", "pantanal", "amazonia", "caatinga", "mata_atlantica", "litoral") var region_id: String = "cerrado"
 var enemy_level: int = 1
-var enemy_xp: int = 0
 
 ## Referências
 @onready var board: Board3D = $board
@@ -43,6 +52,7 @@ var battle_time_remaining: float = 0.0
 @export var gold_on_win: int = 2
 @export var gold_on_loss: int = 1
 @export var battle_duration_seconds: float = 60.0
+@export_range(1.0, 10.0, 0.25) var stationary_stalemate_seconds: float = 3.0
 @export var win_streak_bonus_step: int = 1
 @export var max_win_streak_bonus: int = 5
 
@@ -50,6 +60,7 @@ var win_streak: int = 0
 var loss_streak: int = 0
 
 func _ready() -> void:
+	get_tree().auto_accept_quit = false
 	print("\n" + "=".repeat(50))
 	print("FOLCHESS - PROTÓTIPO")
 	print("=".repeat(50) + "\n")
@@ -78,10 +89,24 @@ func _ready() -> void:
 	
 	# Configurar sistema de loja
 	setup_shop_system()
-	
+	_setup_pause_menu()
+	var slot := CampaignStore.read_slot(region_id)
+	if slot.has("error"):
+		_load_failed = true
+		_open_pause()
+		_overlay.show_error(str(slot["error"]) + " Volte ao menu; o arquivo não será alterado.")
+		return
+	if slot.get("state", "") == "active":
+		if not _restore_campaign(slot["run"]):
+			_load_failed = true
+			_open_pause()
+			_overlay.show_error("Não foi possível restaurar as unidades. Volte ao menu; o arquivo foi preservado.")
+			return
+	else:
+		spawn_enemy_team()
+	_run_ready = true
 	update_ui()
-	
-	spawn_enemy_team()
+	_save_campaign()
 	
 	print("\n" + "=".repeat(50))
 	print("CONTROLES:")
@@ -96,13 +121,14 @@ func _ready() -> void:
 	debug_initialization()
 
 func spawn_enemy_team() -> void:
+	enemy_level = int(Regions.get_enemy_stage(current_round)["level"])
 	for old_enemy in get_tree().get_nodes_in_group("enemy_units"):
 		if old_enemy is BaseUnit3D and board.get_unit_at(old_enemy.board_position) == old_enemy:
 			board.remove_unit(old_enemy.board_position)
 		old_enemy.remove_from_group("enemy_units")
 		old_enemy.queue_free()
-	for slot in Regions.get_formation(region_id, enemy_level):
-		var enemy := UnitSpawner.spawn_unit(str(slot["unit_id"]), 1, 1)
+	for slot in Regions.get_formation_for_round(region_id, current_round):
+		var enemy := UnitSpawner.spawn_unit(str(slot["unit_id"]), int(slot["stars"]), 1)
 		if enemy:
 			enemy.use_navigation = false
 			enemy.debug_movement = false
@@ -161,6 +187,7 @@ func setup_drag_handler() -> void:
 	drag_handler.unit_placed_on_board.connect(_on_unit_placed_on_board)
 	drag_handler.unit_placed_on_bench.connect(_on_unit_placed_on_bench)
 	drag_handler.unit_sold.connect(_on_drag_unit_sold)
+	drag_handler.drag_finished.connect(func() -> void: update_ui.call_deferred())
 	
 	drag_handler.unit_returned_to_shop.connect(_on_unit_returned_to_shop)
 	print("Drag handler configurado")
@@ -339,6 +366,7 @@ func _on_reroll_requested() -> void:
 
 func _on_lock_toggled(is_locked: bool) -> void:
 	shop_system.lock_shop(is_locked)
+	_schedule_save()
 
 func _on_unit_purchased(unit_stats: UnitStats, cost: int) -> void:
 	print("%s comprado por %dg!" % [unit_stats.unit_name, cost])
@@ -455,8 +483,6 @@ func _play_synergy_activation(synergy: Dictionary, team_id: int) -> void:
 			stat_field = "origins"
 		"Classe":
 			stat_field = "classes"
-		"Afinidade":
-			stat_field = "affinities"
 	if stat_field.is_empty():
 		return
 	var synergy_name := str(synergy.get("name", ""))
@@ -574,7 +600,7 @@ func spawn_and_place(unit_id: String, grid_pos: Vector2i, stars: int, team_id: i
 		print("Failed to spawn: %s" % unit_id)
 	return null
 func start_combat() -> void:
-	if combat_active or round_resolution_pending:
+	if not _run_ready or combat_active or round_resolution_pending:
 		print("Combate já está ativo!")
 		return
 	if drag_handler and drag_handler.is_dragging:
@@ -632,12 +658,13 @@ func _on_combat_metric_recorded(unit: BaseUnit3D, metric: StringName, amount: fl
 	combat_report_entries[instance_id] = entry
 
 func check_combat_end() -> void:
-	var deadline_msec := Time.get_ticks_msec() + int(maxf(battle_duration_seconds, 1.0) * 1000.0)
+	var deadline_msec := BattleClock.now_msec() + int(maxf(battle_duration_seconds, 1.0) * 1000.0)
+	var stalemate_since_msec: int = -1
 	while combat_active:
-		await get_tree().create_timer(0.25).timeout
+		await get_tree().create_timer(0.25, false).timeout
 		if not combat_active:
 			return
-		battle_time_remaining = maxf(float(deadline_msec - Time.get_ticks_msec()) / 1000.0, 0.0)
+		battle_time_remaining = maxf(float(deadline_msec - BattleClock.now_msec()) / 1000.0, 0.0)
 		_update_round_label()
 		
 		var player_units: Array = []
@@ -659,14 +686,42 @@ func check_combat_end() -> void:
 		if battle_time_remaining <= 0.0:
 			end_combat(false, true)
 			return
+		if _is_stationary_stalemate(player_units, enemy_units):
+			if stalemate_since_msec < 0:
+				stalemate_since_msec = BattleClock.now_msec()
+			elif BattleClock.now_msec() - stalemate_since_msec >= int(stationary_stalemate_seconds * 1000.0):
+				end_combat(false, true, "Unidades imóveis sem alcance entre os times")
+				return
+		else:
+			stalemate_since_msec = -1
 
-func end_combat(player_won: bool, is_draw: bool = false) -> void:
+func _is_stationary_stalemate(player_units: Array, enemy_units: Array) -> bool:
+	if player_units.is_empty() or enemy_units.is_empty():
+		return false
+	# Espera efeitos em andamento e exclui qualquer sobrevivente móvel.
+	# O banco não participa: estas listas vêm apenas das unidades do tabuleiro.
+	for candidate in player_units + enemy_units:
+		var unit := candidate as BaseUnit3D
+		if not unit.stats.is_stationary or unit.has_pending_combat_effects():
+			return false
+	for player_candidate in player_units:
+		var player := player_candidate as BaseUnit3D
+		for enemy_candidate in enemy_units:
+			var enemy := enemy_candidate as BaseUnit3D
+			# Basta um lado alcançar o outro para a luta continuar normalmente.
+			if player.is_target_in_attack_range(enemy) or enemy.is_target_in_attack_range(player):
+				return false
+	return true
+
+func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "") -> void:
 	if not combat_active:
 		return
 	combat_active = false
 	round_resolution_pending = true
 	battle_time_remaining = 0.0
 	var finished_round := current_round
+	# A vitória precisa ocorrer contra o nível 9, antes do XP deste resultado.
+	var region_completed := player_won and not is_draw and enemy_level >= Progression.MAX_LEVEL
 	# Congela todos os sobreviventes no resultado para que ninguém continue
 	# atacando durante a tela do relatório ou enquanto o próximo round é preparado.
 	for unit in board.get_all_units():
@@ -705,16 +760,24 @@ func end_combat(player_won: bool, is_draw: bool = false) -> void:
 	revive_dead_player_units()
 	update_ui()
 	var is_game_over := player_health <= 0
+	_campaign_state = "won" if region_completed else ("lost" if is_game_over else "active")
+	_save_campaign()
+	# Uma camada própria mantém inclusive cartas com z_index acima do HUD
+	# atrás do relatório. O menu de pausa continua acima, na camada 100.
+	var report_layer := CanvasLayer.new()
+	report_layer.name = "CombatReportLayer"
+	report_layer.layer = 50
+	add_child(report_layer)
 	var report := CombatReport.new()
-	ui.add_child(report)
-	report.show_report(finished_round, player_won, _get_combat_report_data(), is_draw)
-	if is_game_over:
-		report.set_return_to_menu()
+	report_layer.add_child(report)
+	report.show_report(finished_round, player_won, _get_combat_report_data(), is_draw, draw_reason)
+	if is_game_over or region_completed:
+		report.set_return_to_menu(region_completed)
 	await report.continue_requested
-	report.queue_free()
+	report_layer.queue_free()
 
-	if is_game_over:
-		get_tree().change_scene_to_file("res://Scenes/UI/Menu.tscn")
+	if is_game_over or region_completed:
+		_leave_game(false)
 		return
 	print("=".repeat(50) + "\n")
 	prepare_next_round()
@@ -742,6 +805,7 @@ func prepare_next_round() -> void:
 			else:
 				unit.current_health = unit.get_max_health()
 				unit.current_mana = unit.stats.starting_mana
+				unit.current_shield = 0.0
 				unit.current_state = BaseUnit3D.State.IDLE
 				unit.current_target = null
 				unit.global_position = home_pos
@@ -779,8 +843,16 @@ func update_ui() -> void:
 		level_label.text = "Nível 9 · MÁX" if player_level >= Progression.MAX_LEVEL else "Nível %d · XP %d/%d" % [player_level, player_xp, Progression.required_xp(player_level)]
 	var region_label := ui.get_node_or_null("Control/RegionLabel") as Label
 	if region_label:
-		var xp_text := "MÁX" if enemy_level >= Progression.MAX_LEVEL else "XP %d/%d" % [enemy_xp, Progression.required_xp(enemy_level)]
-		region_label.text = "%s · Inimigo nível %d · %s" % [Regions.get_region(region_id)["name"], enemy_level, xp_text]
+		var shown_round := maxi(1, current_round - 1) if round_resolution_pending else current_round
+		var next_stage := Regions.get_next_enemy_stage(shown_round)
+		var progress_text := "DESAFIO FINAL" if next_stage.is_empty() else "Próximo marco R%d" % int(next_stage["round"])
+		region_label.text = "%s · Inimigo nível %d · %s" % [Regions.get_region(region_id)["name"], enemy_level, progress_text]
+		var stage := Regions.get_enemy_stage(shown_round)
+		var stars_text: Array[String] = []
+		for stars in stage["stars"]:
+			stars_text.append("%d★" % int(stars))
+		region_label.tooltip_text = "Estrelas por vaga: %s\nFormação: %s\nO inimigo evolui por marcos de round, sem XP." % [
+			" · ".join(stars_text), Regions.FORMATION_NAMES[Regions.get_formation_index(region_id, shown_round)]]
 	var xp_button := ui.get_node_or_null("Control/BottomBar/ControlsContainer/BuyXPButton") as Button
 	if xp_button and shop_system:
 		xp_button.disabled = round_resolution_pending or player_level >= Progression.MAX_LEVEL or player_gold < shop_system.xp_cost
@@ -792,6 +864,7 @@ func update_ui() -> void:
 	if bench_ui:
 		bench_ui.set_units(bench_units, combat_active)
 	_update_shop_upgrade_hints()
+	_schedule_save()
 
 func _update_shop_upgrade_hints() -> void:
 	if not shop_ui:
@@ -867,11 +940,20 @@ func clear_board() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not shop_system:
+	if not _run_ready or _leaving or not shop_system or (_overlay and _overlay.is_open):
 		return
-	if event.is_action_pressed("ui_accept"):
-		if not combat_active:
+	if round_resolution_pending:
+		if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+			_open_pause()
+			get_viewport().set_input_as_handled()
+		return
+	# Consome pressão, repetição e soltura antes de o botão focado receber
+	# ui_accept. Enter continua disponível para navegação na interface.
+	if event is InputEventKey and event.keycode == KEY_SPACE:
+		get_viewport().set_input_as_handled()
+		if event.pressed and not event.echo and not combat_active:
 			start_combat()
+		return
 	
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
@@ -896,6 +978,9 @@ func _input(event: InputEvent) -> void:
 					drag_handler.cancel_drag()
 					dragging_unit = null
 					update_ui()
+				else:
+					_open_pause()
+				get_viewport().set_input_as_handled()
 			KEY_H:
 				if ui:
 					ui.toggle_hud()
@@ -925,9 +1010,6 @@ func _grant_round_xp() -> void:
 	var player_progress := Progression.gain_xp(player_level, player_xp, Progression.ROUND_XP)
 	player_level = player_progress.x
 	player_xp = player_progress.y
-	var enemy_progress := Progression.gain_xp(enemy_level, enemy_xp, Progression.ROUND_XP)
-	enemy_level = enemy_progress.x
-	enemy_xp = enemy_progress.y
 
 #func _process(_delta: float) -> void:
 	## Atualizar debug info
@@ -976,18 +1058,16 @@ func show_unit_inspector(unit: BaseUnit3D) -> void:
 	var stats = unit.stats
 	
 	panel.show()
-	panel.get_node("VBoxContainer/Name_label").text = stats.unit_name
-	panel.get_node("VBoxContainer/Image_container").texture = stats.icon
-	panel.get_node("VBoxContainer/Hp_label").text = "Vida: %s" %[str(stats.max_health)]
-	panel.get_node("VBoxContainer/Mana_label").text = "Mana: %s" %[str(stats.max_mana)]
-	panel.get_node("VBoxContainer/Range_label").text = "Distância" if stats.is_ranged else "Corpo a Corpo"
-	panel.get_node("VBoxContainer/Type_label").text = "Físico" if stats.attack_damage == 0  else "Mágico"
-	panel.get_node("VBoxContainer/Origins_label").text = "Origens: %s" % (" · ".join(stats.origins) if not stats.origins.is_empty() else "—")
-	panel.get_node("VBoxContainer/Classes_label").text = "Classes: %s" % (" · ".join(stats.classes) if not stats.classes.is_empty() else "—")
-	panel.get_node("VBoxContainer/Affinities_label").text = "Afinidades: %s" % (" · ".join(stats.affinities) if not stats.affinities.is_empty() else "—")
-	var tween := create_tween()
-	panel.position.x = get_viewport().get_visible_rect().size.x
-	tween.tween_property(panel, "position:x", get_viewport().get_visible_rect().size.x - panel.size.x - 14.0, 0.3)
+	panel.get_node("InspectorScroll/VBoxContainer/Name_label").text = stats.unit_name
+	panel.get_node("InspectorScroll/VBoxContainer/Image_container").texture = stats.icon
+	panel.get_node("InspectorScroll/VBoxContainer/Hp_label").text = "Vida: %s" %[str(stats.max_health)]
+	panel.get_node("InspectorScroll/VBoxContainer/Mana_label").text = "Mana: %s" %[str(stats.max_mana)]
+	panel.get_node("InspectorScroll/VBoxContainer/Range_label").text = "Distância" if stats.is_ranged else "Corpo a Corpo"
+	panel.get_node("InspectorScroll/VBoxContainer/Type_label").text = "Físico" if stats.attack_damage == 0  else "Mágico"
+	panel.get_node("InspectorScroll/VBoxContainer/Origins_label").text = "Origens: %s" % (" · ".join(stats.origins) if not stats.origins.is_empty() else "—")
+	panel.get_node("InspectorScroll/VBoxContainer/Classes_label").text = "Classes: %s" % (" · ".join(stats.classes) if not stats.classes.is_empty() else "—")
+	panel.get_node("InspectorScroll/VBoxContainer/Affinities_label").text = "Tipo (sem sinergia): %s" % (" · ".join(stats.affinities) if not stats.affinities.is_empty() else "—")
+	ui.show_inspector()
 
 func hide_unit_inspector() -> void:
 	ui.get_node("Control/RightBar").hide()
@@ -1039,3 +1119,168 @@ func debug_initialization() -> void:
 		print("ERRO CRITICO: DragHandler e NULL!")
 	
 	print("=== FIM DEBUG ===\n")
+
+# --- Pausa e campanhas independentes por região ---
+
+func _setup_pause_menu() -> void:
+	_overlay = GameOverlay.new()
+	add_child(_overlay)
+	_overlay.resume_requested.connect(_resume_game)
+	_overlay.menu_requested.connect(_leave_game.bind(false))
+	_overlay.quit_requested.connect(_leave_game.bind(true))
+	var pause_button := GameOverlay.button("Pausa", _open_pause)
+	pause_button.name = "PauseButton"
+	pause_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	pause_button.offset_left = -210
+	pause_button.offset_right = -80
+	pause_button.offset_top = 16
+	pause_button.offset_bottom = 68
+	pause_button.tooltip_text = "Pausar (Esc)"
+	pause_button.focus_mode = Control.FOCUS_NONE
+	ui.add_child(pause_button)
+	_save_warning = GameOverlay.label("", 18, Color("#ffbba0"))
+	_save_warning.name = "SaveWarning"
+	_save_warning.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	_save_warning.offset_top = 78
+	_save_warning.offset_bottom = 110
+	ui.add_child(_save_warning)
+	ui._layout_extra_panels.call_deferred()
+
+func _open_pause() -> void:
+	if _leaving or not _overlay:
+		return
+	if drag_handler and drag_handler.is_dragging:
+		drag_handler.cancel_drag()
+		dragging_unit = null
+	if camera:
+		camera.cancel_manual_orbit()
+	get_tree().paused = true
+	_overlay.open("pause", true)
+
+func _resume_game() -> void:
+	if _load_failed:
+		_overlay.open("pause", true)
+		_overlay.show_error("Esta campanha não pôde ser carregada. Volte ao menu para preservar o arquivo.")
+		return
+	get_tree().paused = false
+	get_viewport().gui_release_focus()
+
+func _leave_game(quit_application: bool) -> void:
+	if _leaving:
+		return
+	if drag_handler and drag_handler.is_dragging:
+		drag_handler.cancel_drag()
+		dragging_unit = null
+	if _run_ready and not _save_campaign():
+		_open_pause()
+		_overlay.show_error("Não foi possível salvar. A partida continua aberta. Tente salvar novamente antes de sair.")
+		return
+	_leaving = true
+	if quit_application:
+		get_tree().quit()
+	else:
+		_return_to_menu.call_deferred()
+
+func _return_to_menu() -> void:
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://Scenes/UI/Menu.tscn")
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_leave_game(true)
+
+func _schedule_save() -> void:
+	if not _run_ready or _leaving or _save_pending:
+		return
+	_save_pending = true
+	_flush_save.call_deferred()
+
+func _flush_save() -> void:
+	_save_pending = false
+	if not is_inside_tree() or _leaving or not _run_ready:
+		return
+	if drag_handler and drag_handler.is_dragging:
+		return
+	_save_campaign()
+
+func _unit_save_data(unit: BaseUnit3D) -> Dictionary:
+	return {
+		"id": unit.stats.unit_id, "stars": unit.star_level,
+		"invested": unit.invested_gold,
+		"cell": [unit.board_position.x, unit.board_position.y],
+	}
+
+func _capture_campaign() -> Dictionary:
+	var saved_bench: Array[Dictionary] = []
+	var saved_field: Array[Dictionary] = []
+	var saved_shop: Array[String] = []
+	for unit in bench_units:
+		if is_instance_valid(unit) and not unit.is_queued_for_deletion():
+			saved_bench.append(_unit_save_data(unit))
+	# Inclui combatentes mortos: continuam pertencendo ao jogador, com sua casa inicial.
+	for unit in get_tree().get_nodes_in_group("player_units"):
+		if unit is BaseUnit3D and unit not in bench_units and not unit.is_queued_for_deletion():
+			saved_field.append(_unit_save_data(unit))
+	for stats in shop_system.current_units:
+		saved_shop.append(stats.unit_id if stats else "")
+	return {
+		"gold": player_gold, "health": player_health, "level": player_level,
+		# Campos legados preservam a compatibilidade do formato do save.
+		"xp": player_xp, "enemy_level": int(Regions.get_enemy_stage(current_round)["level"]), "enemy_xp": 0,
+		"round": current_round, "win_streak": win_streak, "loss_streak": loss_streak,
+		"phase": "combat" if combat_active else ("resolved" if round_resolution_pending else "prep"),
+		"bench": saved_bench, "field": saved_field, "shop": saved_shop,
+		"locked": shop_system.is_shop_locked,
+	}
+
+func _save_campaign() -> bool:
+	if not _run_ready or _load_failed:
+		return false
+	if drag_handler and drag_handler.is_dragging:
+		return false
+	var result := CampaignStore.write_slot(region_id, _capture_campaign(), _campaign_state)
+	if _save_warning:
+		_save_warning.text = "" if result == OK else "Não foi possível salvar a campanha. Use Pausa para tentar novamente antes de sair."
+	if result != OK:
+		push_warning("Falha ao salvar campanha %s: %s" % [region_id, error_string(result)])
+	return result == OK
+
+func _restore_campaign(run: Dictionary) -> bool:
+	player_gold = int(run["gold"])
+	player_health = int(run["health"])
+	player_level = int(run["level"])
+	player_xp = int(run["xp"])
+	current_round = int(run["round"])
+	# Saves antigos passam a usar o marco correspondente ao round salvo.
+	enemy_level = int(Regions.get_enemy_stage(current_round)["level"])
+	win_streak = int(run["win_streak"])
+	loss_streak = int(run["loss_streak"])
+	for zone in ["field", "bench"]:
+		for entry in run[zone]:
+			var unit := UnitSpawner.spawn_unit(str(entry["id"]), int(entry["stars"]), 0)
+			if not unit:
+				return false
+			unit.use_navigation = false
+			unit.debug_movement = false
+			add_child(unit)
+			unit.invested_gold = int(entry["invested"])
+			if zone == "bench":
+				if not add_unit_to_bench(unit):
+					return false
+			else:
+				var cell := Vector2i(int(entry["cell"][0]), int(entry["cell"][1]))
+				if not board.place_unit(unit, cell, false):
+					return false
+	shop_system.current_units.clear()
+	for id in run["shop"]:
+		shop_system.current_units.append(UnitSpawner.load_unit_stats(id) if id != "" else null)
+	shop_system.lock_shop(bool(run["locked"]))
+	shop_system.shop_refreshed.emit(shop_system.current_units)
+	if run["phase"] == "resolved":
+		# Recompensas e XP já foram gravados; só prepara o próximo round.
+		prepare_next_round()
+	else:
+		# Uma luta interrompida volta à preparação, sem premiar nem penalizar.
+		_resolve_unit_merges()
+		spawn_enemy_team()
+	return true

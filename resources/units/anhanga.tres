@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://bvn37klwvbyd7"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://df77bw47st6hu" path="res://Assets/Units_teste/Anhangá.png" id="1_23mv6"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_64q5c"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Anhangá.png" id="1_23mv6"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_64q5c"]
 
 [resource]
 script = ExtResource("1_64q5c")
@@ -9,12 +9,14 @@ unit_name = "Anhangá"
 unit_id = "anhanga"
 description = "Protetor místico da floresta."
 lore = "Guardião espiritual da mata."
+tier = 3
+cost = 3
 icon = ExtResource("1_23mv6")
-max_health = 950
-attack_damage = 65
+max_health = 950.0
+attack_damage = 65.0
 attack_speed = 0.8
-armor = 40
-magic_resist = 30
+armor = 40.0
+magic_resist = 30.0
 movement_speed = 180.0
 max_mana = 80.0
 mana_per_attack = 12.0
@@ -27,7 +29,3 @@ ability_duration = 4.0
 ability_range = 3.0
 is_tank = true
 on_spawn_effect = "forest_leaves"
-tier = 3
-cost = 3
-attack_range = 1
-is_ranged = false

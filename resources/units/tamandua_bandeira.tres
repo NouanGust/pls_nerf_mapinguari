@@ -1,36 +1,31 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/tamandua_bandeira.png" id="2_splash_art"]
 
 [resource]
 script = ExtResource("1_stats")
-icon = ExtResource("2_splash_art")
 unit_name = "Tamanduá-bandeira"
 unit_id = "tamandua_bandeira"
 description = "Defensor de garras longas e faro apurado."
 lore = "Percorre campos e matas, abrindo espaço para os aliados."
 tier = 2
 cost = 2
-max_health = 780
-attack_damage = 60
+icon = ExtResource("2_splash_art")
+max_health = 780.0
+attack_damage = 60.0
 attack_speed = 0.72
-attack_range = 1
-armor = 30
-magic_resist = 25
+armor = 30.0
+magic_resist = 25.0
 movement_speed = 175.0
-max_mana = 100.0
-mana_when_hit = 8
+mana_when_hit = 8.0
 origins = Array[String](["Cerrado"])
 classes = Array[String](["Tank", "Protetor da Mata"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Cerrado", "Pantanal"])
 ability_name = "Garras de Defesa"
 ability_description = "Causa 100 de dano mágico ao alvo atual e renova um escudo próprio de 110. Não ganha mana enquanto estiver protegido."
-ability_damage = 100
-ability_duration = 0
+ability_damage = 100.0
+ability_shield = 110.0
 ability_range = 2.0
 is_tank = true
-ability_shield = 110
-is_ranged = false

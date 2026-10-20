@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://coalgro5m1qef"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://ce6wrl3qksps0" path="res://Assets/Units_teste/Romaozionho.png" id="1_atoww"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_x2ek6"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Romaozionho.png" id="1_atoww"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_x2ek6"]
 
 [resource]
 script = ExtResource("1_x2ek6")
@@ -32,6 +32,5 @@ ability_damage = 300.0
 ability_heal = 300.0
 ability_targets = 3
 ability_range = 6.0
-target_priority = 6
 is_ranged = true
 stun_resist = 0.8

@@ -1,42 +1,40 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://xogtmiy61b28"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/palmito_jucara.png" id="2_splash_art"]
 
 [resource]
 script = ExtResource("1_stats")
-icon = ExtResource("2_splash_art")
 unit_name = "Palmito-juçara"
 unit_id = "palmito_jucara"
 description = "Palmeira ameaçada ligada à Mata Atlântica e a parte do Cerrado. Planta imóvel: lança sementes ou espinhos a até 4 casas. Aura: +10% de dano de ataque aos outros aliados em até 2 hexes; vale apenas a aura mais forte."
 lore = "Seus frutos alimentam a vida da floresta e fortalecem os aliados."
 tier = 2
 cost = 2
-max_health = 560
-attack_damage = 32
+icon = ExtResource("2_splash_art")
+max_health = 560.0
+attack_damage = 32.0
 attack_speed = 0.8
 attack_range = 4
 armor = 20.0
 magic_resist = 35.0
 movement_speed = 0.0
-max_mana = 100
+is_stationary = true
 starting_mana = 25.0
-mana_per_second = 3
+mana_per_second = 3.0
+mana_when_hit = 5.0
 origins = Array[String](["Mata Atlântica"])
 classes = Array[String](["Suporte", "Místico"])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Mata Atlântica", "Cerrado"])
 ability_name = "Frutos da Floresta"
 ability_description = "Cura até dois aliados feridos em 75 e concede 10 de mana a até dois aliados próximos com menor proporção de mana, sem escudo ativo."
-ability_heal = 75
+ability_heal = 75.0
+ability_mana = 10.0
 ability_targets = 2
 ability_range = 5.0
 is_ranged = true
 prefers_backline = true
-ability_mana = 10
-is_stationary = true
 passive_aura_range = 2
 passive_aura_effect = "power"
-passive_aura_power = 0.10
-mana_when_hit = 5
+passive_aura_power = 0.1

@@ -1,6 +1,8 @@
 class_name BaseUnit3D
 extends CharacterBody3D
 
+const BattleClock = preload("res://Scripts/Systems/battle_clock.gd")
+
 @export var use_navigation: bool = true  # false = movimento direto (debug)
 @export var debug_movement: bool = false  # prints de debug
 
@@ -44,10 +46,14 @@ var _aura_center := Vector2i(-1, -1)
 var _aura_radius: int = -1
 
 ## Posição no Board
-var board_position: Vector2i = Vector2i.ZERO
+var board_position: Vector2i = Vector2i(-1, -1)
 var team: int = 0
 var cell_reference: GridCell3D = null
 var combat_ground_height: float = 0.0
+
+func is_on_bench() -> bool:
+	return board_position.y < 0
+
 
 ## Componentes 3D
 var model: Node3D
@@ -79,10 +85,10 @@ var active_buffs: Array[Dictionary] = []
 ## Navigation
 var navigation_agent: NavigationAgent3D
 
-## Flag para saber se UI já foi finalizada
-var ui_ready: bool = false
-
 @export var debug_navigation: bool = false
+
+var _detour_dir: Vector3 = Vector3.ZERO
+var _detour_timer: float = 0.0
 
 const CombatFeedback = preload("res://Scripts/Systems/combat_feedback.gd")
 const UNIT_LABEL_ATLAS: Texture2D = preload("res://Assets/UI/GUI_4x.png")
@@ -105,14 +111,16 @@ func _ready() -> void:
 	setup_timers()
 	
 
-func move_direct_to_target() -> void:
-	"""Movimento planar para o alvo, mantendo a unidade na altura do tabuleiro."""
+func move_direct_to_target(delta: float = 0.0166) -> void:
+	"""Movimento planar para o alvo com desvio dinâmico de obstáculos e separação entre aliados."""
 	if stats.is_stationary:
 		_wait_rooted()
 		return
 	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
 		current_target = null
 		current_state = State.IDLE
+		_detour_timer = 0.0
+		_detour_dir = Vector3.ZERO
 		find_target()
 		return
 	
@@ -123,8 +131,39 @@ func move_direct_to_target() -> void:
 	
 	var target_pos: Vector3 = current_target.global_position
 	var planar_offset := Vector3(target_pos.x - global_position.x, 0.0, target_pos.z - global_position.z)
-	var direction := planar_offset.normalized()
+	var direct_dir := planar_offset.normalized()
 	
+	# Verificar se o desvio ativo já pode ser encerrado porque o caminho direto está desobstruído
+	if _detour_timer > 0.0:
+		_detour_timer -= delta
+		if not test_move(global_transform, direct_dir * 0.6):
+			_detour_timer = 0.0
+			_detour_dir = Vector3.ZERO
+
+	# Força de separação leve entre aliados para evitar aglomerações e trancamentos mútuos
+	var separation: Vector3 = Vector3.ZERO
+	var ally_group: String = "player_units" if team == 0 else "enemy_units"
+	for ally_node: Node in get_tree().get_nodes_in_group(ally_group):
+		if ally_node == self or not is_instance_valid(ally_node) or not (ally_node is Node3D):
+			continue
+		var ally3d := ally_node as Node3D
+		if ally3d is BaseUnit3D:
+			var ally_unit := ally3d as BaseUnit3D
+			if ally_unit.is_on_bench() or ally_unit.current_state == State.DEAD:
+				continue
+		var to_self: Vector3 = global_position - ally3d.global_position
+		to_self.y = 0.0
+		var dist: float = to_self.length()
+		if dist < 0.85 and dist > 0.001:
+			separation += (to_self / dist) * (1.0 - dist / 0.85)
+
+	# Combinar direção direta com desvio ativo e separação
+	var move_dir := direct_dir
+	if _detour_timer > 0.0 and _detour_dir != Vector3.ZERO:
+		move_dir = (direct_dir * 0.35 + _detour_dir * 0.85).normalized()
+	elif separation.length_squared() > 0.01:
+		move_dir = (direct_dir + separation * 0.45).normalized()
+
 	if debug_movement:
 		print("%s movendo DIRETO para %s (dist: %.2f)" % [
 			stats.unit_name,
@@ -132,15 +171,46 @@ func move_direct_to_target() -> void:
 			planar_offset.length()
 		])
 	
-	# Movimento direto
-	velocity = direction * get_movement_speed()
+	velocity = move_dir * get_movement_speed()
 	velocity.y = 0.0
 	move_and_slide()
 	global_position.y = combat_ground_height
 	
+	# Detecção pós-colisão: se colidiu com uma unidade à frente, calcular vetor tangente de contorno
+	var collision_count := get_slide_collision_count()
+	if collision_count > 0:
+		for i in range(collision_count):
+			var col := get_slide_collision(i)
+			var normal := col.get_normal()
+			normal.y = 0.0
+			if normal.length_squared() > 0.01:
+				normal = normal.normalized()
+				# Colisão frontal contra obstáculo
+				if normal.dot(direct_dir) < -0.12:
+					var perp_left := Vector3(-direct_dir.z, 0.0, direct_dir.x)
+					var perp_right := Vector3(direct_dir.z, 0.0, -direct_dir.x)
+					
+					var left_blocked: bool = test_move(global_transform, perp_left * 0.45)
+					var right_blocked: bool = test_move(global_transform, perp_right * 0.45)
+					
+					var chosen_dir: Vector3 = Vector3.ZERO
+					if not left_blocked and right_blocked:
+						chosen_dir = perp_left
+					elif not right_blocked and left_blocked:
+						chosen_dir = perp_right
+					elif not left_blocked and not right_blocked:
+						var cross_y: float = direct_dir.cross(normal).y
+						chosen_dir = perp_left if cross_y > 0.0 else perp_right
+					else:
+						chosen_dir = perp_left if randf() < 0.5 else perp_right
+					
+					_detour_dir = chosen_dir
+					_detour_timer = 0.4
+					break
+
 	# Rotação
-	if direction.length() > 0:
-		var target_rotation: float = atan2(direction.x, direction.z)
+	if move_dir.length() > 0:
+		var target_rotation: float = atan2(move_dir.x, move_dir.z)
 		rotation.y = lerp_angle(rotation.y, target_rotation, 0.15)
 	
 	# Verificar se chegou perto o suficiente para atacar
@@ -148,6 +218,8 @@ func move_direct_to_target() -> void:
 		if debug_movement:
 			print("%s chegou no range de ataque!" % stats.unit_name)
 		current_state = State.IDLE
+		_detour_timer = 0.0
+		_detour_dir = Vector3.ZERO
 		check_attack_or_move()
 
 
@@ -639,6 +711,8 @@ func on_enemy_defeated() -> void:
 	enemies_defeated += 1
 
 func start_combat() -> void:
+	if is_on_bench():
+		return
 	combat_ground_height = global_position.y
 	var shield_multiplier := 1.0 + float(synergy_bonuses.get("shield_power_pct", 0.0))
 	shield_multiplier *= 1.0 + float(synergy_bonuses.get("shield_received_pct", 0.0))
@@ -651,17 +725,15 @@ func start_combat() -> void:
 	find_target()
 
 func find_target() -> void:
-	if current_state == State.DEAD or current_state == State.CASTING:
+	if current_state == State.DEAD or current_state == State.CASTING or is_on_bench():
 		return
 	
 	var enemy_group: String = "enemy_units" if team == 0 else "player_units"
 	var enemies: Array = get_tree().get_nodes_in_group(enemy_group)
 	
-	# Filtrar inimigos mortos
-	# Unidades no banco e unidades aguardando em uma posição temporária ficam
-	# ocultas. Elas não fazem parte da batalha e não podem ser escolhidas como alvo.
+	# Filtrar inimigos mortos, ocultos ou que estejam no banco/reserva
 	enemies = enemies.filter(func(e):
-		return is_instance_valid(e) and e.current_state != State.DEAD and e.visible
+		return is_instance_valid(e) and not e.is_queued_for_deletion() and e.current_state != State.DEAD and e.visible and not e.is_on_bench()
 	)
 	# Uma planta escolhe entre alvos que consegue alcançar sem sair da casa.
 	if stats.is_stationary and not enemies.is_empty():
@@ -683,39 +755,8 @@ func find_target() -> void:
 		velocity = Vector3.ZERO
 		return
 	
-	# APLICAR PRIORIDADE DE TARGETING
-	match stats.target_priority:
-		UnitStats.TargetPriority.CLOSEST:
-			current_target = get_closest_enemy(enemies)
-		
-		UnitStats.TargetPriority.LOWEST_HP:
-			enemies.sort_custom(func(a, b): return a.current_health < b.current_health)
-			current_target = enemies[0]
-		
-		UnitStats.TargetPriority.HIGHEST_HP:
-			enemies.sort_custom(func(a, b): return a.current_health > b.current_health)
-			current_target = enemies[0]
-		
-		UnitStats.TargetPriority.LOWEST_HP_PERCENT:
-			enemies.sort_custom(func(a, b): 
-				var percent_a = a.current_health / a.get_max_health()
-				var percent_b = b.current_health / b.get_max_health()
-				return percent_a < percent_b
-			)
-			current_target = enemies[0]
-		
-		UnitStats.TargetPriority.BACKLINE:
-			current_target = get_backline_enemy(enemies)
-		
-		UnitStats.TargetPriority.FRONTLINE:
-			current_target = get_frontline_enemy(enemies)
-		
-		UnitStats.TargetPriority.HIGHEST_ATTACK:
-			enemies.sort_custom(func(a, b): return a.get_attack_damage() > b.get_attack_damage())
-			current_target = enemies[0]
-		
-		_:  # RANDOM ou qualquer outro
-			current_target = enemies.pick_random()
+	# Todas as unidades devem priorizar e atacar o alvo mais próximo
+	current_target = get_closest_enemy(enemies)
 	
 	# VERIFICAR SE TARGET FOI DEFINIDO
 	if current_target:
@@ -731,9 +772,6 @@ func find_target() -> void:
 		check_attack_or_move()
 	else:
 		print("%s não conseguiu definir alvo!" % stats.unit_name)
-		current_target = enemies.pick_random()  # Fallback
-		if current_target:
-			check_attack_or_move()
 			
 			
 func get_frontline_enemy(enemies: Array) -> BaseUnit3D:
@@ -783,7 +821,7 @@ func get_attack_range_meters() -> float:
 	return float(stats.get_attack_range_hexes()) * 2.0 + 0.5
 
 func is_target_in_attack_range(target: BaseUnit3D) -> bool:
-	if not is_instance_valid(target) or target.is_queued_for_deletion() or target.current_state == State.DEAD or not target.visible:
+	if not is_instance_valid(target) or target.is_queued_for_deletion() or target.current_state == State.DEAD or not target.visible or target.is_on_bench():
 		return false
 	return Vector2(global_position.x, global_position.z).distance_to(
 		Vector2(target.global_position.x, target.global_position.z)
@@ -793,18 +831,11 @@ func has_pending_combat_effects() -> bool:
 	return current_state == State.CASTING or BattleClock.now_msec() < _burn_expires_at_msec
 
 func check_attack_or_move() -> void:
-	if current_state == State.DEAD or current_state == State.CASTING:
+	if current_state == State.DEAD or current_state == State.CASTING or is_on_bench():
 		return
-	if not is_instance_valid(current_target):
+	if not is_instance_valid(current_target) or current_target.is_queued_for_deletion() or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		if debug_movement:
 			print("%s: alvo invalidado" % stats.unit_name)
-		current_target = null
-		find_target()
-		return
-	
-	if not current_target or current_target.current_state == State.DEAD:
-		if debug_movement:
-			print("%s: alvo morto/inválido" % stats.unit_name)
 		current_target = null
 		find_target()
 		return
@@ -845,9 +876,9 @@ func move_towards_target() -> void:
 		return
 	
 	# VALIDAÇÕES
-	if not is_instance_valid(current_target):
+	if not is_instance_valid(current_target) or current_target.is_queued_for_deletion() or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		if debug_movement:
-			print("%s: alvo foi destruído!" % stats.unit_name)
+			print("%s: alvo foi destruído ou no banco!" % stats.unit_name)
 		current_target = null
 		find_target()
 		return
@@ -925,7 +956,7 @@ func _physics_process(delta: float) -> void:
 				velocity = Vector3.ZERO
 				find_target()
 			else:
-				move_direct_to_target()
+				move_direct_to_target(delta)
 		return
 	
 	# MOVIMENTO COM NAVIGATION
@@ -934,7 +965,7 @@ func _physics_process(delta: float) -> void:
 	
 	if not navigation_agent:
 		use_navigation = false
-		move_direct_to_target()
+		move_direct_to_target(delta)
 		return
 	
 	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
@@ -1018,9 +1049,9 @@ func _wait_rooted() -> void:
 		navigation_agent.velocity = Vector3.ZERO
 
 func start_attacking() -> void:
-	if current_state == State.DEAD or current_state == State.CASTING:
+	if current_state == State.DEAD or current_state == State.CASTING or is_on_bench():
 		return
-	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		current_target = null
 		current_state = State.IDLE
 		find_target()
@@ -1034,8 +1065,9 @@ func start_attacking() -> void:
 		attack_timer.start()
 
 func _on_attack_timer_timeout() -> void:
-	if current_state == State.DEAD:
-		attack_timer.stop()
+	if current_state == State.DEAD or is_on_bench():
+		if attack_timer:
+			attack_timer.stop()
 		return
 	if current_state == State.CASTING or current_state == State.MOVING:
 		attack_timer.stop()
@@ -1045,7 +1077,7 @@ func _on_attack_timer_timeout() -> void:
 		if current_state == State.IDLE:
 			find_target()
 		return
-	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		attack_timer.stop()
 		current_target = null
 		current_state = State.IDLE
@@ -1056,8 +1088,7 @@ func _on_attack_timer_timeout() -> void:
 
 func perform_attack() -> void:
 	# VALIDAÇÃO
-	if not is_instance_valid(current_target):
-		print("Alvo destruído durante ataque!")
+	if not is_instance_valid(current_target) or current_target.is_on_bench():
 		if attack_timer:
 			attack_timer.stop()
 		current_target = null
@@ -1065,7 +1096,7 @@ func perform_attack() -> void:
 		find_target()
 		return
 	
-	if not current_target or current_target.current_state == State.DEAD:
+	if current_target.current_state == State.DEAD:
 		current_target = null
 		current_state = State.IDLE
 		find_target()
@@ -1129,7 +1160,7 @@ func _show_plant_projectile(target_position: Vector3) -> void:
 	flight.tween_callback(projectile.queue_free)
 
 func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.DamageType = UnitStats.DamageType.PHYSICAL) -> void:
-	if current_state == State.DEAD:
+	if current_state == State.DEAD or is_on_bench():
 		return
 	if not first_hit_checked:
 		first_hit_checked = true
@@ -1181,7 +1212,7 @@ func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.Dam
 		die()
 
 func heal(amount: float, healer: BaseUnit3D = null) -> float:
-	if current_state == State.DEAD or amount <= 0.0:
+	if current_state == State.DEAD or amount <= 0.0 or is_on_bench():
 		return 0.0
 
 	var heal_multiplier := 1.0 + float(synergy_bonuses.get("healing_received_pct", 0.0))
@@ -1257,6 +1288,9 @@ func apply_ability_effect() -> void:
 	if stats.unit_id == "cumacanga":
 		_cast_cumacanga_fireball()
 		return
+	if stats.is_assassin or stats.unit_id == "jararaca":
+		_cast_assassin_strike()
+		return
 	match stats.unit_id:
 		"anhanga":
 			_cast_anhanga_roar()
@@ -1287,7 +1321,7 @@ func _apply_ability_energy() -> void:
 		return
 	var ally_group := "player_units" if team == 0 else "enemy_units"
 	var allies: Array = get_tree().get_nodes_in_group(ally_group).filter(func(ally):
-		if not is_instance_valid(ally) or ally == self or not ally.visible:
+		if not is_instance_valid(ally) or ally == self or not ally.visible or ally.is_on_bench():
 			return false
 		if ally.current_state not in [State.MOVING, State.ATTACKING, State.ROOTED] or ally.has_active_shield() or ally.current_mana >= ally.stats.max_mana:
 			return false
@@ -1306,7 +1340,7 @@ func _cast_anhanga_roar() -> void:
 	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.0
 	var enemy_group := "enemy_units" if team == 0 else "player_units"
 	for enemy in get_tree().get_nodes_in_group(enemy_group):
-		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible:
+		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
 			continue
 		var distance := Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
 		if distance <= radius:
@@ -1317,7 +1351,7 @@ func _cast_papa_figo() -> void:
 	# take_damage pode matar o alvo e limpar current_target imediatamente.
 	# Guarda o alvo e a posição antes do dano, sem consultar novamente o alvo da IA.
 	var target := current_target
-	if is_instance_valid(target) and not target.is_queued_for_deletion() and target.current_state != State.DEAD:
+	if is_instance_valid(target) and not target.is_queued_for_deletion() and target.current_state != State.DEAD and not target.is_on_bench():
 		var impact_position := target.global_position
 		target.take_damage(stats.ability_damage, self, stats.ability_damage_type)
 		if is_instance_valid(target) and not target.is_queued_for_deletion() and target.current_state != State.DEAD and current_state == State.CASTING:
@@ -1326,7 +1360,7 @@ func _cast_papa_figo() -> void:
 	_apply_ability_healing()
 
 func _cast_teiniagua_orb() -> void:
-	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		return
 	var target := current_target
 	var target_position := target.global_position
@@ -1339,14 +1373,14 @@ func _cast_teiniagua_orb() -> void:
 		if target_cell != Vector2i(-1, -1):
 			affected_cells.append_array(board.get_neighbors(target_cell))
 		for enemy in enemies:
-			if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible:
+			if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
 				continue
 			var enemy_cell := board.get_grid_position(board.to_local(enemy.global_position))
 			if enemy_cell in affected_cells:
 				enemy.take_damage(stats.ability_damage, self, stats.ability_damage_type)
 	else:
 		for enemy in enemies:
-			if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible:
+			if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
 				continue
 			var distance := Vector2(target_position.x, target_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
 			if distance <= 2.0:
@@ -1354,23 +1388,41 @@ func _cast_teiniagua_orb() -> void:
 	CombatFeedback.create_hit_particles(target_position, Color("#c994ff"))
 
 func _apply_ability_damage() -> void:
-	if stats.ability_damage <= 0.0 or not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
+	if stats.ability_damage <= 0.0 or not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		return
 	current_target.take_damage(stats.ability_damage, self, stats.ability_damage_type)
 
 func _cast_cumacanga_fireball() -> void:
 	var enemy_group := "enemy_units" if team == 0 else "player_units"
 	var enemies: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(unit):
-		return is_instance_valid(unit) and unit is BaseUnit3D and unit.current_state != State.DEAD and unit.visible
+		return is_instance_valid(unit) and unit is BaseUnit3D and unit.current_state != State.DEAD and unit.visible and not unit.is_on_bench()
 	)
 	if enemies.is_empty():
 		return
 
-	# Foca no inimigo mais distante e acompanha a posição atual durante o lançamento.
-	enemies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
-		return global_position.distance_squared_to(a.global_position) > global_position.distance_squared_to(b.global_position)
-	)
-	var target: BaseUnit3D = enemies[0]
+	# Mira no maior conjunto de unidades inimigas
+	var best_target: BaseUnit3D = enemies[0]
+	var max_cluster_size: int = -1
+	var min_distance_to_caster: float = INF
+	
+	for candidate in enemies:
+		var cluster_count: int = 0
+		var cand_pos := Vector2(candidate.global_position.x, candidate.global_position.z)
+		for other in enemies:
+			var other_pos := Vector2(other.global_position.x, other.global_position.z)
+			if cand_pos.distance_to(other_pos) <= 2.8:
+				cluster_count += 1
+		
+		var dist_to_caster := cand_pos.distance_to(Vector2(global_position.x, global_position.z))
+		if cluster_count > max_cluster_size:
+			max_cluster_size = cluster_count
+			min_distance_to_caster = dist_to_caster
+			best_target = candidate
+		elif cluster_count == max_cluster_size and dist_to_caster < min_distance_to_caster:
+			min_distance_to_caster = dist_to_caster
+			best_target = candidate
+
+	var target: BaseUnit3D = best_target
 	var board := _get_combat_board()
 	var impact_cell := target.board_position
 	var impact_position := target.global_position
@@ -1431,6 +1483,91 @@ func _cast_cumacanga_fireball() -> void:
 		_resolve_cumacanga_impact(target, final_cell, final_position, board)
 	)
 
+func _cast_assassin_strike() -> void:
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	var enemies: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(unit):
+		return is_instance_valid(unit) and unit is BaseUnit3D and unit.current_state != State.DEAD and unit.visible and not unit.is_on_bench()
+	)
+	if enemies.is_empty():
+		return
+
+	# Inimigo com a vida mais baixa (valor absoluto de HP)
+	enemies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+		return a.current_health < b.current_health
+	)
+	var target: BaseUnit3D = enemies[0]
+	
+	# Efeito visual de partida
+	CombatFeedback.create_hit_particles(global_position, Color("#4a154b"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.5, Color("#8e44ad"))
+	
+	# Calcular destino adjacente ao alvo
+	var board := _get_combat_board()
+	var landing_pos: Vector3 = target.global_position
+	var found_cell := false
+	
+	if board:
+		var target_cell := board.get_grid_position(board.to_local(target.global_position))
+		if target_cell != Vector2i(-1, -1):
+			var neighbors := board.get_neighbors(target_cell)
+			var empty_neighbors: Array[Vector2i] = []
+			for n in neighbors:
+				if not board.is_cell_occupied(n):
+					empty_neighbors.append(n)
+			var chosen_cell := Vector2i(-1, -1)
+			if not empty_neighbors.is_empty():
+				chosen_cell = empty_neighbors[0]
+			elif not neighbors.is_empty():
+				chosen_cell = neighbors[0]
+				
+			if chosen_cell != Vector2i(-1, -1):
+				landing_pos = board.get_cell_world_position(chosen_cell)
+				found_cell = true
+	
+	if not found_cell:
+		var offset := (global_position - target.global_position)
+		offset.y = 0.0
+		if offset.length_squared() < 0.04:
+			offset = Vector3.BACK
+		landing_pos = target.global_position + offset.normalized() * 1.3
+	
+	landing_pos.y = combat_ground_height
+	global_position = landing_pos
+	
+	if navigation_agent:
+		navigation_agent.velocity = Vector3.ZERO
+	velocity = Vector3.ZERO
+	
+	# Virar em direção ao alvo
+	var look_dir := target.global_position - global_position
+	look_dir.y = 0.0
+	if look_dir.length_squared() > 0.01:
+		rotation.y = atan2(look_dir.x, look_dir.z)
+	
+	# Efeito de chegada no destino
+	CombatFeedback.create_hit_particles(global_position, Color("#9b59b6"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.6, Color("#e74c3c"))
+	
+	# Executar habilidade e dano
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	if damage <= 0.0:
+		damage = get_attack_damage() * 1.8
+	
+	CombatFeedback.create_damage_number(target.global_position, damage, CombatFeedback.DamageType.CRITICAL)
+	CombatFeedback.create_hit_particles(target.global_position, Color("#e74c3c"))
+	target.take_damage(damage, self, stats.ability_damage_type)
+	
+	if stats.unit_id == "jararaca":
+		if is_instance_valid(target) and target.current_state != State.DEAD:
+			target.apply_slow(1.5)
+	
+	# Seguir atacando o alvo se vivo, senão foca no mais próximo
+	if is_instance_valid(target) and target.current_state != State.DEAD and not target.is_on_bench():
+		current_target = target
+	else:
+		current_target = null
+		find_target()
+
 func _get_combat_board() -> Board3D:
 	var scene_root := get_tree().current_scene
 	if scene_root:
@@ -1449,14 +1586,14 @@ func _resolve_cumacanga_impact(target: BaseUnit3D, impact_cell: Vector2i, impact
 			_create_burning_hex(board, cell, burn_duration)
 		var enemy_group := "enemy_units" if team == 0 else "player_units"
 		for victim in get_tree().get_nodes_in_group(enemy_group):
-			if not is_instance_valid(victim) or victim.current_state == State.DEAD or not victim.visible:
+			if not is_instance_valid(victim) or victim.current_state == State.DEAD or not victim.visible or victim.is_on_bench():
 				continue
 			var victim_cell := board.get_grid_position(board.to_local(victim.global_position))
 			if victim_cell in affected_cells:
 				victim.take_damage(stats.ability_damage, self, stats.ability_damage_type)
 				victim.apply_burn(burn_duration, self, stats.ability_damage * 0.15)
 	else:
-		if is_instance_valid(target) and target.current_state != State.DEAD:
+		if is_instance_valid(target) and target.current_state != State.DEAD and not target.is_on_bench():
 			target.take_damage(stats.ability_damage, self, stats.ability_damage_type)
 			target.apply_burn(burn_duration, self, stats.ability_damage * 0.15)
 	CombatFeedback.create_hit_particles(impact_position, Color(1.0, 0.28, 0.035))

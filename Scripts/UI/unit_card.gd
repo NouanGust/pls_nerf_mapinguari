@@ -1,12 +1,8 @@
 class_name UnitCard
 extends PanelContainer
 
+const UIStyle = preload("res://Scripts/UI/ui_style.gd")
 const UPGRADE_HINT_SHADER: Shader = preload("res://Assets/Shaders/shop_upgrade_hint.gdshader")
-
-var upgrade_glow: ColorRect
-var upgrade_material: ShaderMaterial
-var purchase_upgrade_star: int = 0
-var base_tooltip_text: String = ""
 
 signal card_clicked(slot_index: int)
 signal drag_started(unit_stats: UnitStats, slot_index: int)
@@ -21,55 +17,49 @@ var pointer_down: bool = false
 var drag_was_requested: bool = false
 var press_position: Vector2 = Vector2.ZERO
 
-# Referências dos nodes
-@onready var vbox: VBoxContainer = $VBox
-@onready var tier_badge: Label = $VBox/TierBadge
-@onready var icon_rect: TextureRect = $VBox/IconRect
-@onready var name_label: Label = $VBox/NameLabel
-@onready var hp_icon: Label = $VBox/StatsContainer/HpIcon
-@onready var attack_icon: Label = $VBox/StatsContainer/AttackIcon
-@onready var origin_label: Label = $VBox/TraitsContainer/OriginLabel
-@onready var class_label: Label = $VBox/TraitsContainer/ClassLabel
-@onready var cost_label: Label = $VBox/CostLabel
+var upgrade_glow: ColorRect
+var upgrade_material: ShaderMaterial
+var purchase_upgrade_star: int = 0
+var base_tooltip_text: String = ""
+
+# Referências dos nós da interface
+@onready var icon_rect: TextureRect = $IconRect if has_node("IconRect") else $VBox/IconRect
+@onready var name_label: Label = $Margin/CardLayout/BottomRow/NameLabel if has_node("Margin/CardLayout/BottomRow/NameLabel") else $VBox/NameLabel
+@onready var tier_badge: Label = $Margin/CardLayout/TopRow/TierBadge if has_node("Margin/CardLayout/TopRow/TierBadge") else $VBox/TierBadge
+@onready var origin_label: Label = $Margin/CardLayout/TopRow/TraitsContainer/OriginLabel if has_node("Margin/CardLayout/TopRow/TraitsContainer/OriginLabel") else get_node_or_null("VBox/TraitsContainer/OriginLabel")
+@onready var class_label: Label = $Margin/CardLayout/TopRow/TraitsContainer/ClassLabel if has_node("Margin/CardLayout/TopRow/TraitsContainer/ClassLabel") else get_node_or_null("VBox/TraitsContainer/ClassLabel")
+@onready var cost_label: Label = $Margin/CardLayout/BottomRow/CostContainer/CostLabel if has_node("Margin/CardLayout/BottomRow/CostContainer/CostLabel") else $VBox/CostLabel
 @onready var sold_overlay: ColorRect = $SoldOutOverlay if has_node("SoldOutOverlay") else null
 
-# Estilos
+# Compatibilidade legada
+@onready var hp_icon: Label = get_node_or_null("LegacyCompat/VBox/StatsContainer/HpIcon")
+@onready var attack_icon: Label = get_node_or_null("LegacyCompat/VBox/StatsContainer/AttackIcon")
+@onready var vbox: Control = get_node_or_null("Margin/CardLayout") if has_node("Margin/CardLayout") else get_node_or_null("VBox")
+
 var default_style: StyleBoxFlat
 var hover_style: StyleBoxFlat
-var tier_colors := {
-	1: Color(0.6, 0.6, 0.6),
-	2: Color(0.3, 0.8, 0.3),
-	3: Color(0.3, 0.6, 1.0),
-	4: Color(0.7, 0.3, 0.9),
-	5: Color(1.0, 0.6, 0.2)
-}
+var current_tier: int = 1
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	
 	setup_styles()
 	setup_signals()
 	_setup_upgrade_glow()
-	fit_card(140.0)
+	fit_card(136.0)
 
 func fit_card(width: float) -> void:
-	custom_minimum_size = Vector2(width, 164.0)
+	custom_minimum_size = Vector2(width, 172.0)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_FILL
-	vbox.add_theme_constant_override("separation", 3)
-	name_label.custom_minimum_size.y = 28.0
-	name_label.max_lines_visible = 2
-	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon_rect.custom_minimum_size = Vector2(maxf(width - 14.0, 40.0), 52.0)
-	for label in [origin_label, class_label, tier_badge]:
-		label.autowrap_mode = TextServer.AUTOWRAP_OFF
-		label.clip_text = true
-		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		label.size_flags_horizontal = Control.SIZE_FILL
-	var sold_label := get_node_or_null("SoldOutOverlay/SoulOutLabel") as Label
-	if sold_label:
-		sold_label.add_theme_font_size_override("font_size", 16)
+	if name_label:
+		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		name_label.clip_text = true
+	if origin_label:
+		origin_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		origin_label.clip_text = true
+	if class_label:
+		class_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		class_label.clip_text = true
 
 func _setup_upgrade_glow() -> void:
 	upgrade_material = ShaderMaterial.new()
@@ -78,58 +68,19 @@ func _setup_upgrade_glow() -> void:
 	upgrade_glow.name = "UpgradeGlow"
 	upgrade_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	upgrade_glow.material = upgrade_material
-	upgrade_glow.z_index = 1
+	upgrade_glow.z_index = 2
+	upgrade_glow.set_anchors_preset(Control.PRESET_FULL_RECT)
 	upgrade_glow.hide()
 	add_child(upgrade_glow)
-	upgrade_glow.resized.connect(_resize_upgrade_glow)
-	_resize_upgrade_glow()
+	resized.connect(_resize_upgrade_glow)
 
 func _resize_upgrade_glow() -> void:
-	upgrade_material.set_shader_parameter("card_size", upgrade_glow.size)
-
-func set_purchase_upgrade(stars: int, deferred_until_next_round: bool = false) -> void:
-	purchase_upgrade_star = clampi(stars, 2, 4) if stars >= 2 and unit_stats and not is_sold else 0
-	if not is_instance_valid(upgrade_glow):
-		return
-	upgrade_glow.visible = purchase_upgrade_star > 0
-	tooltip_text = base_tooltip_text
-	if purchase_upgrade_star == 0:
-		if unit_stats:
-			tier_badge.text = "Tier %d" % unit_stats.tier
-			tier_badge.add_theme_color_override("font_color", tier_colors.get(unit_stats.tier, Color.WHITE))
-		return
-	var tint := Color("#ffd16b")
-	if purchase_upgrade_star == 3:
-		tint = Color("#dca1ff")
-	elif purchase_upgrade_star == 4:
-		tint = Color("#88f4ff")
-	upgrade_material.set_shader_parameter("glow_color", tint)
-	tier_badge.text = "EVOLUI → %s" % "★".repeat(purchase_upgrade_star)
-	tier_badge.add_theme_color_override("font_color", tint)
-	tooltip_text += "\nEsta compra completa uma evolução para %d estrelas%s." % [purchase_upgrade_star, " no início do próximo round" if deferred_until_next_round else ""]
+	if upgrade_material:
+		upgrade_material.set_shader_parameter("card_size", size)
 
 func setup_styles() -> void:
-	# Estilo padrão
-	default_style = StyleBoxFlat.new()
-	default_style.bg_color = Color("#d9c5a0")
-	
-	var b_width = 3
-	default_style.border_width_left = b_width
-	default_style.border_width_right = b_width
-	default_style.border_width_top = b_width
-	default_style.border_width_bottom = b_width
-	default_style.border_color = Color("#4a3222") 
-	
-	default_style.corner_radius_top_left = 2
-	default_style.corner_radius_top_right = 2
-	
-	default_style.shadow_size = 5
-	default_style.shadow_color = Color(0, 0, 0, 0.4)
-	
-	hover_style = default_style.duplicate()
-	hover_style.shadow_color = Color("#e8c547", 0.3)
-	hover_style.shadow_size = 8
-	
+	default_style = UIStyle.make_card_style(current_tier, false)
+	hover_style = UIStyle.make_card_style(current_tier, true)
 	add_theme_stylebox_override("panel", default_style)
 
 func setup_signals() -> void:
@@ -142,103 +93,100 @@ func set_unit(stats: UnitStats) -> void:
 	is_sold = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	
-	if default_style == null:
-		setup_styles()
-	
 	if not unit_stats:
 		clear()
 		return
-	# Nome
-	name_label.text = unit_stats.unit_name
-	name_label.add_theme_color_override("font-color", Color("#2d1d12"))
 	
-	# Tier
-	tier_badge.text = "Tier %d" % unit_stats.tier
-	tier_badge.add_theme_color_override("font_color", tier_colors.get(unit_stats.tier, Color.WHITE))
-	
-	# Stats
-	hp_icon.text = "%d" % int(unit_stats.max_health)
-	attack_icon.text = "%d" % int(unit_stats.attack_damage)
-	
-	# Origens e Classes
-	var origins: Array[String] = unit_stats.origins
-	var classes: Array[String] = unit_stats.classes
-	origin_label.text = "Origem: %s" % (" · ".join(origins) if not origins.is_empty() else "—")
-	class_label.text = "Classe: %s" % (" · ".join(classes) if not classes.is_empty() else "—")
-	origin_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	class_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	origin_label.add_theme_font_size_override("font_size", 9)
-	class_label.add_theme_font_size_override("font_size", 9)
-	tooltip_text = "Clique para comprar · arraste para posicionar\nOrigem: %s\nClasses: %s\nTipo (sem sinergia): %s" % [
-		", ".join(origins) if not origins.is_empty() else "—",
-		", ".join(classes) if not classes.is_empty() else "—",
-		", ".join(unit_stats.affinities) if not unit_stats.affinities.is_empty() else "—",
-	]
-	if unit_stats.is_stationary:
-		tooltip_text += "\n" + unit_stats.description
-	base_tooltip_text = tooltip_text
-	set_purchase_upgrade(0)
-	
-	# Custo
-	cost_label.text = "%d" % unit_stats.cost
-	
-	# Ícone (se houver)
-	if unit_stats.icon:
-		icon_rect.texture = unit_stats.icon
-	else:
-		# Placeholder colorido por tier
-		create_tier_placeholder()
-	
-	# Atualizar estilo com cor do tier
+	current_tier = unit_stats.tier
 	update_tier_style()
 	
-	# Esconder overlay de vendido
+	# Nome e Custo
+	if name_label:
+		name_label.text = unit_stats.unit_name
+	if cost_label:
+		cost_label.text = "%d" % unit_stats.cost
+	
+	# Tier Badge
+	if tier_badge:
+		tier_badge.text = "T%d" % unit_stats.tier
+		tier_badge.add_theme_color_override("font_color", UIStyle.TIER_COLORS.get(unit_stats.tier, Color.WHITE))
+	
+	# Origem e Classe
+	var origins: Array[String] = unit_stats.origins
+	var classes: Array[String] = unit_stats.classes
+	if origin_label:
+		origin_label.text = origins[0] if not origins.is_empty() else "—"
+		origin_label.visible = not origins.is_empty()
+	if class_label:
+		class_label.text = classes[0] if not classes.is_empty() else "—"
+		class_label.visible = not classes.is_empty()
+	
+	# Stats legados
+	if hp_icon:
+		hp_icon.text = "%d" % int(unit_stats.max_health)
+	if attack_icon:
+		attack_icon.text = "%d" % int(unit_stats.attack_damage)
+	
+	# Retrato da unidade
+	if icon_rect:
+		if unit_stats.icon:
+			icon_rect.texture = unit_stats.icon
+		else:
+			create_tier_placeholder()
+	
+	# Tooltip padrao desabilitado: usamos exclusivamente o StatsTooltip estilizado
+	tooltip_text = ""
+	base_tooltip_text = ""
+	
+	set_purchase_upgrade(0)
+	
 	if sold_overlay:
 		sold_overlay.hide()
 	
 	show()
 
 func create_tier_placeholder() -> void:
-	# Criar uma textura colorida simples baseada no tier
-	var color: Color = tier_colors.get(unit_stats.tier, Color.WHITE)
-	
-	# Criar gradiente
+	var color: Color = UIStyle.TIER_COLORS.get(current_tier, Color.WHITE)
 	var gradient := Gradient.new()
-	gradient.colors = [color.lightened(0.3), color.darkened(0.3)]
-	
+	gradient.colors = [color.lightened(0.2), color.darkened(0.4)]
 	var gradient_texture := GradientTexture2D.new()
 	gradient_texture.gradient = gradient
 	gradient_texture.width = 128
 	gradient_texture.height = 128
-	gradient_texture.fill_from = Vector2(0, 0)
-	gradient_texture.fill_to = Vector2(1, 1)
-	
-	icon_rect.texture = gradient_texture
+	if icon_rect:
+		icon_rect.texture = gradient_texture
 
 func update_tier_style() -> void:
-	if not unit_stats:
+	default_style = UIStyle.make_card_style(current_tier, false)
+	hover_style = UIStyle.make_card_style(current_tier, true)
+	add_theme_stylebox_override("panel", hover_style if is_hovered else default_style)
+
+func set_purchase_upgrade(stars: int, deferred_until_next_round: bool = false) -> void:
+	purchase_upgrade_star = clampi(stars, 2, 4) if stars >= 2 and unit_stats and not is_sold else 0
+	if not is_instance_valid(upgrade_glow):
 		return
-	
-	var tier_color: Color = tier_colors.get(unit_stats.tier, Color.WHITE)
-	
-	# Atualizar cor de borda
-	default_style.border_color = tier_color
-	hover_style.border_color = tier_color.lightened(0.3)
-	
-	# Aplicar estilo apropriado
-	if is_hovered:
-		add_theme_stylebox_override("panel", hover_style)
-	else:
-		add_theme_stylebox_override("panel", default_style)
+	upgrade_glow.visible = purchase_upgrade_star > 0
+	tooltip_text = ""
+	if purchase_upgrade_star == 0:
+		if tier_badge and unit_stats:
+			tier_badge.text = "T%d" % unit_stats.tier
+			tier_badge.add_theme_color_override("font_color", UIStyle.TIER_COLORS.get(unit_stats.tier, Color.WHITE))
+		return
+	var tint := Color("#ffd16b")
+	if purchase_upgrade_star == 3:
+		tint = Color("#dca1ff")
+	elif purchase_upgrade_star == 4:
+		tint = Color("#88f4ff")
+	upgrade_material.set_shader_parameter("glow_color", tint)
+	if tier_badge:
+		tier_badge.text = "★".repeat(purchase_upgrade_star)
+		tier_badge.add_theme_color_override("font_color", tint)
 
 func mark_as_sold() -> void:
 	is_sold = true
 	set_purchase_upgrade(0)
-	
 	if sold_overlay:
 		sold_overlay.show()
-	
-	# Desabilitar interação
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func clear() -> void:
@@ -247,53 +195,45 @@ func clear() -> void:
 	base_tooltip_text = ""
 	set_purchase_upgrade(0)
 	tooltip_text = ""
-	
-	name_label.text = "---"
-	tier_badge.text = ""
-	hp_icon.text = ""
-	attack_icon.text = ""
-	origin_label.text = ""
-	class_label.text = ""
-	cost_label.text = ""
-	icon_rect.texture = null
-	
-	# Estilo vazio
+	if name_label:
+		name_label.text = "---"
+	if tier_badge:
+		tier_badge.text = ""
+	if origin_label:
+		origin_label.text = ""
+	if class_label:
+		class_label.text = ""
+	if cost_label:
+		cost_label.text = ""
+	if icon_rect:
+		icon_rect.texture = null
 	var empty_style := StyleBoxFlat.new()
-	empty_style.bg_color = Color(0.1, 0.1, 0.1, 0.5)
-	empty_style.border_color = Color(0.3, 0.3, 0.3, 0.5)
-	empty_style.corner_radius_top_left = 8
-	empty_style.corner_radius_top_right = 8
-	empty_style.corner_radius_bottom_left = 8
-	empty_style.corner_radius_bottom_right = 8
+	empty_style.bg_color = Color(0.06, 0.08, 0.11, 0.6)
+	empty_style.border_color = Color(0.2, 0.25, 0.3, 0.5)
+	empty_style.set_border_width_all(1)
+	empty_style.set_corner_radius_all(5)
 	add_theme_stylebox_override("panel", empty_style)
-	
 	if sold_overlay:
 		sold_overlay.hide()
-	
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 func _on_mouse_entered() -> void:
 	if is_sold or not unit_stats:
 		return
-		
-	if unit_stats:
-		hover_started.emit(unit_stats, global_position)
-	
 	is_hovered = true
+	hover_started.emit(unit_stats, global_position)
 	add_theme_stylebox_override("panel", hover_style)
-	
-	# Animação de escala
 	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector2(1.05, 1.05), 0.1)
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "scale", Vector2(1.04, 1.04), 0.12)
 
 func _on_mouse_exited() -> void:
 	is_hovered = false
 	hover_ended.emit()
 	add_theme_stylebox_override("panel", default_style)
-	
-	# Voltar escala normal
 	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector2(1.0, 1.0), 0.1)
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "scale", Vector2(1.0, 1.0), 0.12)
 
 func _on_gui_input(event: InputEvent) -> void:
 	if is_sold or not unit_stats:

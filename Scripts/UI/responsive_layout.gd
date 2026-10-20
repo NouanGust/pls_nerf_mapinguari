@@ -15,16 +15,16 @@ func _update_reference() -> void:
 static func battle_metrics(viewport_size: Vector2) -> Dictionary:
 	var compact := viewport_size.x < 1100.0
 	var shop_height := 232.0 if compact else 194.0
-	var bench_height := 78.0
+	var bench_height := 0.0
 	var shop_top := viewport_size.y - shop_height - 12.0
-	var bench_top := shop_top - bench_height - 8.0
+	var bench_top := shop_top
 	var top_height := 84.0 if compact else 60.0
 	var field_top := top_height + 78.0
 	var field_left := 12.0 if compact else 270.0
 	return {
 		"compact": compact, "shop_height": shop_height, "shop_top": shop_top,
 		"bench_height": bench_height, "bench_top": bench_top, "top_height": top_height,
-		"board_rect": Rect2(field_left, field_top, maxf(viewport_size.x - field_left - 16.0, 1.0), maxf(bench_top - field_top - 12.0, 1.0)),
+		"board_rect": Rect2(field_left, field_top, maxf(viewport_size.x - field_left - 16.0, 1.0), maxf(shop_top - field_top - 12.0, 1.0)),
 	}
 
 static func place(control: Control, rectangle: Rect2) -> void:

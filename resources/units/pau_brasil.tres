@@ -1,27 +1,26 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/pau_brasil.png" id="2_splash_art"]
 
 [resource]
 script = ExtResource("1_stats")
-icon = ExtResource("2_splash_art")
 unit_name = "Pau-brasil"
 unit_id = "pau_brasil"
 description = "Árvore símbolo da Mata Atlântica, agora guardiã do campo. Planta imóvel: ataca corpo a corpo, a uma casa de alcance. Aura: +18% de dano de ataque aos outros aliados em até 2 hexes; vale apenas a aura mais forte."
 lore = "Sua madeira rubra e flores douradas inspiram uma presença resistente."
 tier = 4
 cost = 4
+icon = ExtResource("2_splash_art")
 max_health = 1200.0
 attack_damage = 90.0
 attack_speed = 0.85
-attack_range = 1
 armor = 50.0
 magic_resist = 35.0
 movement_speed = 0.0
-max_mana = 100.0
+is_stationary = true
 mana_per_attack = 12.0
+mana_per_second = 5.0
 origins = Array[String](["Mata Atlântica"])
 classes = Array[String](["Tank", "Protetor da Mata"])
 affinities = Array[String](["Flora"])
@@ -32,11 +31,6 @@ ability_damage = 100.0
 ability_duration = 4.0
 ability_range = 3.0
 is_tank = true
-
-
-is_ranged = false
-mana_per_second = 5.0
-is_stationary = true
 passive_aura_range = 2
 passive_aura_effect = "power"
 passive_aura_power = 0.18

@@ -5,7 +5,6 @@
 [ext_resource type="PackedScene" uid="uid://oqcy4nvnnbd8" path="res://Scenes/Camera/camera.tscn" id="3_2a143"]
 [ext_resource type="PackedScene" uid="uid://c3exjsipb8037" path="res://Scenes/UI/GameUI.tscn" id="4_xlvfx"]
 [ext_resource type="Script" uid="uid://dqroqn18qtmvr" path="res://Scripts/Board/navigation_setup.gd" id="5_p6jpk"]
-[ext_resource type="Environment" uid="uid://ds86np0ou1qug" path="res://new_environment.tres" id="6_2a143"]
 [ext_resource type="PackedScene" uid="uid://bu1o8iehokw1k" path="res://Scenes/env.tscn" id="7_xlvfx"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_xlvfx"]
@@ -30,7 +29,6 @@ script = ExtResource("1_5yls4")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 0)
 
 [node name="GameUi" parent="." unique_id=1710037490 instance=ExtResource("4_xlvfx")]
-follow_viewport_enabled = true
 
 [node name="Control" parent="GameUi" index="0" unique_id=1312105481]
 offset_right = -1.0
@@ -41,31 +39,10 @@ offset_top = 31.0
 offset_right = 591.0
 offset_bottom = 91.0
 
-[node name="BoardCountLabel" parent="GameUi/Control" index="1" unique_id=1900415998]
-layout_mode = 1
-anchors_preset = 8
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_top = -18.0
-offset_bottom = 18.0
-grow_vertical = 2
-
 [node name="ShopContainer" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1904179370) index="1" unique_id=1611297172]
 z_index = 2
-offset_left = 179.0
-offset_top = 33.0
-offset_right = 786.0
-offset_bottom = 198.0
 
 [node name="ControlsContainer" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1904179370) index="2" unique_id=758041956]
-anchors_preset = 0
-anchor_left = 0.0
-anchor_right = 0.0
-offset_left = 1549.0
-offset_top = 21.0
-offset_right = 1861.0
-offset_bottom = 59.0
-grow_horizontal = 1
 
 [node name="StatsTooltip" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1904179370) index="3" unique_id=475325823]
 z_index = 2
@@ -124,14 +101,13 @@ navigation_mesh = SubResource("NavigationMesh_2a143")
 script = ExtResource("5_p6jpk")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=432455242]
-environment = ExtResource("6_2a143")
 
 [node name="Env" parent="." unique_id=32248824 instance=ExtResource("7_xlvfx")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -6.0403004, 0)
 visible = false
 
 [connection signal="pressed" from="GameUi/Control/BottomBar/ControlsContainer/RerollButton" to="." method="_on_reroll_button_pressed"]
-[connection signal="pressed" from="GameUi/Control/BottomBar/ControlsContainer/LockButton" to="." method="_on_lock_button_pressed"]
+[connection signal="pressed" from="GameUi/Control/BottomBar/LockButton" to="." method="_on_lock_button_pressed"]
 [connection signal="pressed" from="GameUi/Control/BottomBar/ControlsContainer/BuyXPButton" to="." method="_on_buy_xp_button_pressed"]
 
 [editable path="board"]

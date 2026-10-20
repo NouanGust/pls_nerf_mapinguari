@@ -1,19 +1,20 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dx6jqxpuumy16"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_8uxd0"]
-[ext_resource type="Texture2D" uid="uid://cmn18vuepv4s2" path="res://Assets/Units_teste/Papa-figo.png" id="1_dtdlx"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_8uxd0"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Papa-figo.png" id="1_dtdlx"]
 
 [resource]
 script = ExtResource("1_8uxd0")
 unit_name = "Papa-Figo"
 unit_id = "papa_figo"
 description = "Figura sinistra."
+tier = 2
+cost = 2
 icon = ExtResource("1_dtdlx")
-max_health = 650
-attack_damage = 50
+max_health = 650.0
 attack_speed = 0.9
-armor = 25
-magic_resist = 25
+armor = 25.0
+magic_resist = 25.0
 movement_speed = 190.0
 max_mana = 90.0
 mana_per_attack = 13.0
@@ -21,8 +22,6 @@ origins = Array[String](["Urbano"])
 classes = Array[String](["Assombração", "Suporte"])
 ability_name = "Toque Gélido"
 ability_description = "Causa 115 de dano mágico ao alvo, reduz seu ataque em 25% por 5 segundos e cura um aliado ferido próximo em 80."
-ability_damage = 115
-ability_heal = 80
+ability_damage = 115.0
+ability_heal = 80.0
 ability_duration = 5.0
-tier = 2
-cost = 2

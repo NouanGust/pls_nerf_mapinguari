@@ -4,7 +4,10 @@ const Progression = preload("res://Scripts/Systems/level_progression.gd")
 const Regions = preload("res://Scripts/Systems/region_rosters.gd")
 const CampaignStore = preload("res://Scripts/Systems/campaign_store.gd")
 const GameOverlay = preload("res://Scripts/UI/game_overlay.gd")
+const BattleTransition = preload("res://Scripts/UI/battle_transition.gd")
 
+var entry_transition: BattleTransition
+var _entry_in_progress: bool = false
 var _overlay: GameOverlay
 var _run_ready: bool = false
 var _save_pending: bool = false
@@ -19,7 +22,7 @@ var enemy_level: int = 1
 ## Referências
 @onready var board: Board3D = $board
 @onready var camera: GameCamera = $Node3D
-@onready var ui: GameUI = $GameUi
+@onready var ui = $GameUi
 @onready var nav_region: NavigationRegion3D = $NavigationRegion3D
 @onready var bench_ui: BenchUI = $GameUi/Control/BenchPanel/BenchContent/BenchSlots
 var ui_visible: bool = true
@@ -58,9 +61,14 @@ var battle_time_remaining: float = 0.0
 
 var win_streak: int = 0
 var loss_streak: int = 0
+var round_outcomes: Dictionary = {}
 
 func _ready() -> void:
 	get_tree().auto_accept_quit = false
+	if is_instance_valid(entry_transition):
+		_entry_in_progress = true
+		ui.hide()
+		camera.entry_active = true
 	print("\n" + "=".repeat(50))
 	print("FOLCHESS - PROTÓTIPO")
 	print("=".repeat(50) + "\n")
@@ -74,6 +82,7 @@ func _ready() -> void:
 	
 	# Configurar board
 	if board:
+		board.apply_region_environment(region_id)
 		print("\nBoard hexagonal pronto: %d × %d\n" % [board.rows, board.columns])
 	
 	# Aguardar navigation
@@ -89,24 +98,30 @@ func _ready() -> void:
 	
 	# Configurar sistema de loja
 	setup_shop_system()
+	if _entry_in_progress:
+		drag_handler.set_process_input(false)
 	_setup_pause_menu()
 	var slot := CampaignStore.read_slot(region_id)
 	if slot.has("error"):
 		_load_failed = true
 		_open_pause()
 		_overlay.show_error(str(slot["error"]) + " Volte ao menu; o arquivo não será alterado.")
+		await _dismiss_entry_on_error()
 		return
 	if slot.get("state", "") == "active":
 		if not _restore_campaign(slot["run"]):
 			_load_failed = true
 			_open_pause()
 			_overlay.show_error("Não foi possível restaurar as unidades. Volte ao menu; o arquivo foi preservado.")
+			await _dismiss_entry_on_error()
 			return
 	else:
 		spawn_enemy_team()
 	_run_ready = true
 	update_ui()
 	_save_campaign()
+	if _entry_in_progress:
+		await _play_battle_entry(not slot.is_empty() or current_round > 1)
 	
 	print("\n" + "=".repeat(50))
 	print("CONTROLES:")
@@ -120,6 +135,36 @@ func _ready() -> void:
 	
 	debug_initialization()
 
+func _play_battle_entry(returning_to_region: bool) -> void:
+	var focus_unit: Node3D = null
+	if returning_to_region:
+		var candidates: Array[Node3D] = []
+		for unit in board.get_all_units():
+			if unit is BaseUnit3D and not unit.is_queued_for_deletion() and unit.current_state != BaseUnit3D.State.DEAD:
+				candidates.append(unit)
+		if not candidates.is_empty():
+			focus_unit = candidates.pick_random()
+	await camera.play_entry(focus_unit, entry_transition.reveal)
+	_finish_battle_entry()
+
+func _dismiss_entry_on_error() -> void:
+	if not is_instance_valid(entry_transition):
+		return
+	# Erros de carregamento precisam deixar o menu de recuperação acessível.
+	await entry_transition.reveal()
+	_finish_battle_entry()
+
+func _finish_battle_entry() -> void:
+	camera.entry_active = false
+	_entry_in_progress = false
+	ui.show()
+	if is_instance_valid(drag_handler):
+		drag_handler.set_process_input(true)
+	if is_instance_valid(entry_transition):
+		entry_transition.queue_free()
+	entry_transition = null
+	get_viewport().gui_release_focus()
+
 func spawn_enemy_team() -> void:
 	enemy_level = int(Regions.get_enemy_stage(current_round)["level"])
 	for old_enemy in get_tree().get_nodes_in_group("enemy_units"):
@@ -127,13 +172,17 @@ func spawn_enemy_team() -> void:
 			board.remove_unit(old_enemy.board_position)
 		old_enemy.remove_from_group("enemy_units")
 		old_enemy.queue_free()
+	board.clear_enemy_zone()
 	for slot in Regions.get_formation_for_round(region_id, current_round):
+		var target_cell: Vector2i = slot["position"]
+		if board.is_cell_occupied(target_cell):
+			board.remove_unit(target_cell)
 		var enemy := UnitSpawner.spawn_unit(str(slot["unit_id"]), int(slot["stars"]), 1)
 		if enemy:
 			enemy.use_navigation = false
 			enemy.debug_movement = false
 			add_child(enemy)
-			if not board.place_unit(enemy, slot["position"], false):
+			if not board.place_unit(enemy, target_cell, false):
 				push_error("Não foi possível posicionar a unidade regional %s" % slot["unit_id"])
 				enemy.remove_from_group("enemy_units")
 				enemy.queue_free()
@@ -300,10 +349,10 @@ func spawn_unit_for_drag(unit_stats: UnitStats) -> BaseUnit3D:
 	
 	return null
 
-func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: String, source_index: int) -> void:
+func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: String, _source_index: int) -> void:
 	if combat_active or round_resolution_pending:
 		if source == "bench":
-			unit.visible = false
+			_realign_bench_units()
 		elif source == "board":
 			board.place_unit(unit, unit.board_position, true)
 		else:
@@ -315,7 +364,7 @@ func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: Stri
 	if unit.team == 0 and get_player_units_on_board_count() >= get_board_unit_limit():
 		print("Limite atingido")
 		if source == "bench":
-			unit.visible = false
+			_realign_bench_units()
 		elif add_unit_to_bench(unit):
 			_resolve_unit_merges()
 		else:
@@ -334,14 +383,15 @@ func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: Stri
 	
 	if success:
 		unit.play_pending_star_upgrade_effect()
-		if source == "bench" and source_index >= 0 and source_index < bench_units.size():
-			bench_units.remove_at(source_index)
+		if source == "bench":
+			bench_units.erase(unit)
+			_realign_bench_units()
 		dragging_unit = null
 		_resolve_unit_merges()
 		update_ui()
 	else:
 		if source == "bench":
-			unit.visible = false
+			_realign_bench_units()
 		elif source == "board":
 			board.place_unit(unit, unit.board_position, true)
 		else:
@@ -380,13 +430,35 @@ func add_unit_to_bench(unit: BaseUnit3D) -> bool:
 	if board.get_unit_at(unit.board_position) == unit:
 		board.remove_unit(unit.board_position)
 		
-	bench_units.append(unit)
-	unit.visible = false
+	if not bench_units.has(unit):
+		bench_units.append(unit)
+	unit.visible = true
+	unit.team = 0
 	unit.debug_movement = false
-	unit.global_position = Vector3(-20 - bench_units.size(), -100, 0)
+	unit.use_navigation = false
+	unit.rotation.y = 0.0
+	_realign_bench_units()
 	
 	print("%s enviado para o banco (%d/%d)" % [unit.stats.unit_name, bench_units.size(), max_bench_size])
 	return true
+
+func _realign_bench_units(animate: bool = true) -> void:
+	for i in bench_units.size():
+		var u: BaseUnit3D = bench_units[i]
+		if not is_instance_valid(u):
+			continue
+		u.visible = true
+		u.team = 0
+		u.board_position = Vector2i(i, -1)
+		u.rotation.y = 0.0
+		var target_pos := board.get_bench_slot_world_position(i)
+		if animate and is_inside_tree():
+			var tween := create_tween()
+			tween.set_ease(Tween.EASE_OUT)
+			tween.set_trans(Tween.TRANS_QUAD)
+			tween.tween_property(u, "global_position", target_pos, 0.25)
+		else:
+			u.global_position = target_pos
 
 func _resolve_unit_merges() -> void:
 	# Recalcula as cópias na preparação: vender uma reserva pode desfazer o trio.
@@ -439,6 +511,7 @@ func _resolve_unit_merges() -> void:
 		survivor.promote_to_star(old_star + 1)
 		print("%s evoluiu para %d estrelas" % [survivor.stats.unit_name, survivor.star_level])
 
+	_realign_bench_units()
 	_update_shop_exclusions()
 	_refresh_synergies()
 
@@ -502,13 +575,11 @@ func _sell_hovered_unit() -> void:
 	if round_resolution_pending or (drag_handler and drag_handler.is_dragging):
 		return
 	var mouse_position := get_viewport().get_mouse_position()
-	if bench_ui:
+	if bench_ui and bench_ui.is_visible_in_tree():
 		var bench_index := bench_ui.get_unit_index_at(mouse_position)
 		if bench_index >= 0 and bench_index < bench_units.size():
 			_sell_unit(bench_units[bench_index], "bench")
 			return
-	if combat_active:
-		return
 	if get_viewport().gui_get_hovered_control() != null:
 		return
 	var camera_3d := camera.get_node_or_null("Camera3D") as Camera3D if camera else null
@@ -519,7 +590,9 @@ func _sell_hovered_unit() -> void:
 	query.collision_mask = 1
 	var hit := board.get_world_3d().direct_space_state.intersect_ray(query)
 	if hit and hit.collider is BaseUnit3D:
-		_sell_unit(hit.collider, "board")
+		var hit_unit: BaseUnit3D = hit.collider
+		var source := "bench" if bench_units.has(hit_unit) else "board"
+		_sell_unit(hit_unit, source)
 
 func _sell_unit(unit: BaseUnit3D, source: String = "") -> void:
 	if round_resolution_pending or not is_instance_valid(unit) or unit.is_queued_for_deletion() or unit.team != 0 or unit.current_state == BaseUnit3D.State.DEAD:
@@ -536,6 +609,7 @@ func _sell_unit(unit: BaseUnit3D, source: String = "") -> void:
 		board.remove_unit(unit.board_position)
 	if in_bench:
 		bench_units.erase(unit)
+		_realign_bench_units()
 	player_gold += unit.invested_gold
 	print("%s vendido por %d ouro" % [unit.stats.unit_name, unit.invested_gold])
 	if dragging_unit == unit:
@@ -600,7 +674,7 @@ func spawn_and_place(unit_id: String, grid_pos: Vector2i, stars: int, team_id: i
 		print("Failed to spawn: %s" % unit_id)
 	return null
 func start_combat() -> void:
-	if not _run_ready or combat_active or round_resolution_pending:
+	if not _run_ready or _entry_in_progress or combat_active or round_resolution_pending:
 		print("Combate já está ativo!")
 		return
 	if drag_handler and drag_handler.is_dragging:
@@ -742,18 +816,21 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 		loss_streak = 0
 		player_gold += roundi(float(gold_on_win) * 0.5)
 		player_health -= 5
+		round_outcomes[current_round] = false
 	elif player_won:
 		win_streak += 1
 		loss_streak = 0
 		
 		var streak_bonus = min((win_streak - 1) * win_streak_bonus_step, max_win_streak_bonus)
 		player_gold += gold_on_win + streak_bonus
+		round_outcomes[current_round] = true
 	else:
 		loss_streak += 1
 		win_streak = 0
 		
 		player_gold += gold_on_loss
 		player_health -= 10
+		round_outcomes[current_round] = false
 	# Todo resultado encerra um round, inclusive derrota e empate.
 	current_round += 1
 	_grant_round_xp()
@@ -830,17 +907,11 @@ func update_ui() -> void:
 	if not ui:
 		return
 	
-	var gold_label: Label = ui.get_node_or_null("Control/TopBar/GoldLabel")
-	var health_label: Label = ui.get_node_or_null("Control/TopBar/HealthLabel")
-	var level_label: Label = ui.get_node_or_null("Control/TopBar/LevelLabel")
-	
-	if gold_label:
-		gold_label.text = "Ouro: %d" % player_gold
-	if health_label:
-		health_label.text = "HP: %d" % player_health
+	ui.update_player_stats(player_gold, player_health, player_level, player_xp, Progression.required_xp(player_level))
+	ui.update_enemy_level(enemy_level)
+	ui.update_board_capacity(get_player_units_on_board_count(), get_board_unit_limit())
 	_update_round_label()
-	if level_label:
-		level_label.text = "Nível 9 · MÁX" if player_level >= Progression.MAX_LEVEL else "Nível %d · XP %d/%d" % [player_level, player_xp, Progression.required_xp(player_level)]
+	
 	var region_label := ui.get_node_or_null("Control/RegionLabel") as Label
 	if region_label:
 		var shown_round := maxi(1, current_round - 1) if round_resolution_pending else current_round
@@ -884,15 +955,7 @@ func _update_shop_upgrade_hints() -> void:
 func _update_round_label() -> void:
 	if not ui:
 		return
-	var round_label := ui.get_node_or_null("Control/TopBar/RoundLabel") as Label
-	if not round_label:
-		return
-	if combat_active:
-		round_label.text = "LUTA · R%d · %02ds" % [current_round, ceili(battle_time_remaining)]
-	elif round_resolution_pending:
-		round_label.text = "RESULTADO · R%d" % (current_round - 1)
-	else:
-		round_label.text = "PREP · R%d" % current_round
+	ui.update_round_display(current_round, combat_active, battle_time_remaining, round_resolution_pending, round_outcomes)
 
 func spawn_random_unit_at_position(tier: int, team: int) -> void:
 	# Verificar se existem unidades desse tier
@@ -940,6 +1003,9 @@ func clear_board() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if _entry_in_progress:
+		get_viewport().set_input_as_handled()
+		return
 	if not _run_ready or _leaving or not shop_system or (_overlay and _overlay.is_open):
 		return
 	if round_resolution_pending:
@@ -1040,37 +1106,80 @@ func _on_buy_xp_button_pressed() -> void:
 # --- Painel de inspeção lateral ---
 
 func inspect_unit_at_mouse(mouse_pos: Vector2) -> void:
-	var from = camera.get_node("Camera3D").project_ray_origin(mouse_pos)
-	var to = from + camera.get_node("Camera3D").project_ray_normal(mouse_pos) * 1000
-	var query = PhysicsRayQueryParameters3D.create(from, to)
+	var camera_3d: Camera3D = null
+	if camera:
+		camera_3d = camera.get_node_or_null("Camera3D") as Camera3D
+	if not camera_3d:
+		camera_3d = get_viewport().get_camera_3d()
+	if not camera_3d:
+		return
+	
+	var from := camera_3d.project_ray_origin(mouse_pos)
+	var to := from + camera_3d.project_ray_normal(mouse_pos) * 1000.0
+	var query := PhysicsRayQueryParameters3D.create(from, to)
 	query.collision_mask = 1
 	
-	var result = get_world_3d().direct_space_state.intersect_ray(query)
+	var result := get_world_3d().direct_space_state.intersect_ray(query)
 	
 	if result and result.collider is BaseUnit3D:
 		show_unit_inspector(result.collider)
 	else:
 		hide_unit_inspector()
-	
 
 func show_unit_inspector(unit: BaseUnit3D) -> void:
-	var panel = ui.get_node("Control/RightBar")
-	var stats = unit.stats
+	if not is_instance_valid(unit) or not unit.stats or not ui:
+		return
+	var panel := ui.get_node_or_null("Control/RightBar")
+	if not panel:
+		return
+	var stats := unit.stats
 	
-	panel.show()
-	panel.get_node("InspectorScroll/VBoxContainer/Name_label").text = stats.unit_name
-	panel.get_node("InspectorScroll/VBoxContainer/Image_container").texture = stats.icon
-	panel.get_node("InspectorScroll/VBoxContainer/Hp_label").text = "Vida: %s" %[str(stats.max_health)]
-	panel.get_node("InspectorScroll/VBoxContainer/Mana_label").text = "Mana: %s" %[str(stats.max_mana)]
-	panel.get_node("InspectorScroll/VBoxContainer/Range_label").text = "Distância" if stats.is_ranged else "Corpo a Corpo"
-	panel.get_node("InspectorScroll/VBoxContainer/Type_label").text = "Físico" if stats.attack_damage == 0  else "Mágico"
-	panel.get_node("InspectorScroll/VBoxContainer/Origins_label").text = "Origens: %s" % (" · ".join(stats.origins) if not stats.origins.is_empty() else "—")
-	panel.get_node("InspectorScroll/VBoxContainer/Classes_label").text = "Classes: %s" % (" · ".join(stats.classes) if not stats.classes.is_empty() else "—")
-	panel.get_node("InspectorScroll/VBoxContainer/Affinities_label").text = "Tipo (sem sinergia): %s" % (" · ".join(stats.affinities) if not stats.affinities.is_empty() else "—")
+	var name_lbl = panel.find_child("Name_label", true, false)
+	if name_lbl:
+		name_lbl.text = "[b]%s[/b] %s (Tier %d)" % [stats.unit_name, "★".repeat(unit.star_level), stats.tier]
+	
+	var img = panel.find_child("Image_container", true, false) as TextureRect
+	if img:
+		img.texture = stats.icon
+	
+	var hp_lbl = panel.find_child("Hp_label", true, false)
+	if hp_lbl:
+		hp_lbl.text = "Vida: [color=#2ecc71]%d[/color] / %d" % [int(unit.current_health), int(unit.get_max_health())]
+	
+	var mana_lbl = panel.find_child("Mana_label", true, false)
+	if mana_lbl:
+		mana_lbl.text = "Mana: [color=#3498db]%d[/color] / %d" % [int(unit.current_mana), int(stats.max_mana)]
+	
+	var range_lbl = panel.find_child("Range_label", true, false)
+	if range_lbl:
+		range_lbl.text = "Alcance: %s (%d hexes)" % ["À Distância" if stats.is_ranged else "Corpo a Corpo", stats.get_attack_range_hexes()]
+	
+	var type_lbl = panel.find_child("Type_label", true, false)
+	if type_lbl:
+		type_lbl.text = "Ataque: [color=#e67e22]%d[/color] (%s)" % [int(unit.get_attack_damage()), "Físico" if stats.ability_damage_type == 0 else "Mágico"]
+	
+	var origins_lbl = panel.find_child("Origins_label", true, false)
+	if origins_lbl:
+		origins_lbl.text = "Origens: [color=#f1c40f]%s[/color]" % (" · ".join(stats.origins) if not stats.origins.is_empty() else "—")
+	
+	var classes_lbl = panel.find_child("Classes_label", true, false)
+	if classes_lbl:
+		classes_lbl.text = "Classes: [color=#9b59b6]%s[/color]" % (" · ".join(stats.classes) if not stats.classes.is_empty() else "—")
+	
+	var aff_lbl = panel.find_child("Affinities_label", true, false)
+	if aff_lbl:
+		aff_lbl.text = "Habilidade: [b]%s[/b]\n[color=#bdc3c7]%s[/color]" % [stats.ability_name, stats.ability_description]
+	
 	ui.show_inspector()
 
 func hide_unit_inspector() -> void:
-	ui.get_node("Control/RightBar").hide()
+	if ui and ui.has_method("hide_inspector"):
+		ui.hide_inspector()
+	elif ui:
+		var panel = ui.get_node_or_null("Control/RightBar")
+		if panel:
+			panel.hide()
+
 
 
 func get_board_unit_limit() -> int:
@@ -1204,10 +1313,23 @@ func _flush_save() -> void:
 	_save_campaign()
 
 func _unit_save_data(unit: BaseUnit3D) -> Dictionary:
+	var pos := unit.board_position
+	# Garantir que unidades de campo fiquem obrigatoriamente dentro da zona do jogador (linhas 4..7)
+	if not unit.is_on_bench():
+		if pos.y < 4 or pos.y >= 8 or pos.x < 0 or pos.x >= 7:
+			for r in range(4, 8):
+				for c in range(7):
+					var candidate := Vector2i(c, r)
+					if not board.is_cell_occupied(candidate):
+						pos = candidate
+						unit.board_position = pos
+						break
+				if pos.y >= 4:
+					break
 	return {
 		"id": unit.stats.unit_id, "stars": unit.star_level,
 		"invested": unit.invested_gold,
-		"cell": [unit.board_position.x, unit.board_position.y],
+		"cell": [pos.x, pos.y],
 	}
 
 func _capture_campaign() -> Dictionary:
@@ -1218,19 +1340,42 @@ func _capture_campaign() -> Dictionary:
 		if is_instance_valid(unit) and not unit.is_queued_for_deletion():
 			saved_bench.append(_unit_save_data(unit))
 	# Inclui combatentes mortos: continuam pertencendo ao jogador, com sua casa inicial.
+	var field_positions: Array[Vector2i] = []
 	for unit in get_tree().get_nodes_in_group("player_units"):
 		if unit is BaseUnit3D and unit not in bench_units and not unit.is_queued_for_deletion():
-			saved_field.append(_unit_save_data(unit))
-	for stats in shop_system.current_units:
-		saved_shop.append(stats.unit_id if stats else "")
+			var data := _unit_save_data(unit)
+			var cell := Vector2i(int(data["cell"][0]), int(data["cell"][1]))
+			# Evitar posições duplicadas no save
+			if cell in field_positions or cell.y < 4 or cell.y >= 8 or cell.x < 0 or cell.x >= 7:
+				for r in range(4, 8):
+					for c in range(7):
+						var candidate := Vector2i(c, r)
+						if candidate not in field_positions:
+							cell = candidate
+							data["cell"] = [cell.x, cell.y]
+							unit.board_position = cell
+							break
+					if cell not in field_positions:
+						break
+			field_positions.append(cell)
+			saved_field.append(data)
+	if shop_system and shop_system.current_units:
+		for stats in shop_system.current_units:
+			saved_shop.append(stats.unit_id if stats else "")
+	while saved_shop.size() < 5:
+		saved_shop.append("")
+	if saved_shop.size() > 5:
+		saved_shop.resize(5)
+	
+	var effective_level: int = clampi(maxi(player_level, saved_field.size()), 1, 9)
 	return {
-		"gold": player_gold, "health": player_health, "level": player_level,
+		"gold": player_gold, "health": player_health, "level": effective_level,
 		# Campos legados preservam a compatibilidade do formato do save.
 		"xp": player_xp, "enemy_level": int(Regions.get_enemy_stage(current_round)["level"]), "enemy_xp": 0,
 		"round": current_round, "win_streak": win_streak, "loss_streak": loss_streak,
 		"phase": "combat" if combat_active else ("resolved" if round_resolution_pending else "prep"),
 		"bench": saved_bench, "field": saved_field, "shop": saved_shop,
-		"locked": shop_system.is_shop_locked,
+		"locked": shop_system.is_shop_locked if shop_system else false,
 	}
 
 func _save_campaign() -> bool:
@@ -1283,4 +1428,5 @@ func _restore_campaign(run: Dictionary) -> bool:
 		# Uma luta interrompida volta à preparação, sem premiar nem penalizar.
 		_resolve_unit_merges()
 		spawn_enemy_team()
+	_realign_bench_units(false)
 	return true

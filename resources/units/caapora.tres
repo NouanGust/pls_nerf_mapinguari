@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://ddie0cbejkgnc"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_cm1nw"]
-[ext_resource type="Texture2D" uid="uid://cq38jb0je502y" path="res://Assets/Units_teste/Caapora.png" id="1_wnuna"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_cm1nw"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Caapora.png" id="1_wnuna"]
 
 [resource]
 script = ExtResource("1_cm1nw")
@@ -31,6 +31,5 @@ ability_damage = 200.0
 ability_targets = 5
 ability_range = 6.0
 ability_damage_type = 0
-target_priority = 1
 is_ranged = true
 prefers_backline = true

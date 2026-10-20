@@ -1,39 +1,33 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/ipe_amarelo.png" id="2_splash_art"]
 
 [resource]
 script = ExtResource("1_stats")
-icon = ExtResource("2_splash_art")
-unit_id = "ipe_amarelo"
 unit_name = "Ipê-amarelo"
-cost = 2
+unit_id = "ipe_amarelo"
 description = "Protetor de linha de frente que amplia as opções de Flora e Cerrado. Planta imóvel: ataca corpo a corpo, a uma casa de alcance. Aura: +10% de dano de ataque aos outros aliados em até 2 hexes; vale apenas a aura mais forte."
+tier = 2
+cost = 2
+icon = ExtResource("2_splash_art")
+max_health = 760.0
+attack_damage = 42.0
+attack_speed = 0.8
+armor = 30.0
+magic_resist = 30.0
+movement_speed = 0.0
+is_stationary = true
+mana_per_second = 3.0
+mana_when_hit = 8.0
 origins = Array[String](["Cerrado"])
-classes = Array[String](["Protetor da Mata","Tank"])
+classes = Array[String](["Protetor da Mata", "Tank"])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Cerrado"])
-max_health = 760
-attack_damage = 42
-attack_speed = 0.8
-attack_range = 1
-armor = 30
-magic_resist = 30
-max_mana = 100
 ability_name = "Casca Dourada"
 ability_description = "Renova um escudo próprio de 150 até ser consumido. Não ganha mana enquanto estiver protegido."
-ability_shield = 150
+ability_shield = 150.0
 is_tank = true
-tier = 2
-movement_speed = 0.0
-mana_per_attack = 10
-mana_when_hit = 8
-
-is_ranged = false
-mana_per_second = 3
-is_stationary = true
 passive_aura_range = 2
 passive_aura_effect = "power"
-passive_aura_power = 0.10
+passive_aura_power = 0.1

@@ -1,93 +1,88 @@
 [gd_scene format=3 uid="uid://c3exjsipb8037"]
 
-[ext_resource type="Script" uid="uid://c6d4f6am2fxkn" path="res://Scripts/UI/shop_ui.gd" id="1_13cgw"]
-[ext_resource type="Texture2D" uid="uid://cnljivd6cakk" path="res://Assets/Units_teste/Comadre_fulozinha.png" id="2_71wt1"]
-[ext_resource type="Texture2D" uid="uid://bhsyhygsnitft" path="res://Assets/UI/GUI_4x.png" id="2_npa51"]
-[ext_resource type="Texture2D" uid="uid://d0tnt6pe4eoxh" path="res://74880.jpg" id="2_xkiwj"]
-[ext_resource type="Script" uid="uid://daelinxbkh2la" path="res://Scripts/UI/bench_ui.gd" id="3_bench"]
-[ext_resource type="Texture2D" uid="uid://b062irqj1alvi" path="res://Assets/UI/buttons_4x.png" id="3_intyv"]
-[ext_resource type="Script" uid="uid://bp57d1d7t4y8l" path="res://Scripts/UI/game_ui.gd" id="4_game_ui"]
+[ext_resource type="Script" uid="uid://bp57d1d7t4y8l" path="res://Scripts/UI/game_ui.gd" id="1_game_ui"]
+[ext_resource type="Script" uid="uid://c6d4f6am2fxkn" path="res://Scripts/UI/shop_ui.gd" id="2_shop_ui"]
+[ext_resource type="Script" uid="uid://daelinxbkh2la" path="res://Scripts/UI/bench_ui.gd" id="3_bench_ui"]
+[ext_resource type="Texture2D" uid="uid://bhsyhygsnitft" path="res://Assets/UI/GUI_4x.png" id="4_gui_atlas"]
+[ext_resource type="Texture2D" uid="uid://cnljivd6cakk" path="res://Assets/Units_teste/Comadre_fulozinha.png" id="5_portrait"]
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_intyv"]
-texture_margin_left = 16.0
-texture_margin_top = 16.0
-texture_margin_right = 16.0
-texture_margin_bottom = 16.0
-expand_margin_left = 10.0
-expand_margin_top = 10.0
-expand_margin_right = 10.0
-expand_margin_bottom = 10.0
-region_rect = Rect2(0, 352, 160, 48)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_ikj5o"]
-texture = ExtResource("3_intyv")
-texture_margin_left = 18.0
-texture_margin_top = 18.0
-texture_margin_right = 18.0
-texture_margin_bottom = 18.0
-region_rect = Rect2(128, 0, 96, 64)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_4efff"]
-texture = ExtResource("3_intyv")
-texture_margin_left = 16.0
-texture_margin_top = 16.0
-texture_margin_right = 16.0
-texture_margin_bottom = 16.0
-region_rect = Rect2(224, 0, 96, 64)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_78ss0"]
-texture = ExtResource("3_intyv")
-texture_margin_left = 18.0
-texture_margin_top = 18.0
-texture_margin_right = 18.0
-texture_margin_bottom = 18.0
-region_rect = Rect2(224, 0, 96, 64)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_panel"]
-content_margin_left = 8.0
-content_margin_top = 8.0
-content_margin_right = 8.0
-content_margin_bottom = 8.0
-bg_color = Color(0.055, 0.078, 0.09, 0.96)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_top_bar"]
+bg_color = Color(0.043, 0.078, 0.114, 0.95)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.3, 0.52, 0.49, 1)
+border_color = Color(0.784, 0.667, 0.431, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_milestone_badge"]
+content_margin_left = 6.0
+content_margin_top = 2.0
+content_margin_right = 6.0
+content_margin_bottom = 2.0
+bg_color = Color(0.06, 0.11, 0.16, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.45, 0.55, 0.7)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_panel"]
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.04, 0.07, 0.1, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.24, 0.35, 0.44, 0.9)
 corner_radius_top_left = 5
 corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_active"]
 content_margin_left = 6.0
 content_margin_top = 4.0
 content_margin_right = 6.0
 content_margin_bottom = 4.0
-bg_color = Color(0.141, 0.275, 0.255, 0.98)
+bg_color = Color(0.08, 0.16, 0.18, 0.96)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.4, 0.72, 0.64, 1)
+border_color = Color(0.25, 0.85, 0.72, 1)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_synergy_icon"]
-atlas = ExtResource("2_npa51")
+atlas = ExtResource("4_gui_atlas")
 region = Rect2(256, 256, 16, 16)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_bar_bg"]
-bg_color = Color(0.09, 0.13, 0.15, 1)
+bg_color = Color(0.05, 0.08, 0.1, 1)
 corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_bar_active"]
-bg_color = Color(0.39, 0.82, 0.68, 1)
+bg_color = Color(0.25, 0.85, 0.72, 1)
 corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
@@ -98,84 +93,150 @@ content_margin_left = 6.0
 content_margin_top = 4.0
 content_margin_right = 6.0
 content_margin_bottom = 4.0
-bg_color = Color(0.145, 0.17, 0.19, 0.98)
+bg_color = Color(0.06, 0.09, 0.12, 0.92)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.35, 0.39, 0.41, 1)
+border_color = Color(0.22, 0.3, 0.36, 0.8)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_bar_inactive"]
-bg_color = Color(0.49, 0.6, 0.61, 1)
+bg_color = Color(0.38, 0.48, 0.54, 1)
 corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_4284l"]
-texture = ExtResource("2_npa51")
-texture_margin_left = 48.0
-texture_margin_top = 24.0
-texture_margin_right = 48.0
-texture_margin_bottom = 24.0
-region_rect = Rect2(384, 0, 96, 96)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_sinwf"]
-texture = ExtResource("3_intyv")
-texture_margin_left = 10.0
-texture_margin_top = 10.0
-texture_margin_right = 10.0
-texture_margin_bottom = 10.0
-region_rect = Rect2(132, 4, 88, 56)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_5x6t4"]
-texture = ExtResource("3_intyv")
-texture_margin_left = 10.0
-texture_margin_top = 10.0
-texture_margin_right = 10.0
-texture_margin_bottom = 10.0
-region_rect = Rect2(228, 8, 88, 52)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_x82rw"]
-texture = ExtResource("2_npa51")
-texture_margin_left = 56.0
-texture_margin_top = 8.0
-texture_margin_right = 56.0
-texture_margin_bottom = 8.0
-region_rect = Rect2(448, 192, 64, 64)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_43gfl"]
-bg_color = Color(0.075, 0.064, 0.057, 0.86)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bench_panel"]
+bg_color = Color(0.055, 0.086, 0.118, 0.95)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.43, 0.27, 0.19, 0.85)
+border_color = Color(0.24, 0.34, 0.42, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+shadow_color = Color(0, 0, 0, 0.4)
+shadow_size = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bottom_bar"]
+bg_color = Color(0.039, 0.067, 0.098, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.784, 0.667, 0.431, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gold_badge"]
+content_margin_left = 8.0
+content_margin_top = 2.0
+content_margin_right = 8.0
+content_margin_bottom = 2.0
+bg_color = Color(0.06, 0.1, 0.14, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.85, 0.35, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.3)
+shadow_size = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_level_box"]
+content_margin_left = 6.0
+content_margin_top = 4.0
+content_margin_right = 6.0
+content_margin_bottom = 4.0
+bg_color = Color(0.055, 0.09, 0.13, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.25, 0.36, 0.46, 0.85)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xp_bg"]
+bg_color = Color(0.04, 0.06, 0.08, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xp_fill"]
+bg_color = Color(0.12, 0.56, 1, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tooltip"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(0.04, 0.07, 0.1, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.784, 0.667, 0.431, 1)
 corner_radius_top_left = 5
 corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 8
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_npa51"]
-texture = ExtResource("2_npa51")
-texture_margin_left = 16.0
-texture_margin_top = 16.0
-texture_margin_right = 16.0
-texture_margin_bottom = 16.0
-expand_margin_left = 10.0
-expand_margin_top = 10.0
-expand_margin_right = 10.0
-expand_margin_bottom = 10.0
-region_rect = Rect2(192, 0, 96, 96)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_widget"]
+bg_color = Color(0.043, 0.078, 0.114, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.784, 0.667, 0.431, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 8
 
-[node name="GameUi" type="CanvasLayer" unique_id=1728843799]
-script = ExtResource("4_game_ui")
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_bg"]
+bg_color = Color(0.04, 0.06, 0.08, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
 
-[node name="Control" type="Control" parent="." unique_id=1312105481]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_fill"]
+bg_color = Color(0.22, 0.85, 0.55, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="GameUi" type="CanvasLayer" unique_id=566596533]
+script = ExtResource("1_game_ui")
+
+[node name="Control" type="Control" parent="." unique_id=130547909]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -184,137 +245,184 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="TopBar" type="Panel" parent="Control" unique_id=2065043646]
-texture_filter = 1
-layout_mode = 0
-offset_left = 18.0
-offset_top = 14.0
-offset_right = 575.0
-offset_bottom = 74.0
-theme_override_styles/panel = SubResource("StyleBoxTexture_intyv")
-
-[node name="GoldLabel" type="Label" parent="Control/TopBar" unique_id=596846676]
-layout_mode = 0
-offset_left = 16.0
+[node name="TopBar" type="Panel" parent="Control" unique_id=2051808828]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -290.0
 offset_top = 10.0
-offset_right = 112.0
-offset_bottom = 50.0
-theme_override_colors/font_color = Color(0.96, 0.84, 0.63, 1)
+offset_right = 290.0
+offset_bottom = 66.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_top_bar")
+
+[node name="Content" type="HBoxContainer" parent="Control/TopBar" unique_id=2094092110]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 6.0
+offset_right = -12.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="RoundBox" type="HBoxContainer" parent="Control/TopBar/Content" unique_id=360668918]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="RoundLabel" type="Label" parent="Control/TopBar/Content/RoundBox" unique_id=1195915259]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.9, 0.78, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 16
-text = "Ouro: 0"
+text = "1-1"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="HealthLabel" type="Label" parent="Control/TopBar" unique_id=1104116360]
-layout_mode = 0
-offset_left = 122.0
-offset_top = 10.0
-offset_right = 220.0
-offset_bottom = 50.0
-theme_override_colors/font_color = Color(0.96, 0.68, 0.57, 1)
-theme_override_font_sizes/font_size = 16
-text = "HP: 100"
+[node name="PhaseLabel" type="Label" parent="Control/TopBar/Content/RoundBox" unique_id=289966907]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.88, 0.82, 1)
+theme_override_font_sizes/font_size = 11
+theme_override_styles/normal = SubResource("StyleBoxFlat_milestone_badge")
+text = "PREP"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="RoundLabel" type="Label" parent="Control/TopBar" unique_id=1919650044]
-layout_mode = 0
-offset_left = 355.0
-offset_top = 10.0
-offset_right = 548.0
-offset_bottom = 50.0
-theme_override_colors/font_color = Color(0.89, 0.84, 0.73, 1)
+[node name="Divider1" type="VSeparator" parent="Control/TopBar/Content" unique_id=1237782022]
+layout_mode = 2
+
+[node name="MilestonesContainer" type="HBoxContainer" parent="Control/TopBar/Content" unique_id=760547797]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Divider2" type="VSeparator" parent="Control/TopBar/Content" unique_id=560191962]
+layout_mode = 2
+
+[node name="EnemyBox" type="HBoxContainer" parent="Control/TopBar/Content" unique_id=1849201948]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="EnemyIcon" type="Label" parent="Control/TopBar/Content/EnemyBox" unique_id=1498302194]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.45, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+text = "⚔️"
+vertical_alignment = 1
+
+[node name="EnemyLevelLabel" type="Label" parent="Control/TopBar/Content/EnemyBox" unique_id=1748291039]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.78, 0.75, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 11
+theme_override_styles/normal = SubResource("StyleBoxFlat_milestone_badge")
+text = "INIMIGO NV. 1"
+vertical_alignment = 1
+
+[node name="Divider3" type="VSeparator" parent="Control/TopBar/Content" unique_id=1948201959]
+layout_mode = 2
+
+[node name="TimerBox" type="HBoxContainer" parent="Control/TopBar/Content" unique_id=747864040]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="TimerIcon" type="Label" parent="Control/TopBar/Content/TimerBox" unique_id=924725101]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.88, 0.82, 1)
 theme_override_font_sizes/font_size = 14
+text = "⏱"
+vertical_alignment = 1
+
+[node name="TimerLabel" type="Label" parent="Control/TopBar/Content/TimerBox" unique_id=1664763481]
+custom_minimum_size = Vector2(36, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.94, 0.88, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 16
+text = "30s"
+vertical_alignment = 1
+
+[node name="LegacyNodes" type="Control" parent="Control/TopBar" unique_id=2017273386]
+visible = false
+layout_mode = 1
+anchors_preset = 0
+
+[node name="RoundLabel" type="Label" parent="Control/TopBar/LegacyNodes" unique_id=1929026570]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
 text = "Round: 1"
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="LevelLabel" type="Label" parent="Control/TopBar" unique_id=1106596111]
+[node name="GoldLabel" type="Label" parent="Control/TopBar/LegacyNodes" unique_id=1273117763]
 layout_mode = 0
-offset_left = 232.0
-offset_top = 10.0
-offset_right = 350.0
-offset_bottom = 50.0
-theme_override_colors/font_color = Color(0.77, 0.86, 0.94, 1)
-theme_override_font_sizes/font_size = 14
-text = "Nível 1 · XP 0/2"
-horizontal_alignment = 1
-vertical_alignment = 1
+offset_right = 40.0
+offset_bottom = 23.0
+text = "Ouro: 0"
 
-[node name="BoardCountLabel" type="Label" parent="Control" unique_id=1900415998]
+[node name="HealthLabel" type="Label" parent="Control/TopBar/LegacyNodes" unique_id=842833847]
 layout_mode = 0
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -130.0
-offset_top = 82.0
-offset_right = 130.0
-offset_bottom = 118.0
-grow_horizontal = 2
-theme_override_colors/font_color = Color(0.97, 0.87, 0.62, 1)
-theme_override_font_sizes/font_size = 19
-text = "NO CAMPO · 0 / 1"
-horizontal_alignment = 1
-vertical_alignment = 1
+offset_right = 40.0
+offset_bottom = 23.0
+text = "HP: 100"
 
-[node name="RegionLabel" type="Label" parent="Control" unique_id=878686082]
+[node name="LevelLabel" type="Label" parent="Control/TopBar/LegacyNodes" unique_id=1214099690]
 layout_mode = 0
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -280.0
-offset_top = 120.0
-offset_right = 280.0
-offset_bottom = 148.0
-grow_horizontal = 2
-theme_override_colors/font_color = Color(0.8, 0.88, 0.86, 1)
-theme_override_font_sizes/font_size = 15
-text = "Cerrado · Inimigo nível 1 · XP 0/2"
-horizontal_alignment = 1
+offset_right = 40.0
+offset_bottom = 23.0
+text = "Nível 1"
 
-[node name="SynergyToggleButton" type="Button" parent="Control" unique_id=1960782639]
-texture_filter = 1
+[node name="SynergyToggleButton" type="Button" parent="Control" unique_id=1641550023]
 layout_mode = 0
-offset_left = 17.0
-offset_top = 103.0
-offset_right = 159.0
-offset_bottom = 162.0
-tooltip_text = "Mostrar sinergias ativas e inativas"
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_styles/normal = SubResource("StyleBoxTexture_ikj5o")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_4efff")
-theme_override_styles/hover = SubResource("StyleBoxTexture_78ss0")
+offset_left = 14.0
+offset_top = 12.0
+offset_right = 154.0
+offset_bottom = 48.0
+tooltip_text = "Mostrar/ocultar painel de sinergias"
 text = "Sinergias · 0"
 
-[node name="SynergyPanel" type="PanelContainer" parent="Control" unique_id=951990027]
+[node name="SynergyPanel" type="PanelContainer" parent="Control" unique_id=621106158]
 layout_mode = 0
-offset_left = 15.0
-offset_top = 169.0
-offset_right = 265.0
-offset_bottom = 589.0
+offset_left = 14.0
+offset_top = 56.0
+offset_right = 254.0
+offset_bottom = 450.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_synergy_panel")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Control/SynergyPanel" unique_id=1853953061]
+[node name="ScrollContainer" type="ScrollContainer" parent="Control/SynergyPanel" unique_id=1252563010]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="SynergyList" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer" unique_id=1166405583]
+[node name="SynergyList" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer" unique_id=897506395]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="SynergyRowTemplateActive" type="PanelContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList" unique_id=386822474]
+[node name="SynergyRowTemplateActive" type="PanelContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList" unique_id=1074046336]
 visible = false
-custom_minimum_size = Vector2(224, 42)
+custom_minimum_size = Vector2(216, 42)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_synergy_active")
 
-[node name="Row" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive" unique_id=1512154998]
+[node name="Row" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive" unique_id=602762005]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 7
+theme_override_constants/separation = 6
 
-[node name="Icon" type="TextureRect" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row" unique_id=1401000248]
+[node name="Icon" type="TextureRect" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row" unique_id=2140440472]
 custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
 mouse_filter = 2
@@ -322,50 +430,50 @@ texture = SubResource("AtlasTexture_synergy_icon")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Content" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row" unique_id=1544494059]
+[node name="Content" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row" unique_id=1003823727]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 2
 
-[node name="Header" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content" unique_id=1563724651]
+[node name="Header" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content" unique_id=391958333]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="TagLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content/Header" unique_id=1842208429]
+[node name="TagLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content/Header" unique_id=1676235568]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.94, 0.84, 0.55, 1)
+theme_override_colors/font_color = Color(0.96, 0.88, 0.65, 1)
 theme_override_font_sizes/font_size = 12
-text = "Origem · Amazônico"
+text = "Amazônico"
 
-[node name="CountLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content/Header" unique_id=778475528]
+[node name="CountLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content/Header" unique_id=1433464744]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.88, 0.92, 0.88, 1)
+theme_override_colors/font_color = Color(0.9, 0.95, 0.9, 1)
 theme_override_font_sizes/font_size = 11
 text = "2/2"
 horizontal_alignment = 2
 
-[node name="Progress" type="ProgressBar" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content" unique_id=1994926569]
-custom_minimum_size = Vector2(0, 5)
+[node name="Progress" type="ProgressBar" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateActive/Row/Content" unique_id=1013410349]
+custom_minimum_size = Vector2(0, 4)
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_synergy_bar_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_synergy_bar_active")
 show_percentage = false
 
-[node name="SynergyRowTemplateInactive" type="PanelContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList" unique_id=1514227656]
+[node name="SynergyRowTemplateInactive" type="PanelContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList" unique_id=821493934]
 visible = false
-custom_minimum_size = Vector2(224, 42)
+custom_minimum_size = Vector2(216, 42)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_synergy_inactive")
 
-[node name="Row" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive" unique_id=1632759281]
+[node name="Row" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive" unique_id=578590532]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 7
+theme_override_constants/separation = 6
 
-[node name="Icon" type="TextureRect" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row" unique_id=1360699354]
+[node name="Icon" type="TextureRect" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row" unique_id=1205397556]
 custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
 mouse_filter = 2
@@ -373,305 +481,497 @@ texture = SubResource("AtlasTexture_synergy_icon")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Content" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row" unique_id=1618663125]
+[node name="Content" type="VBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row" unique_id=2074848092]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 2
 
-[node name="Header" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content" unique_id=2140273357]
+[node name="Header" type="HBoxContainer" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content" unique_id=988203512]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="TagLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content/Header" unique_id=289658011]
+[node name="TagLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content/Header" unique_id=1318928820]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.73, 0.77, 0.78, 1)
+theme_override_colors/font_color = Color(0.65, 0.72, 0.78, 1)
 theme_override_font_sizes/font_size = 12
-text = "Classe · Tank"
+text = "Lutador"
 
-[node name="CountLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content/Header" unique_id=1717006618]
+[node name="CountLabel" type="Label" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content/Header" unique_id=37977779]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.71, 0.75, 0.76, 1)
+theme_override_colors/font_color = Color(0.6, 0.68, 0.74, 1)
 theme_override_font_sizes/font_size = 11
 text = "1/2"
 horizontal_alignment = 2
 
-[node name="Progress" type="ProgressBar" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content" unique_id=398173755]
-custom_minimum_size = Vector2(0, 5)
+[node name="Progress" type="ProgressBar" parent="Control/SynergyPanel/ScrollContainer/SynergyList/SynergyRowTemplateInactive/Row/Content" unique_id=333762122]
+custom_minimum_size = Vector2(0, 4)
 layout_mode = 2
 mouse_filter = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_synergy_bar_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_synergy_bar_inactive")
 show_percentage = false
 
-[node name="BottomBar" type="Panel" parent="Control" unique_id=1904179370]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 3.0
-offset_top = -243.0
-offset_right = 3.0
-offset_bottom = -23.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxTexture_4284l")
-
-[node name="ShopLabel" type="Button" parent="Control/BottomBar" unique_id=2078547573]
+[node name="SynergyTooltip" type="PanelContainer" parent="Control" unique_id=1498127390]
+visible = false
+z_index = 10
 layout_mode = 0
-offset_left = 23.0
-offset_top = 15.0
-offset_right = 105.0
-offset_bottom = 55.0
-theme_override_colors/font_color = Color(0.5875146, 0.58614224, 9.62615e-07, 1)
-theme_override_font_sizes/font_size = 14
-theme_override_styles/normal = SubResource("StyleBoxTexture_sinwf")
-theme_override_styles/pressed = SubResource("StyleBoxTexture_5x6t4")
-text = "LOJA"
+offset_left = 264.0
+offset_top = 56.0
+offset_right = 564.0
+offset_bottom = 220.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tooltip")
 
-[node name="ShopContainer" type="HBoxContainer" parent="Control/BottomBar" unique_id=1611297172]
-clip_contents = true
-custom_minimum_size = Vector2(600, 0)
-layout_mode = 0
-offset_left = 184.0
-offset_top = 18.0
-offset_right = 791.0
-offset_bottom = 183.0
-theme_override_constants/separation = 10
-alignment = 1
-script = ExtResource("1_13cgw")
-
-[node name="ControlsContainer" type="VBoxContainer" parent="Control/BottomBar" unique_id=758041956]
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -367.0
-offset_top = 52.0
-offset_right = -55.0
-offset_bottom = 174.0
-grow_horizontal = 0
-theme_override_constants/separation = 10
-
-[node name="RerollButton" type="Button" parent="Control/BottomBar/ControlsContainer" unique_id=1515377000]
-custom_minimum_size = Vector2(96, 34)
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/SynergyTooltip" unique_id=1498127391]
 layout_mode = 2
-tooltip_text = "Atualizar a loja (R)"
-text = "Rerrolar 2g"
+mouse_filter = 2
+theme_override_constants/separation = 4
 
-[node name="LockButton" type="Button" parent="Control/BottomBar/ControlsContainer" unique_id=260637900]
-custom_minimum_size = Vector2(96, 34)
+[node name="Tooltip_title" type="RichTextLabel" parent="Control/SynergyTooltip/VBoxContainer" unique_id=1498127392]
 layout_mode = 2
-tooltip_text = "Manter esta loja entre rodadas (L)"
-text = "Travar"
-
-[node name="BuyXPButton" type="Button" parent="Control/BottomBar/ControlsContainer" unique_id=336221098]
-custom_minimum_size = Vector2(100, 34)
-layout_mode = 2
-tooltip_text = "Comprar experiência (Q)"
-text = "XP 4g"
-
-[node name="StatsTooltip" type="PanelContainer" parent="Control/BottomBar" unique_id=475325823]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -116.0
-offset_top = -78.5
-offset_right = 116.0
-offset_bottom = 78.5
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxTexture_x82rw")
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Control/BottomBar/StatsTooltip" unique_id=1071325550]
-custom_minimum_size = Vector2(120, 0)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-theme_override_constants/separation = 8
-
-[node name="Tooltip_name" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=1039519784]
-layout_mode = 2
-text = "Nome
-"
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.96, 0.9, 0.78, 1)
+theme_override_font_sizes/normal_font_size = 14
+bbcode_enabled = true
+text = "Sinergia"
 fit_content = true
 
-[node name="Tooltip_hp" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=2065744821]
+[node name="Tooltip_status" type="RichTextLabel" parent="Control/SynergyTooltip/VBoxContainer" unique_id=1498127393]
 layout_mode = 2
-text = "HP"
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.4, 0.9, 0.6, 1)
+theme_override_font_sizes/normal_font_size = 12
+bbcode_enabled = true
+text = "Status"
 fit_content = true
 
-[node name="Tooltip_range" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=1602243571]
+[node name="Tooltip_desc" type="RichTextLabel" parent="Control/SynergyTooltip/VBoxContainer" unique_id=1498127394]
 layout_mode = 2
-text = "range"
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.9, 0.88, 0.82, 1)
+theme_override_font_sizes/normal_font_size = 12
+bbcode_enabled = true
+text = "Efeito"
 fit_content = true
 
-[node name="Tooltip_type" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=102777709]
+[node name="Tooltip_units" type="RichTextLabel" parent="Control/SynergyTooltip/VBoxContainer" unique_id=1498127395]
 layout_mode = 2
-text = "tipo"
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.65, 0.75, 0.82, 1)
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
+text = "Unidades"
 fit_content = true
 
-[node name="BenchPanel" type="Panel" parent="Control" unique_id=1900415993]
+[node name="BenchPanel" type="Panel" parent="Control" unique_id=993275518]
+visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -438.0
-offset_top = -339.0
-offset_right = 442.0
-offset_bottom = -249.0
+offset_left = -440.0
+offset_top = -337.0
+offset_right = 440.0
+offset_bottom = -253.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_43gfl")
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bench_panel")
 
-[node name="BenchContent" type="VBoxContainer" parent="Control/BenchPanel" unique_id=1900415994]
-layout_mode = 0
+[node name="BenchContent" type="VBoxContainer" parent="Control/BenchPanel" unique_id=231478274]
+layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 10.0
-offset_top = 3.0
-offset_right = -10.0
-offset_bottom = -3.0
+offset_left = 8.0
+offset_top = 4.0
+offset_right = -8.0
+offset_bottom = -4.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 2
 
-[node name="BenchTitle" type="Label" parent="Control/BenchPanel/BenchContent" unique_id=1900415995]
+[node name="BenchTitle" type="Label" parent="Control/BenchPanel/BenchContent" unique_id=766841837]
 custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.92, 0.82, 0.62, 1)
-theme_override_font_sizes/font_size = 12
-text = "BANCO 0/9 · arraste para o tabuleiro"
+theme_override_colors/font_color = Color(0.92, 0.84, 0.68, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 11
+text = "BANCO · 0 / 9"
 horizontal_alignment = 1
 
-[node name="BenchSlots" type="HBoxContainer" parent="Control/BenchPanel/BenchContent" unique_id=1900415996]
-custom_minimum_size = Vector2(0, 62)
+[node name="BenchSlots" type="HBoxContainer" parent="Control/BenchPanel/BenchContent" unique_id=1564051610]
 layout_mode = 2
-script = ExtResource("3_bench")
+size_flags_vertical = 3
+alignment = 1
+script = ExtResource("3_bench_ui")
 
-[node name="RightBar" type="Panel" parent="Control" unique_id=1903512356]
+[node name="BottomBar" type="Panel" parent="Control" unique_id=1906316000]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -220.0
+offset_right = -46.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_bottom_bar")
+
+[node name="ShopLabel" type="Button" parent="Control/BottomBar" unique_id=2145726549]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -86.0
+offset_top = -42.0
+offset_right = -14.0
+offset_bottom = -10.0
+grow_horizontal = 0
+grow_vertical = 0
+tooltip_text = "Ocultar/mostrar cartas da loja"
+text = "LOJA"
+
+[node name="GoldContainer" type="PanelContainer" parent="Control/BottomBar" unique_id=905527534]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 10.0
+offset_right = 120.0
+offset_bottom = 42.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_gold_badge")
+
+[node name="GoldBox" type="HBoxContainer" parent="Control/BottomBar/GoldContainer" unique_id=310051793]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="GoldIcon" type="Label" parent="Control/BottomBar/GoldContainer/GoldBox" unique_id=13899708]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
+theme_override_font_sizes/font_size = 14
+text = "🪙"
+
+[node name="GoldLabel" type="Label" parent="Control/BottomBar/GoldContainer/GoldBox" unique_id=912469225]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 15
+text = "0"
+
+[node name="ControlsContainer" type="VBoxContainer" parent="Control/BottomBar" unique_id=1358761633]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 48.0
+offset_right = 236.0
+offset_bottom = 196.0
+theme_override_constants/separation = 6
+
+[node name="LevelBox" type="PanelContainer" parent="Control/BottomBar/ControlsContainer" unique_id=2083142120]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_level_box")
+
+[node name="VBox" type="VBoxContainer" parent="Control/BottomBar/ControlsContainer/LevelBox" unique_id=89611860]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Header" type="HBoxContainer" parent="Control/BottomBar/ControlsContainer/LevelBox/VBox" unique_id=1467733196]
+layout_mode = 2
+
+[node name="LevelLabel" type="Label" parent="Control/BottomBar/ControlsContainer/LevelBox/VBox/Header" unique_id=331826822]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.96, 0.9, 0.78, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 13
+text = "Nível 1"
+
+[node name="XPProgressLabel" type="Label" parent="Control/BottomBar/ControlsContainer/LevelBox/VBox/Header" unique_id=995615679]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "XP 0/2"
+horizontal_alignment = 2
+
+[node name="XPProgressBar" type="ProgressBar" parent="Control/BottomBar/ControlsContainer/LevelBox/VBox" unique_id=52955492]
+custom_minimum_size = Vector2(0, 5)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_xp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_xp_fill")
+max_value = 2.0
+show_percentage = false
+
+[node name="BoardSpaceContainer" type="HBoxContainer" parent="Control/BottomBar/ControlsContainer/LevelBox/VBox" unique_id=1928374651]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="BoardSpaceIcon" type="Label" parent="Control/BottomBar/ControlsContainer/LevelBox/VBox/BoardSpaceContainer" unique_id=1928374652]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.88, 0.82, 1)
+theme_override_font_sizes/font_size = 11
+text = "♟"
+vertical_alignment = 1
+
+[node name="BoardSpaceLabel" type="Label" parent="Control/BottomBar/ControlsContainer/LevelBox/VBox/BoardSpaceContainer" unique_id=1928374653]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.92, 0.94, 0.96, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 11
+text = "CAMPO: 0/1 (1 livre)"
+vertical_alignment = 1
+
+[node name="BuyXPButton" type="Button" parent="Control/BottomBar/ControlsContainer" unique_id=39606295]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+tooltip_text = "Comprar 4 de XP por 4 de ouro (Q)"
+text = "+4 XP · 4g"
+
+[node name="RerollButton" type="Button" parent="Control/BottomBar/ControlsContainer" unique_id=1620008137]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+tooltip_text = "Atualizar loja por 2 de ouro (R)"
+text = "Rerrolar 2g"
+
+[node name="TierOddsContainer" type="HBoxContainer" parent="Control/BottomBar/ControlsContainer" unique_id=404951029]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="LockButton" type="Button" parent="Control/BottomBar" unique_id=1115008750]
+layout_mode = 0
+offset_left = 126.0
+offset_top = 10.0
+offset_right = 236.0
+offset_bottom = 42.0
+tooltip_text = "Travar/destravar ofertas da loja para o próximo round (L)"
+text = "🔒 Travar"
+
+[node name="ShopContainer" type="HBoxContainer" parent="Control/BottomBar" unique_id=1007177299]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 246.0
+offset_top = 12.0
+offset_right = -100.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+alignment = 1
+script = ExtResource("2_shop_ui")
+
+[node name="StatsTooltip" type="PanelContainer" parent="Control/BottomBar" unique_id=871767434]
+z_index = 10
+layout_mode = 0
+offset_left = 300.0
+offset_top = -140.0
+offset_right = 540.0
+offset_bottom = -10.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_tooltip")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/BottomBar/StatsTooltip" unique_id=513790708]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Tooltip_name" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=1095462834]
+layout_mode = 2
+theme_override_colors/default_color = Color(0.96, 0.9, 0.78, 1)
+theme_override_font_sizes/normal_font_size = 14
+bbcode_enabled = true
+text = "Nome"
+fit_content = true
+
+[node name="Tooltip_hp" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=2080433627]
+layout_mode = 2
+theme_override_colors/default_color = Color(0.4, 0.9, 0.6, 1)
+theme_override_font_sizes/normal_font_size = 12
+bbcode_enabled = true
+text = "HP"
+fit_content = true
+
+[node name="Tooltip_range" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=1485475993]
+layout_mode = 2
+theme_override_colors/default_color = Color(0.5, 0.8, 1, 1)
+theme_override_font_sizes/normal_font_size = 12
+bbcode_enabled = true
+text = "Alcance"
+fit_content = true
+
+[node name="Tooltip_type" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=76565951]
+layout_mode = 2
+theme_override_colors/default_color = Color(0.9, 0.8, 0.5, 1)
+theme_override_font_sizes/normal_font_size = 12
+bbcode_enabled = true
+text = "Tipo"
+fit_content = true
+
+[node name="HealthWidget" type="PanelContainer" parent="Control" unique_id=152244167]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -211.0
+offset_top = -309.0
+offset_right = -51.0
+offset_bottom = -253.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_health_widget")
+
+[node name="Content" type="HBoxContainer" parent="Control/HealthWidget" unique_id=98968371]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Avatar" type="Label" parent="Control/HealthWidget/Content" unique_id=61314595]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.25, 0.75, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "💧"
+vertical_alignment = 1
+
+[node name="VBox" type="VBoxContainer" parent="Control/HealthWidget/Content" unique_id=1723951906]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="Header" type="HBoxContainer" parent="Control/HealthWidget/Content/VBox" unique_id=912414950]
+layout_mode = 2
+
+[node name="HPTitle" type="Label" parent="Control/HealthWidget/Content/VBox/Header" unique_id=843714841]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.8, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 11
+text = "VIDA"
+
+[node name="HealthLabel" type="Label" parent="Control/HealthWidget/Content/VBox/Header" unique_id=1716329877]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.85, 0.55, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 16
+text = "100"
+horizontal_alignment = 2
+
+[node name="HealthProgressBar" type="ProgressBar" parent="Control/HealthWidget/Content/VBox" unique_id=880182158]
+custom_minimum_size = Vector2(0, 5)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_hp_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_hp_fill")
+value = 100.0
+show_percentage = false
+
+[node name="RightBar" type="Panel" parent="Control" unique_id=967378360]
 visible = false
-texture_filter = 1
 layout_mode = 1
 anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -204.0
-offset_top = 94.0
-offset_bottom = -350.0
+offset_left = -280.0
+offset_top = 70.0
+offset_right = -12.0
+offset_bottom = -230.0
 grow_horizontal = 0
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxTexture_npa51")
+theme_override_styles/panel = SubResource("StyleBoxFlat_top_bar")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Control/RightBar" unique_id=177663562]
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/RightBar" unique_id=112461574]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 8
-alignment = 1
+theme_override_constants/separation = 6
 
-[node name="Name_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=628121363]
+[node name="Name_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=451297752]
 layout_mode = 2
-size_flags_vertical = 8
-text = "Nome
-"
+bbcode_enabled = true
+text = "Nome"
 fit_content = true
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="Image_container" type="TextureRect" parent="Control/RightBar/VBoxContainer" unique_id=1116855693]
+[node name="Image_container" type="TextureRect" parent="Control/RightBar/VBoxContainer" unique_id=700994523]
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
-size_flags_vertical = 6
-texture = ExtResource("2_71wt1")
-expand_mode = 5
-stretch_mode = 4
+texture = ExtResource("5_portrait")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="Hp_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=947616224]
+[node name="Hp_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=974720386]
 layout_mode = 2
+bbcode_enabled = true
 text = "Vida"
 fit_content = true
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="Mana_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=50575404]
+[node name="Mana_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=2078037380]
 layout_mode = 2
+bbcode_enabled = true
 text = "Mana"
 fit_content = true
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="Range_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=1995017617]
+[node name="Range_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=519329396]
 layout_mode = 2
+bbcode_enabled = true
 text = "Range"
 fit_content = true
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="Type_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=51925485]
+[node name="Type_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=188899993]
 layout_mode = 2
+bbcode_enabled = true
 text = "Tipo"
 fit_content = true
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="Origins_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=1490994263]
+[node name="Origins_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=1596251064]
 layout_mode = 2
+bbcode_enabled = true
 text = "Origens"
 fit_content = true
-autowrap_mode = 2
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="Classes_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=1226879704]
+[node name="Classes_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=599054872]
 layout_mode = 2
+bbcode_enabled = true
 text = "Classes"
 fit_content = true
-autowrap_mode = 2
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="Affinities_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=2136437205]
+[node name="Affinities_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=1871772193]
 layout_mode = 2
+bbcode_enabled = true
 text = "Afinidades"
 fit_content = true
-autowrap_mode = 2
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="Player_Stats" type="Panel" parent="Control" unique_id=773727987]
-visible = false
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="NinePatchRect" type="NinePatchRect" parent="Control/Player_Stats" unique_id=2137963439]
-layout_mode = 0
-offset_right = 41.0
-offset_bottom = 40.0
-texture = ExtResource("2_xkiwj")
-region_rect = Rect2(2, 4, 1498, 837)
-
-[node name="HUDToggleButton" type="Button" parent="." unique_id=1900415997]
+[node name="HUDToggleButton" type="Button" parent="." unique_id=1460861161]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -72.0
-offset_top = 14.0
-offset_right = -16.0
-offset_bottom = 48.0
+offset_left = -68.0
+offset_top = 10.0
+offset_right = -14.0
+offset_bottom = 44.0
 grow_horizontal = 0
-tooltip_text = "Ocultar interface (H)"
+tooltip_text = "Ocultar/mostrar interface (H)"
 text = "HUD"
 
 [connection signal="pressed" from="Control/BottomBar/ShopLabel" to="Control/BottomBar/ShopContainer" method="toogle_shop"]

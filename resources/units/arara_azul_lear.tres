@@ -1,26 +1,24 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/arara_azul_lear.png" id="2_splash_art"]
 
 [resource]
 script = ExtResource("1_stats")
-icon = ExtResource("2_splash_art")
 unit_name = "Arara-azul-de-lear"
 unit_id = "arara_azul_lear"
 description = "Arara rara das áreas de Caatinga no nordeste da Bahia."
 lore = "Com precisão e coragem, vigia os paredões e os caminhos da Caatinga."
 tier = 2
 cost = 2
-max_health = 550
-attack_damage = 64
-attack_speed = 1
+icon = ExtResource("2_splash_art")
+max_health = 550.0
+attack_damage = 64.0
 attack_range = 4
-armor = 15
-magic_resist = 20
+armor = 15.0
+magic_resist = 20.0
 movement_speed = 235.0
-max_mana = 85
+max_mana = 85.0
 mana_per_attack = 12.0
 origins = Array[String](["Caatinga"])
 classes = Array[String](["Caçador", "DPS"])
@@ -28,8 +26,7 @@ affinities = Array[String](["Fauna"])
 biomes = Array[String](["Caatinga"])
 ability_name = "Voo de Lear"
 ability_description = "Causa 150 de dano mágico ao alvo atual; prioriza inimigos com maior ataque."
-ability_damage = 150
+ability_damage = 150.0
 ability_range = 6.0
-target_priority = 7
 is_ranged = true
 prefers_backline = true

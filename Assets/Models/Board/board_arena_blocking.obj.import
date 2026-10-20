@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://ca2kr8u5ttpjn"
+path="res://.godot/imported/board_arena_blocking.obj-30edfd97eb87284d5f8c3b1c327b7022.mesh"
+
+[deps]
+
+files=["res://.godot/imported/board_arena_blocking.obj-30edfd97eb87284d5f8c3b1c327b7022.mesh"]
+
+source_file="res://Assets/Models/Board/board_arena_blocking.obj"
+dest_files=["res://.godot/imported/board_arena_blocking.obj-30edfd97eb87284d5f8c3b1c327b7022.mesh", "res://.godot/imported/board_arena_blocking.obj-30edfd97eb87284d5f8c3b1c327b7022.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

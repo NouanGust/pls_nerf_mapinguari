@@ -3,6 +3,7 @@ extends Control
 const Regions = preload("res://Scripts/Systems/region_rosters.gd")
 const Store = preload("res://Scripts/Systems/campaign_store.gd")
 const Overlay = preload("res://Scripts/UI/game_overlay.gd")
+const BattleTransition = preload("res://Scripts/UI/battle_transition.gd")
 const BATTLE_SCENE: PackedScene = preload("res://Scenes/Main/main.tscn")
 const PORTRAIT_SHADER: Shader = preload("res://Assets/Shaders/region_portrait.gdshader")
 const REGION_ORDER := ["mata_atlantica", "cerrado", "pantanal", "amazonia", "caatinga", "litoral"]
@@ -317,10 +318,15 @@ func _start_selected_region() -> void:
 	_enter_region.call_deferred(REGION_ORDER[_selected_index])
 
 func _enter_region(id: String) -> void:
+	var transition := BattleTransition.new()
+	get_tree().root.add_child(transition)
+	await transition.fade_to_black()
 	var battle := BATTLE_SCENE.instantiate()
 	battle.set("region_id", id)
+	battle.set("entry_transition", transition)
 	var tree := get_tree()
 	tree.root.add_child(battle)
+	transition.reparent(battle)
 	tree.current_scene = battle
 	queue_free()
 

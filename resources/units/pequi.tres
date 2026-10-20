@@ -1,35 +1,30 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/pequi.png" id="2_splash_art"]
 
 [resource]
 script = ExtResource("1_stats")
-icon = ExtResource("2_splash_art")
-unit_id = "pequi"
 unit_name = "Pequi"
-cost = 1
+unit_id = "pequi"
 description = "Planta de ataque mágico para composições do Cerrado e da classe Místico. Planta imóvel: lança sementes ou espinhos a até 4 casas."
+icon = ExtResource("2_splash_art")
+max_health = 480.0
+attack_damage = 36.0
+attack_speed = 0.85
+attack_range = 4
+armor = 15.0
+magic_resist = 20.0
+movement_speed = 0.0
+is_stationary = true
+max_mana = 75.0
+mana_per_second = 3.0
 origins = Array[String](["Cerrado"])
 classes = Array[String](["Místico"])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Cerrado"])
-max_health = 480
-attack_damage = 36
-attack_speed = 0.85
-attack_range = 4
-armor = 15
-magic_resist = 20
-max_mana = 75
 ability_name = "Semente Espinhosa"
 ability_description = "Causa 95 de dano mágico ao alvo atual."
-ability_damage = 95
+ability_damage = 95.0
 is_ranged = true
 prefers_backline = true
-tier = 1
-movement_speed = 0.0
-mana_per_attack = 10
-mana_when_hit = 10
-mana_per_second = 3
-is_stationary = true

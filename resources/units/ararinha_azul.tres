@@ -1,18 +1,17 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/ararinha_azul.png" id="2_splash_art"]
 
 [resource]
 script = ExtResource("1_stats")
-icon = ExtResource("2_splash_art")
 unit_name = "Ararinha-azul"
 unit_id = "ararinha_azul"
 description = "Ave endêmica da Caatinga, símbolo de recuperação e retorno à natureza."
 lore = "Seu voo anuncia a esperança de ver a Caatinga novamente povoada."
 tier = 5
 cost = 5
+icon = ExtResource("2_splash_art")
 max_health = 850.0
 attack_damage = 92.0
 attack_speed = 1.05
@@ -20,9 +19,7 @@ attack_range = 4
 armor = 25.0
 magic_resist = 45.0
 movement_speed = 245.0
-max_mana = 100.0
 starting_mana = 30.0
-mana_per_attack = 10.0
 origins = Array[String](["Caatinga"])
 classes = Array[String](["Caçador", "Suporte"])
 affinities = Array[String](["Fauna"])
@@ -34,4 +31,3 @@ ability_targets = 4
 ability_range = 5.0
 is_ranged = true
 prefers_backline = true
-

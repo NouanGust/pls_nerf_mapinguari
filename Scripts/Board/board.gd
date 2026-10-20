@@ -1,6 +1,8 @@
 class_name Board3D
 extends Node3D
 
+const RegionEnvironment = preload("res://Scripts/Environment/region_environment.gd")
+
 @export var rows: int = 8
 @export var columns: int = 7
 @export var cell_size: float = 2.0
@@ -11,12 +13,20 @@ extends Node3D
 @export var cell_material: StandardMaterial3D
 @export var hover_material: StandardMaterial3D
 @export var occupied_material: StandardMaterial3D
+@export var show_default_floor_mesh: bool = false
+@export var environment_scene: PackedScene = preload("res://Scenes/Board/board_environment.tscn")
 
 var units_on_board: Dictionary = {}
 var hovered_cell: Vector2i = Vector2i(-1, -1)
 var cell_meshes: Dictionary = {}
 var cell_base_colors: Dictionary = {}
 var generated_board: Node3D
+var environment_instance: Node3D = null
+
+const BENCH_SLOTS_COUNT: int = 9
+const BENCH_Z: float = 8.375
+const BENCH_SLOT_SPACING: float = 1.55
+const BENCH_Y: float = 0.22
 
 signal unit_placed(unit: Node3D, position: Vector2i)
 signal unit_removed(unit: Node3D, position: Vector2i)
@@ -58,6 +68,11 @@ func generate_board() -> void:
 	cell_meshes.clear()
 	cell_base_colors.clear()
 
+	if environment_scene and (not environment_instance or not is_instance_valid(environment_instance)):
+		environment_instance = environment_scene.instantiate()
+		environment_instance.name = "BoardEnvironmentInstance"
+		add_child(environment_instance)
+
 	var extents := get_board_extents()
 	var floor_mesh := MeshInstance3D.new()
 	floor_mesh.name = "BoardMesh"
@@ -68,6 +83,7 @@ func generate_board() -> void:
 	floor_material.albedo_color = Color("#463b34")
 	floor_material.roughness = 0.94
 	floor_mesh.material_override = floor_material
+	floor_mesh.visible = show_default_floor_mesh
 	generated_board.add_child(floor_mesh)
 
 	var static_body := StaticBody3D.new()
@@ -79,6 +95,17 @@ func generate_board() -> void:
 	collision.shape = box
 	static_body.add_child(collision)
 	generated_board.add_child(static_body)
+
+	var bench_body := StaticBody3D.new()
+	bench_body.name = "BenchCollision"
+	bench_body.collision_layer = 2
+	var bench_shape := CollisionShape3D.new()
+	var bench_box := BoxShape3D.new()
+	bench_box.size = Vector3(BENCH_SLOTS_COUNT * BENCH_SLOT_SPACING + 1.2, 0.4, 2.7)
+	bench_shape.shape = bench_box
+	bench_shape.position = Vector3(0.0, BENCH_Y, BENCH_Z)
+	bench_body.add_child(bench_shape)
+	generated_board.add_child(bench_body)
 
 	for row in rows:
 		for col in columns:
@@ -159,7 +186,21 @@ func get_grid_position(local_position: Vector3) -> Vector2i:
 
 
 func is_cell_occupied(grid_pos: Vector2i) -> bool:
-	return units_on_board.has(grid_pos)
+	if not units_on_board.has(grid_pos):
+		return false
+	var u: Node3D = units_on_board[grid_pos]
+	if not is_instance_valid(u) or u.is_queued_for_deletion():
+		units_on_board.erase(grid_pos)
+		return false
+	return true
+
+
+func clear_enemy_zone() -> void:
+	for row in range(rows - player_rows):
+		for col in range(columns):
+			var pos := Vector2i(col, row)
+			if units_on_board.has(pos):
+				units_on_board.erase(pos)
 
 
 func is_player_zone(grid_pos: Vector2i) -> bool:
@@ -258,9 +299,8 @@ func _on_cell_hovered(grid_pos: Vector2i) -> void:
 
 
 func _on_unit_died(unit: Node3D) -> void:
-	if unit is BaseUnit3D:
-		var pos: Vector2i = unit.board_position
-		if units_on_board.get(pos) == unit:
+	for pos in units_on_board.keys():
+		if units_on_board[pos] == unit:
 			units_on_board.erase(pos)
 
 
@@ -315,3 +355,35 @@ func create_navigation_geometry() -> void:
 	nav_plane.add_child(collision)
 	nav_plane.position.y = -0.1
 	generated_board.add_child(nav_plane)
+
+
+func get_bench_slot_world_position(slot_index: int) -> Vector3:
+	var x := (slot_index - 4) * BENCH_SLOT_SPACING
+	return global_position + Vector3(x, BENCH_Y, BENCH_Z)
+
+
+func is_bench_position(world_pos: Vector3) -> bool:
+	var local_pos := to_local(world_pos)
+	var max_half_width := (float(BENCH_SLOTS_COUNT) * 0.5) * BENCH_SLOT_SPACING
+	return absf(local_pos.z - BENCH_Z) <= 1.35 and absf(local_pos.x) <= max_half_width
+
+
+func get_bench_slot_from_world_position(world_pos: Vector3) -> int:
+	var local_pos := to_local(world_pos)
+	if absf(local_pos.z - BENCH_Z) > 1.35:
+		return -1
+	var slot := clampi(roundi((local_pos.x / BENCH_SLOT_SPACING) + 4.0), 0, BENCH_SLOTS_COUNT - 1)
+	return slot
+
+
+func apply_region_environment(new_region_id: String, duration: float = 0.0) -> void:
+	var target_env: WorldEnvironment = get_node_or_null("WorldEnvironment")
+	if not target_env and get_parent():
+		target_env = get_parent().get_node_or_null("WorldEnvironment")
+	if not target_env:
+		target_env = find_child("WorldEnvironment", true, false)
+	var target_sun: DirectionalLight3D = get_node_or_null("DirectionalLight3D")
+	if not target_sun and get_parent():
+		target_sun = get_parent().find_child("DirectionalLight3D", true, false)
+	
+	RegionEnvironment.apply_to(target_env, target_sun, new_region_id, duration)

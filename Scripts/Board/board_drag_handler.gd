@@ -72,14 +72,22 @@ func try_pickup_unit(mouse_pos: Vector2) -> void:
 		var unit: BaseUnit3D = result.collider
 		if unit.team == 0 and unit.current_state != BaseUnit3D.State.DEAD:
 			var grid_pos = unit.board_position
-			board.remove_unit(grid_pos)
-			
-			start_drag({
-				"unit_instance": unit,
-				"unit_stats": unit.stats,
-				"source": "board",
-				"old_pos": grid_pos,
-			})
+			if grid_pos.y == -1 or board.is_bench_position(unit.global_position):
+				start_drag({
+					"unit_instance": unit,
+					"unit_stats": unit.stats,
+					"source": "bench",
+					"bench_index": grid_pos.x,
+					"old_pos": grid_pos,
+				})
+			else:
+				board.remove_unit(grid_pos)
+				start_drag({
+					"unit_instance": unit,
+					"unit_stats": unit.stats,
+					"source": "board",
+					"old_pos": grid_pos,
+				})
 			
 func start_drag(unit_data: Dictionary) -> void:
 	if not interaction_enabled or is_dragging:
@@ -154,7 +162,10 @@ func update_ghost_position(mouse_pos: Vector2) -> void:
 	
 	var grid_pos := get_grid_position_from_mouse(mouse_pos)
 	
-	if grid_pos != Vector2i(-1, -1):
+	if grid_pos.y == -1 and grid_pos.x >= 0:
+		var bench_pos := board.get_bench_slot_world_position(grid_pos.x)
+		ghost_unit.global_position = bench_pos + Vector3(0, 0.9, 0)
+	elif grid_pos != Vector2i(-1, -1):
 		var world_pos := board.get_cell_world_position(grid_pos)
 		ghost_unit.global_position = world_pos + Vector3(0, 1.5, 0)
 	else:
@@ -252,19 +263,10 @@ func try_place_unit(mouse_pos: Vector2) -> void:
 		stop_drag()
 		return
 	if not board_interaction_enabled:
-		# Reservas podem ser vendidas, mas nunca entrar no combate em andamento.
 		return_unit_to_origin()
 		stop_drag()
 		return
-	if bench_control and bench_control.is_visible_in_tree() and bench_control.get_global_rect().has_point(mouse_pos):
-		if source != "bench" and dragging_unit_data.has("unit_instance"):
-			unit_placed_on_bench.emit(
-				dragging_unit_data.unit_instance,
-				source,
-				int(dragging_unit_data.get("bench_index", -1))
-			)
-		stop_drag()
-		return
+
 	if get_viewport().gui_get_hovered_control() != null:
 		return_unit_to_origin()
 		stop_drag()
@@ -272,6 +274,17 @@ func try_place_unit(mouse_pos: Vector2) -> void:
 
 	var grid_pos: Vector2i = get_grid_position_from_mouse(mouse_pos)
 	
+	# Drop no Banco 3D
+	if grid_pos.y == -1 and grid_pos.x >= 0:
+		if dragging_unit_data.has("unit_instance"):
+			unit_placed_on_bench.emit(
+				dragging_unit_data.unit_instance,
+				source,
+				int(dragging_unit_data.get("bench_index", -1))
+			)
+		stop_drag()
+		return
+
 	var drop_valid := (
 		grid_pos != Vector2i(-1,-1)
 		and board.is_player_zone(grid_pos)
@@ -299,7 +312,10 @@ func return_unit_to_origin() -> void:
 			unit_returned_to_shop.emit(dragging_unit_data.unit_stats)
 		unit.queue_free()
 	elif dragging_unit_data.get("source") == "bench":
-		unit.visible = false
+		unit.visible = true
+		var idx: int = int(dragging_unit_data.get("bench_index", 0))
+		unit.global_position = board.get_bench_slot_world_position(idx)
+		unit.rotation.y = 0.0
 
 
 
@@ -328,10 +344,12 @@ func get_grid_position_from_mouse(mouse_pos: Vector2) -> Vector2i:
 	var result := board.get_world_3d().direct_space_state.intersect_ray(query)
 	
 	if result:
-		var hit_pos = result.position
-		var local_pos = board.to_local(hit_pos)
+		var hit_pos: Vector3 = result.position
+		if board.is_bench_position(hit_pos):
+			var slot := board.get_bench_slot_from_world_position(hit_pos)
+			return Vector2i(slot, -1)
 		
+		var local_pos := board.to_local(hit_pos)
 		return board.get_grid_position(local_pos)
-		
 	
 	return Vector2i(-1, -1)

@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://pdempaq1txbp"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://bap3li3tswnt2" path="res://Assets/Units_teste/Labatut.png" id="1_a4wlh"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_vjcm3"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Labatut.png" id="1_a4wlh"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_vjcm3"]
 
 [resource]
 script = ExtResource("1_vjcm3")
@@ -9,21 +9,21 @@ unit_name = "Labatut"
 unit_id = "labatut"
 description = "Criatura aquática curadora."
 lore = "Ser das águas turvas."
+tier = 3
+cost = 3
 icon = ExtResource("1_a4wlh")
+max_health = 720.0
 health_regen = 3.0
-attack_damage = 45
+attack_damage = 45.0
 attack_range = 2
-armor = 25
-magic_resist = 40
+armor = 25.0
+magic_resist = 40.0
 starting_mana = 50.0
 mana_per_second = 5.0
 origins = Array[String](["Amazônico"])
 classes = Array[String](["Aquático", "Suporte"])
 ability_name = "Corrente Curativa"
 ability_description = "Cura aliados feridos."
-ability_heal = 150
-ability_range = 5.0
-tier = 3
-cost = 3
-max_health = 720
+ability_heal = 150.0
 ability_targets = 3
+ability_range = 5.0

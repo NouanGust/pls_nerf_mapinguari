@@ -103,7 +103,7 @@ func create_labatut() -> void:
 	unit.ability_range = 5.0
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.LOWEST_HP
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	unit.prefers_backline = true
 	
@@ -138,7 +138,7 @@ func create_teiniagua() -> void:
 	unit.ability_targets = 1
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.RANDOM
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	
 	save_unit(unit, "teiniagua")
@@ -174,7 +174,7 @@ func create_cumacanga() -> void:
 	unit.ability_duration = 4.0
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.LOWEST_HP_PERCENT
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	
 	save_unit(unit, "cumacanga")
 
@@ -208,7 +208,7 @@ func create_papa_figo() -> void:
 	unit.ability_duration = 5.0
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.HIGHEST_ATTACK
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	
 	save_unit(unit, "papa_figo")
 
@@ -277,7 +277,7 @@ func create_mae_de_ouro() -> void:
 	unit.ability_targets = 3
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.RANDOM
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	
 	save_unit(unit, "mae_de_ouro")

@@ -1,41 +1,38 @@
-[gd_resource type="Resource" script_class="UnitStats" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://lynypfxue3up"]
 
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-
-[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/aguape.png" id="2_splash_art"]
+[ext_resource type="Texture2D" uid="uid://cc8aany8jvl84" path="res://Assets/Units/SplashArts/images (12).jpg" id="1_3oecy"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
 script = ExtResource("1_stats")
-icon = ExtResource("2_splash_art")
-unit_id = "aguape"
 unit_name = "Aguapé"
-cost = 2
+unit_id = "aguape"
 description = "Planta de suporte para composições aquáticas do Pantanal. Planta imóvel: lança sementes ou espinhos a até 4 casas. Aura: +10% de dano de ataque aos outros aliados em até 2 hexes; vale apenas a aura mais forte."
-origins = Array[String](["Pantaneiro"])
-classes = Array[String](["Aquático","Suporte"])
-affinities = Array[String](["Flora"])
-biomes = Array[String](["Pantanal"])
-max_health = 580
-attack_damage = 30
+tier = 2
+cost = 2
+icon = ExtResource("1_3oecy")
+max_health = 580.0
+attack_damage = 30.0
 attack_speed = 0.8
 attack_range = 4
-armor = 15
-magic_resist = 35
-max_mana = 100
-starting_mana = 20
+armor = 15.0
+magic_resist = 35.0
+movement_speed = 0.0
+is_stationary = true
+starting_mana = 20.0
+mana_per_second = 3.0
+mana_when_hit = 5.0
+origins = Array[String](["Pantaneiro"])
+classes = Array[String](["Aquático", "Suporte"])
+affinities = Array[String](["Flora"])
+biomes = Array[String](["Pantanal"])
 ability_name = "Manto Flutuante"
 ability_description = "Recupera 110 de vida de até dois aliados feridos próximos."
-ability_heal = 110
+ability_heal = 110.0
 ability_targets = 2
-ability_range = 5
+ability_range = 5.0
 is_ranged = true
 prefers_backline = true
-tier = 2
-movement_speed = 0.0
-mana_per_attack = 10
-mana_when_hit = 5
-mana_per_second = 3
-is_stationary = true
 passive_aura_range = 2
 passive_aura_effect = "power"
-passive_aura_power = 0.10
+passive_aura_power = 0.1

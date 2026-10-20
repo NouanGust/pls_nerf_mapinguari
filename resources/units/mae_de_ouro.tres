@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://ku31ahyw8i1f"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://obiadekqclkx" path="res://Assets/Units_teste/Mãe_douro.png" id="1_c3y0t"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_whoo3"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Mãe_douro.png" id="1_c3y0t"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_whoo3"]
 
 [resource]
 script = ExtResource("1_whoo3")
@@ -29,5 +29,4 @@ ability_description = "Explosão dupla."
 ability_damage = 150.0
 ability_heal = 120.0
 ability_targets = 3
-target_priority = 6
 is_ranged = true

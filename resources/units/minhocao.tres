@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://bvvwx8rd3marf"]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://c0yvf2atoijg5"]
 
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_41kwa"]
 [ext_resource type="Texture2D" uid="uid://cu7i61skv142t" path="res://Assets/Units_teste/Minhocao.png" id="1_57osp"]
@@ -26,10 +26,9 @@ classes = Array[String](["Protetor da Mata", "Tank"])
 ability_name = "Terremoto"
 ability_description = "Emerge do chão, atordoando e causando dano em área."
 ability_damage = 180.0
+ability_targets = 2
 ability_duration = 2.0
 ability_range = 3.5
 ability_damage_type = 0
 is_tank = true
 stun_resist = 0.5
-attack_range = 1
-is_ranged = false

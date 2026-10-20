@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dywmdp4icgd16"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_6nwsa"]
-[ext_resource type="Texture2D" uid="uid://laubf7gqu52s" path="res://Assets/Units_teste/Pe_garrafa.png" id="1_rh75l"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_6nwsa"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Pe_garrafa.png" id="1_rh75l"]
 
 [resource]
 script = ExtResource("1_6nwsa")
@@ -30,7 +30,6 @@ ability_description = "Disparo garantido que causa dano massivo e executa alvos 
 ability_damage = 500.0
 ability_range = 8.0
 ability_damage_type = 0
-target_priority = 3
 is_assassin = true
 is_ranged = true
 prefers_backline = true

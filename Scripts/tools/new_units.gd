@@ -75,7 +75,7 @@ func create_quibungo() -> void:
 	unit.ability_targets = 1
 	unit.ability_damage_type = UnitStats.DamageType.TRUE
 	
-	unit.target_priority = UnitStats.TargetPriority.HIGHEST_ATTACK
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_tank = true
 	
 	save_unit(unit, "quibungo")
@@ -113,7 +113,7 @@ func create_matinta_perera() -> void:
 	unit.ability_range = 3.0
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.BACKLINE
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_assassin = true
 	
 	save_unit(unit, "matinta_perera")
@@ -190,7 +190,7 @@ func create_alamoa() -> void:
 	unit.ability_range = 4.0
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.HIGHEST_ATTACK
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	
 	save_unit(unit, "alamoa")
@@ -228,7 +228,7 @@ func create_cabeca_de_cuia() -> void:
 	unit.ability_targets = 1
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.BACKLINE
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	
 	save_unit(unit, "cabeca_de_cuia")
@@ -270,7 +270,7 @@ func create_corpo_seco() -> void:
 	unit.ability_range = 2.5
 	unit.ability_damage_type = UnitStats.DamageType.TRUE
 	
-	unit.target_priority = UnitStats.TargetPriority.LOWEST_HP_PERCENT
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	
 	save_unit(unit, "corpo_seco")
 
@@ -342,7 +342,7 @@ func create_mboi_guacu() -> void:
 	unit.ability_targets = 1
 	unit.ability_damage_type = UnitStats.DamageType.PHYSICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.HIGHEST_HP
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_tank = true
 	
 	save_unit(unit, "mboi_guacu")
@@ -380,7 +380,7 @@ func create_caapora() -> void:
 	unit.ability_range = 6.0
 	unit.ability_damage_type = UnitStats.DamageType.PHYSICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.LOWEST_HP
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	unit.prefers_backline = true
 	
@@ -464,7 +464,7 @@ func create_boiuna() -> void:
 	unit.ability_range = 8.0
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.RANDOM
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	unit.passive_aura_range = 2
 	unit.passive_aura_effect = "Unidades Aquáticas ganham +50% resistência mágica"
@@ -505,7 +505,7 @@ func create_mae_dagua() -> void:
 	unit.ability_range = 10.0
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.LOWEST_HP
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	unit.prefers_backline = true
 	unit.passive_aura_range = 3
@@ -548,7 +548,7 @@ func create_romãozinho() -> void:
 	unit.ability_range = 6.0
 	unit.ability_damage_type = UnitStats.DamageType.MAGICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.RANDOM
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	unit.stun_resist = 0.8
 	
@@ -587,7 +587,7 @@ func create_pe_de_garrafa() -> void:
 	unit.ability_range = 8.0
 	unit.ability_damage_type = UnitStats.DamageType.PHYSICAL
 	
-	unit.target_priority = UnitStats.TargetPriority.LOWEST_HP_PERCENT
+	unit.target_priority = UnitStats.TargetPriority.CLOSEST
 	unit.is_ranged = true
 	unit.prefers_backline = true
 	unit.is_assassin = true

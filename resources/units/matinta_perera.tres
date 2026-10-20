@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://btcehjrk5vkew"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://dogm2sr6o5ddy" path="res://Assets/Units_teste/MAtinta_pereira.png" id="1_jca3h"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_mrs1p"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/MAtinta_pereira.png" id="1_jca3h"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_mrs1p"]
 
 [resource]
 script = ExtResource("1_mrs1p")
@@ -29,6 +29,5 @@ ability_description = "Transforma-se, ficando imune e causando dano em área."
 ability_damage = 120.0
 ability_duration = 3.0
 ability_range = 3.0
-target_priority = 4
 is_assassin = true
 prefers_backline = true

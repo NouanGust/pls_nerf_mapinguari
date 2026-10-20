@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://obliud6cjvp8"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://by6jcl6fhob1a" path="res://Assets/Units_teste/Boiúna.png" id="1_akffg"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_pnefc"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Boiúna.png" id="1_akffg"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_pnefc"]
 
 [resource]
 script = ExtResource("1_pnefc")
@@ -14,7 +14,6 @@ cost = 5
 icon = ExtResource("1_akffg")
 max_health = 1000.0
 attack_damage = 140.0
-attack_range = 1
 armor = 60.0
 magic_resist = 70.0
 max_mana = 150.0
@@ -22,17 +21,15 @@ starting_mana = 50.0
 mana_per_attack = 12.0
 mana_per_second = 5.0
 origins = Array[String](["Amazônico"])
+classes = Array[String](["Místico", "Tank"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Amazônia"])
-classes = Array[String](["Místico", "Tank"])
 ability_name = "Dilúvio Ancestral"
 ability_description = "Invoca tsunami que causa dano massivo e cura aliados."
 ability_damage = 400.0
 ability_heal = 300.0
 ability_targets = 5
 ability_range = 8.0
-target_priority = 5
-is_ranged = false
+is_tank = true
 passive_aura_range = 2
 passive_aura_effect = "Unidades Aquáticas ganham +50% resistência mágica"
-is_tank = true

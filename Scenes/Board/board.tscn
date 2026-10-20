@@ -1,13 +1,11 @@
 [gd_scene format=3 uid="uid://qf7yvxonap5j"]
 
 [ext_resource type="Script" uid="uid://cbt1tnnt0px6e" path="res://Scripts/Board/board.gd" id="1_bqq0f"]
-[ext_resource type="Environment" uid="uid://ds86np0ou1qug" path="res://new_environment.tres" id="2_ef5ss"]
 
 [node name="board" type="Node3D" unique_id=1609199487]
 script = ExtResource("1_bqq0f")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1791553041]
-environment = ExtResource("2_ef5ss")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=990453328]
 transform = Transform3D(0.8660254, 0.35355338, -0.35355338, 0, 0.70710677, 0.70710677, 0.5, -0.6123724, 0.6123724, 5, 10, 5)

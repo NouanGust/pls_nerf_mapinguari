@@ -27,6 +27,13 @@ extends Node3D
 @export var max_zoom: float = 40.0
 @export var zoom_smoothing: float = 10.0
 
+@export_group("Entrada na batalha")
+@export_range(1.0, 6.0, 0.1) var entry_descent_seconds: float = 3.2
+@export_range(1.2, 3.0, 0.1) var entry_height_multiplier: float = 1.8
+@export_range(0.5, 3.0, 0.1) var entry_closeup_seconds: float = 1.2
+@export_range(0.0, 2.0, 0.1) var entry_hold_seconds: float = 0.6
+@export_range(3.0, 12.0, 0.5) var entry_unit_distance: float = 6.0
+
 @onready var camera: Camera3D = get_node_or_null("Camera3D") as Camera3D
 
 var target_distance: float = 20.0
@@ -40,6 +47,7 @@ var _current_elevation: float = 0.0
 var _target_elevation: float = 0.0
 var _settings_auto_orbit: bool = false
 var _last_fitted_distance: float = 20.0
+var entry_active: bool = false
 
 func _ready() -> void:
 	if not camera:
@@ -60,7 +68,7 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_refit_view)
 
 func _refit_view() -> void:
-	if not is_instance_valid(_board):
+	if entry_active or not is_instance_valid(_board):
 		return
 	var zoom_ratio := target_distance / maxf(_last_fitted_distance, 1.0)
 	_last_fitted_distance = _get_fitted_distance()
@@ -110,6 +118,8 @@ func set_auto_orbit(enabled: bool) -> void:
 	_manual_orbit = false
 
 func _input(event: InputEvent) -> void:
+	if entry_active:
+		return
 	# A liberação precisa funcionar mesmo se o cursor terminar sobre a interface.
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE and not event.pressed:
 		_manual_orbit = false
@@ -127,6 +137,8 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if entry_active:
+		return
 	if _is_positioning_unit():
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -154,6 +166,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 
 func _process(delta: float) -> void:
+	if entry_active:
+		return
 	if _is_positioning_unit():
 		# Também elimina a inércia para manter o hex sob o cursor durante o arraste.
 		_manual_orbit = false
@@ -174,6 +188,43 @@ func _process(delta: float) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		_manual_orbit = false
+
+func play_entry(focus_unit: Node3D = null, reveal: Callable = Callable()) -> void:
+	entry_active = true
+	_manual_orbit = false
+	# Reinicia apenas o enquadramento, preservando a preferência de órbita.
+	var keep_auto_orbit := auto_orbit_enabled
+	reset_view(true)
+	auto_orbit_enabled = keep_auto_orbit
+	var gameplay_pose := camera.global_transform
+	var entry := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	entry.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if is_instance_valid(focus_unit):
+		var focus := focus_unit.global_position + Vector3.UP * 1.1
+		var toward_camera := Vector3(sin(_current_yaw), 0.0, cos(_current_yaw))
+		var close_position := focus + (toward_camera * 0.85 + Vector3.UP * 0.53).normalized() * entry_unit_distance
+		var close_pose := Transform3D(Basis.IDENTITY, close_position).looking_at(focus, Vector3.UP)
+		entry.tween_method(_set_entry_pose.bind(gameplay_pose, close_pose), 0.0, 1.0, entry_closeup_seconds)
+		entry.tween_interval(entry_hold_seconds)
+		entry.tween_method(_set_entry_pose.bind(close_pose, gameplay_pose), 0.0, 1.0, entry_closeup_seconds + 0.4)
+	else:
+		var backward := Vector3(sin(_current_yaw), 0.0, cos(_current_yaw))
+		var high_position := look_at_position + Vector3.UP * current_distance * entry_height_multiplier + backward * current_distance * 0.35
+		var high_pose := Transform3D(Basis.IDENTITY, high_position).looking_at(look_at_position, Vector3.UP)
+		camera.global_transform = high_pose
+		entry.tween_method(_set_entry_pose.bind(high_pose, gameplay_pose), 0.0, 1.0, entry_descent_seconds)
+	# A pose inicial já está pronta antes de retirar a cortina preta.
+	if reveal.is_valid():
+		reveal.call()
+	await entry.finished
+	camera.transform = Transform3D.IDENTITY
+	entry_active = false
+	# Recalcula se a janela mudou de tamanho durante a apresentação.
+	_refit_view()
+	_update_transform()
+
+func _set_entry_pose(weight: float, from_pose: Transform3D, to_pose: Transform3D) -> void:
+	camera.global_transform = from_pose.interpolate_with(to_pose, weight)
 
 func _is_positioning_unit() -> bool:
 	return Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or (is_instance_valid(drag_handler) and drag_handler.is_dragging)
@@ -212,9 +263,12 @@ func _get_fitted_distance() -> float:
 	var right := Vector3(cos(_target_yaw), 0.0, -sin(_target_yaw))
 	var up := backward.cross(right)
 	var fitted_distance := min_zoom
-	# Inclui a altura das cápsulas/rótulos e a perspectiva nos cantos do campo.
-	for x in [-extents.x * 0.5, extents.x * 0.5]:
-		for z in [-extents.y * 0.5, extents.y * 0.5]:
+	# Inclui a altura das cápsulas/rótulos, perspectiva nos cantos do campo e o banco 3D frontal.
+	var half_x := maxf(extents.x * 0.5, 7.2)
+	var z_min := -extents.y * 0.5
+	var z_max := maxf(extents.y * 0.5, 9.6)
+	for x in [-half_x, half_x]:
+		for z in [z_min, z_max]:
 			for y in [0.0, 3.0]:
 				var offset := Vector3(x, y, z) - focus_offset
 				var screen_distance := maxf(absf(offset.dot(right)) / tan_horizontal, absf(offset.dot(up)) / tan_vertical)

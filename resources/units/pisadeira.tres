@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dasq7gsls68tc"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://ss7wtrwx651a" path="res://Assets/Units_teste/Pisadeira.png" id="1_cqwwj"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_wo830"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Pisadeira.png" id="1_cqwwj"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_wo830"]
 
 [resource]
 script = ExtResource("1_wo830")

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://byphjdy82iy7l"]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://cpsutyjb42lvk"]
 
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_lfirk"]
 [ext_resource type="Texture2D" uid="uid://cnwbv1m5rg6bm" path="res://Assets/Units_teste/Cumacanga.png" id="1_rpcj1"]
@@ -10,6 +10,7 @@ unit_id = "cumacanga"
 description = "Crânio flamejante."
 icon = ExtResource("1_rpcj1")
 max_health = 400.0
+attack_damage = 44.0
 attack_speed = 1.1
 attack_range = 3
 critical_chance = 0.1
@@ -18,15 +19,11 @@ magic_resist = 25.0
 movement_speed = 240.0
 max_mana = 70.0
 starting_mana = 20.0
-mana_per_attack = 12
+mana_per_attack = 12.0
 origins = Array[String](["Urbano"])
 classes = Array[String](["Assombração", "DPS"])
 ability_name = "Chamas do Terror"
 ability_description = "Lança fogo no inimigo mais distante, queimando o hex e os adjacentes. Inimigos atingidos sofrem queimadura por 2 segundos."
-ability_damage = 30.0
-ability_duration = 2.0
-target_priority = 3
+ability_damage = 45.0
+ability_duration = 2.5
 is_ranged = true
-tier = 1
-cost = 1
-attack_damage = 44

@@ -189,6 +189,7 @@ func stop_drag() -> void:
 func cancel_drag() -> void:
 	if not is_dragging:
 		return
+	AudioManager.play_ui_cancel()
 	return_unit_to_origin()
 	stop_drag()
 	

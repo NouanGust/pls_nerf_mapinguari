@@ -30,6 +30,7 @@ var _next: Button
 func _ready() -> void:
 	get_tree().paused = false
 	get_tree().auto_accept_quit = false
+	AudioManager.play_menu_music()
 	for id in REGION_ORDER:
 		_champions[id] = Regions.get_champion(id)
 	_build_interface()
@@ -130,6 +131,8 @@ func _make_background() -> TextureRect:
 func _select_region(direction: int) -> void:
 	if _starting:
 		return
+	if direction != 0:
+		AudioManager.play_ui_choose()
 	_selected_index = posmod(_selected_index + direction, REGION_ORDER.size())
 	var id: String = REGION_ORDER[_selected_index]
 	var region: Dictionary = Regions.get_region(id)
@@ -284,6 +287,8 @@ func _show_regions() -> void:
 	_enter_button.grab_focus()
 
 func _show_home() -> void:
+	if _selection.visible:
+		AudioManager.play_ui_cancel()
 	_selection.hide()
 	_home.show()
 	_fit_layout()
@@ -318,6 +323,7 @@ func _start_selected_region() -> void:
 	_enter_region.call_deferred(REGION_ORDER[_selected_index])
 
 func _enter_region(id: String) -> void:
+	AudioManager.stop_music()
 	var transition := BattleTransition.new()
 	get_tree().root.add_child(transition)
 	await transition.fade_to_black()

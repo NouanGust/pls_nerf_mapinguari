@@ -55,7 +55,17 @@ static func button(text: String, action: Callable) -> Button:
 		style.set_content_margin(SIDE_TOP, 8.0)
 		style.set_content_margin(SIDE_BOTTOM, 8.0)
 		result.add_theme_stylebox_override(state, style)
-	result.pressed.connect(action)
+	result.pressed.connect(func() -> void:
+		var am = result.get_node_or_null("/root/AudioManager")
+		if am:
+			am.play_ui_click()
+		action.call()
+	)
+	result.mouse_entered.connect(func() -> void:
+		var am = result.get_node_or_null("/root/AudioManager")
+		if am:
+			am.play_ui_hover()
+	)
 	return result
 
 func _ready() -> void:
@@ -124,6 +134,8 @@ func _render() -> void:
 		"options":
 			_content.add_child(label("OPÇÕES", 36, Color("#e4c58a")))
 			_slider("Volume geral", "volume", GameSettings.volume, 0.0, 1.0, 0.01)
+			_slider("Música", "music_volume", GameSettings.music_volume, 0.0, 1.0, 0.01)
+			_slider("Efeitos sonoros", "sfx_volume", GameSettings.sfx_volume, 0.0, 1.0, 0.01)
 			_check("Tela cheia", "fullscreen", GameSettings.fullscreen, OS.has_feature("web"))
 			_check("Orbitar automaticamente", "auto_orbit", GameSettings.auto_orbit)
 			_slider("Sensibilidade da câmera", "mouse_sensitivity", GameSettings.mouse_sensitivity, 0.05, 1.0, 0.05)
@@ -198,6 +210,9 @@ func _resume() -> void:
 	resume_requested.emit()
 
 func _back() -> void:
+	var am = get_node_or_null("/root/AudioManager")
+	if am:
+		am.play_ui_cancel()
 	if _in_game:
 		open("pause", true)
 	else:

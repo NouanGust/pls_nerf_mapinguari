@@ -268,6 +268,7 @@ func _on_unit_placed_on_bench(unit: BaseUnit3D, source: String, _source_index: i
 	if combat_active or round_resolution_pending or not unit:
 		return
 	if add_unit_to_bench(unit):
+		AudioManager.play_move_unit()
 		dragging_unit = null
 		_resolve_unit_merges()
 		update_ui()
@@ -303,17 +304,21 @@ func _purchase_shop_unit(unit_stats: UnitStats, slot_index: int, start_dragging:
 	])
 	
 	if player_gold < unit_stats.cost:
+		AudioManager.play_fail()
 		print("Gold insuficiente! Precisa: %d, Tem: %d" % [unit_stats.cost, player_gold])
 		return
 	
 	if not start_dragging and bench_units.size() >= max_bench_size:
+		AudioManager.play_fail()
 		print("Banco cheio! (%d/%d)" % [bench_units.size(), max_bench_size])
 		return
 	
 	var purchased_unit: UnitStats = shop_system.purchase_unit(slot_index)
 	if not purchased_unit:
+		AudioManager.play_fail()
 		return
 	player_gold -= purchased_unit.cost
+	AudioManager.play_buy()
 	var unit_instance: BaseUnit3D = spawn_unit_for_drag(purchased_unit)
 	if not unit_instance:
 		player_gold += purchased_unit.cost
@@ -362,6 +367,7 @@ func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: Stri
 		return
 
 	if unit.team == 0 and get_player_units_on_board_count() >= get_board_unit_limit():
+		AudioManager.play_fail()
 		print("Limite atingido")
 		if source == "bench":
 			_realign_bench_units()
@@ -382,6 +388,7 @@ func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: Stri
 	var success: bool = board.place_unit(unit, grid_pos, true)
 	
 	if success:
+		AudioManager.play_move_unit()
 		unit.play_pending_star_upgrade_effect()
 		if source == "bench":
 			bench_units.erase(unit)
@@ -390,6 +397,7 @@ func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: Stri
 		_resolve_unit_merges()
 		update_ui()
 	else:
+		AudioManager.play_ui_cancel()
 		if source == "bench":
 			_realign_bench_units()
 		elif source == "board":
@@ -406,10 +414,12 @@ func _on_reroll_requested() -> void:
 		return
 	
 	if player_gold < shop_system.reroll_cost:
+		AudioManager.play_fail()
 		print("Gold insuficiente para reroll! Precisa: %d" % shop_system.reroll_cost)
 		return
 	
 	player_gold -= shop_system.reroll_cost
+	AudioManager.play_ui_click()
 	_refresh_shop()
 	update_ui()
 	print("Loja rerolada! (-%dg)" % shop_system.reroll_cost)
@@ -509,6 +519,10 @@ func _resolve_unit_merges() -> void:
 			unit.queue_free()
 		survivor.invested_gold = total_invested
 		survivor.promote_to_star(old_star + 1)
+		if survivor.star_level == 2:
+			AudioManager.play_2_star_up()
+		elif survivor.star_level >= 3:
+			AudioManager.play_3_star_up()
 		print("%s evoluiu para %d estrelas" % [survivor.stats.unit_name, survivor.star_level])
 
 	_realign_bench_units()
@@ -550,6 +564,8 @@ func _refresh_synergies() -> void:
 		ui.update_synergies(player_synergies)
 
 func _play_synergy_activation(synergy: Dictionary, team_id: int) -> void:
+	if team_id == 0:
+		AudioManager.play_sinergy_activated()
 	var stat_field := ""
 	match str(synergy.get("category", "")):
 		"Origem":
@@ -820,6 +836,7 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 	elif player_won:
 		win_streak += 1
 		loss_streak = 0
+		AudioManager.play_win_streak(win_streak)
 		
 		var streak_bonus = min((win_streak - 1) * win_streak_bonus_step, max_win_streak_bonus)
 		player_gold += gold_on_win + streak_bonus
@@ -827,6 +844,7 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 	else:
 		loss_streak += 1
 		win_streak = 0
+		AudioManager.play_loss_streak(loss_streak)
 		
 		player_gold += gold_on_loss
 		player_health -= 10
@@ -1059,10 +1077,12 @@ func buy_xp() -> void:
 	if not shop_system or round_resolution_pending or player_level >= Progression.MAX_LEVEL:
 		return
 	if player_gold < shop_system.xp_cost:
+		AudioManager.play_fail()
 		print("Gold insuficiente para XP!")
 		return
 	
 	player_gold -= shop_system.xp_cost
+	AudioManager.play_ui_click()
 	var previous_level := player_level
 	var progress := Progression.gain_xp(player_level, player_xp, Progression.PURCHASE_XP)
 	player_level = progress.x

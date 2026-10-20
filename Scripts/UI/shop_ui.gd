@@ -214,6 +214,13 @@ func _on_shop_refreshed(units: Array[UnitStats]) -> void:
 		else:
 			unit_cards[i].clear()
 	_refresh_upgrade_hints()
+	var has_upgrade_hint := false
+	for card in unit_cards:
+		if card.unit_stats and not card.is_sold and _get_purchase_upgrade_star(card.unit_stats.unit_id) > 0:
+			has_upgrade_hint = true
+			break
+	if has_upgrade_hint:
+		AudioManager.play_evol_hint_shop()
 
 func set_owned_star_counts(counts: Dictionary, in_combat: bool) -> void:
 	owned_star_counts = counts.duplicate(true)

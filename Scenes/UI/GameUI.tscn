@@ -36,6 +36,21 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_enemy_sword"]
+atlas = ExtResource("4_gui_atlas")
+region = Rect2(320, 256, 32, 32)
+filter_clip = true
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_timer_clock"]
+atlas = ExtResource("4_gui_atlas")
+region = Rect2(576, 64, 32, 32)
+filter_clip = true
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_streak_lightning"]
+atlas = ExtResource("4_gui_atlas")
+region = Rect2(352, 256, 32, 32)
+filter_clip = true
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_synergy_panel"]
 content_margin_left = 6.0
 content_margin_top = 6.0
@@ -111,6 +126,24 @@ corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tooltip"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(0.04, 0.07, 0.1, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.784, 0.667, 0.431, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 8
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bench_panel"]
 bg_color = Color(0.055, 0.086, 0.118, 0.95)
 border_width_left = 2
@@ -157,6 +190,11 @@ corner_radius_bottom_left = 10
 shadow_color = Color(0, 0, 0, 0.3)
 shadow_size = 3
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_gold_coin"]
+atlas = ExtResource("4_gui_atlas")
+region = Rect2(288, 288, 32, 32)
+filter_clip = true
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_level_box"]
 content_margin_left = 6.0
 content_margin_top = 4.0
@@ -187,23 +225,15 @@ corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tooltip"]
-content_margin_left = 10.0
-content_margin_top = 8.0
-content_margin_right = 10.0
-content_margin_bottom = 8.0
-bg_color = Color(0.04, 0.07, 0.1, 0.96)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.784, 0.667, 0.431, 1)
-corner_radius_top_left = 5
-corner_radius_top_right = 5
-corner_radius_bottom_right = 5
-corner_radius_bottom_left = 5
-shadow_color = Color(0, 0, 0, 0.5)
-shadow_size = 8
+[sub_resource type="AtlasTexture" id="AtlasTexture_board_pawn"]
+atlas = ExtResource("4_gui_atlas")
+region = Rect2(512, 0, 32, 32)
+filter_clip = true
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lock_padlock"]
+atlas = ExtResource("4_gui_atlas")
+region = Rect2(576, 96, 32, 32)
+filter_clip = true
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_widget"]
 bg_color = Color(0.043, 0.078, 0.114, 0.95)
@@ -218,6 +248,11 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 shadow_color = Color(0, 0, 0, 0.45)
 shadow_size = 8
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_health_heart"]
+atlas = ExtResource("4_gui_atlas")
+region = Rect2(256, 256, 32, 32)
+filter_clip = true
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_bg"]
 bg_color = Color(0.04, 0.06, 0.08, 1)
@@ -250,9 +285,9 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -290.0
+offset_left = -340.0
 offset_top = 10.0
-offset_right = 290.0
+offset_right = 340.0
 offset_bottom = 66.0
 grow_horizontal = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_top_bar")
@@ -312,12 +347,12 @@ layout_mode = 2
 theme_override_constants/separation = 4
 alignment = 1
 
-[node name="EnemyIcon" type="Label" parent="Control/TopBar/Content/EnemyBox" unique_id=1498302194]
+[node name="EnemyIcon" type="TextureRect" parent="Control/TopBar/Content/EnemyBox" unique_id=1498302194]
+custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.45, 0.4, 1)
-theme_override_font_sizes/font_size = 13
-text = "⚔️"
-vertical_alignment = 1
+texture = SubResource("AtlasTexture_enemy_sword")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="EnemyLevelLabel" type="Label" parent="Control/TopBar/Content/EnemyBox" unique_id=1748291039]
 layout_mode = 2
@@ -337,12 +372,12 @@ layout_mode = 2
 theme_override_constants/separation = 4
 alignment = 1
 
-[node name="TimerIcon" type="Label" parent="Control/TopBar/Content/TimerBox" unique_id=924725101]
+[node name="TimerIcon" type="TextureRect" parent="Control/TopBar/Content/TimerBox" unique_id=924725101]
+custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.35, 0.88, 0.82, 1)
-theme_override_font_sizes/font_size = 14
-text = "⏱"
-vertical_alignment = 1
+texture = SubResource("AtlasTexture_timer_clock")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="TimerLabel" type="Label" parent="Control/TopBar/Content/TimerBox" unique_id=1664763481]
 custom_minimum_size = Vector2(36, 0)
@@ -352,6 +387,31 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 16
 text = "30s"
+vertical_alignment = 1
+
+[node name="Divider4" type="VSeparator" parent="Control/TopBar/Content" unique_id=1948201960]
+layout_mode = 2
+
+[node name="StreakBox" type="HBoxContainer" parent="Control/TopBar/Content" unique_id=1948201961]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="StreakIcon" type="TextureRect" parent="Control/TopBar/Content/StreakBox" unique_id=1948201962]
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+texture = SubResource("AtlasTexture_streak_lightning")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="StreakLabel" type="Label" parent="Control/TopBar/Content/StreakBox" unique_id=1948201963]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 11
+theme_override_styles/normal = SubResource("StyleBoxFlat_milestone_badge")
+text = "0 STREAK"
 vertical_alignment = 1
 
 [node name="LegacyNodes" type="Control" parent="Control/TopBar" unique_id=2017273386]
@@ -654,11 +714,12 @@ layout_mode = 2
 theme_override_constants/separation = 4
 alignment = 1
 
-[node name="GoldIcon" type="Label" parent="Control/BottomBar/GoldContainer/GoldBox" unique_id=13899708]
+[node name="GoldIcon" type="TextureRect" parent="Control/BottomBar/GoldContainer/GoldBox" unique_id=13899708]
+custom_minimum_size = Vector2(18, 18)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
-theme_override_font_sizes/font_size = 14
-text = "🪙"
+texture = SubResource("AtlasTexture_gold_coin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="GoldLabel" type="Label" parent="Control/BottomBar/GoldContainer/GoldBox" unique_id=912469225]
 layout_mode = 2
@@ -715,12 +776,12 @@ show_percentage = false
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="BoardSpaceIcon" type="Label" parent="Control/BottomBar/ControlsContainer/LevelBox/VBox/BoardSpaceContainer" unique_id=1928374652]
+[node name="BoardSpaceIcon" type="TextureRect" parent="Control/BottomBar/ControlsContainer/LevelBox/VBox/BoardSpaceContainer" unique_id=1928374652]
+custom_minimum_size = Vector2(16, 16)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.88, 0.82, 1)
-theme_override_font_sizes/font_size = 11
-text = "♟"
-vertical_alignment = 1
+texture = SubResource("AtlasTexture_board_pawn")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="BoardSpaceLabel" type="Label" parent="Control/BottomBar/ControlsContainer/LevelBox/VBox/BoardSpaceContainer" unique_id=1928374653]
 layout_mode = 2
@@ -756,7 +817,9 @@ offset_top = 10.0
 offset_right = 236.0
 offset_bottom = 42.0
 tooltip_text = "Travar/destravar ofertas da loja para o próximo round (L)"
-text = "🔒 Travar"
+text = "Travar"
+icon = SubResource("AtlasTexture_lock_padlock")
+expand_icon = true
 
 [node name="ShopContainer" type="HBoxContainer" parent="Control/BottomBar" unique_id=1007177299]
 clip_contents = true
@@ -839,12 +902,12 @@ layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Avatar" type="Label" parent="Control/HealthWidget/Content" unique_id=61314595]
+[node name="Avatar" type="TextureRect" parent="Control/HealthWidget/Content" unique_id=61314595]
+custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.25, 0.75, 1, 1)
-theme_override_font_sizes/font_size = 22
-text = "💧"
-vertical_alignment = 1
+texture = SubResource("AtlasTexture_health_heart")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="VBox" type="VBoxContainer" parent="Control/HealthWidget/Content" unique_id=1723951906]
 layout_mode = 2
@@ -879,6 +942,50 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_hp_fill")
 value = 100.0
 show_percentage = false
 
+[node name="RoundResolutionBanner" type="PanelContainer" parent="Control" unique_id=1849201964]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -170.0
+offset_top = 74.0
+offset_right = 170.0
+offset_bottom = 128.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tooltip")
+
+[node name="Content" type="HBoxContainer" parent="Control/RoundResolutionBanner" unique_id=1849201965]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="BannerIcon" type="TextureRect" parent="Control/RoundResolutionBanner/Content" unique_id=1849201966]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = SubResource("AtlasTexture_gold_coin")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBox" type="VBoxContainer" parent="Control/RoundResolutionBanner/Content" unique_id=1849201967]
+layout_mode = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="BannerTitle" type="Label" parent="Control/RoundResolutionBanner/Content/VBox" unique_id=1849201968]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 14
+text = "VITÓRIA! +3 OURO"
+
+[node name="BannerDetail" type="Label" parent="Control/RoundResolutionBanner/Content/VBox" unique_id=1849201969]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "+2g base · +1g sequência"
+
 [node name="RightBar" type="Panel" parent="Control" unique_id=967378360]
 visible = false
 layout_mode = 1
@@ -892,17 +999,30 @@ offset_right = -12.0
 offset_bottom = -230.0
 grow_horizontal = 0
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_top_bar")
+
+[node name="PanelFrame" type="NinePatchRect" parent="Control/RightBar" unique_id=967378361]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("4_gui_atlas")
+region_rect = Rect2(129, 224, 127, 126)
+patch_margin_left = 64
+patch_margin_top = 64
+patch_margin_right = 64
+patch_margin_bottom = 64
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Control/RightBar" unique_id=112461574]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 12.0
-offset_top = 12.0
-offset_right = -12.0
-offset_bottom = -12.0
+offset_left = 34.0
+offset_top = 34.0
+offset_right = -29.0
+offset_bottom = -30.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 6
@@ -912,12 +1032,35 @@ layout_mode = 2
 bbcode_enabled = true
 text = "Nome"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="Image_container" type="TextureRect" parent="Control/RightBar/VBoxContainer" unique_id=700994523]
-custom_minimum_size = Vector2(0, 120)
+[node name="PortraitFrame" type="NinePatchRect" parent="Control/RightBar/VBoxContainer" unique_id=700994522]
+texture_filter = 1
+custom_minimum_size = Vector2(40, 60)
 layout_mode = 2
+size_flags_vertical = 4
+region_rect = Rect2(512, 192, 64, 64)
+patch_margin_left = 32
+patch_margin_top = 51
+patch_margin_right = 32
+patch_margin_bottom = 52
+
+[node name="Image_container" type="TextureRect" parent="Control/RightBar/VBoxContainer/PortraitFrame" unique_id=700994523]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.263
+anchor_top = 0.078
+anchor_right = 0.73200005
+anchor_bottom = 1.0
+offset_left = 0.084999084
+offset_top = -0.034000397
+offset_right = -7.060013
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
 texture = ExtResource("5_portrait")
-expand_mode = 1
+expand_mode = 3
 stretch_mode = 5
 
 [node name="Hp_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=974720386]
@@ -925,42 +1068,56 @@ layout_mode = 2
 bbcode_enabled = true
 text = "Vida"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Mana_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=2078037380]
 layout_mode = 2
 bbcode_enabled = true
 text = "Mana"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Range_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=519329396]
 layout_mode = 2
 bbcode_enabled = true
 text = "Range"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Type_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=188899993]
 layout_mode = 2
 bbcode_enabled = true
 text = "Tipo"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Origins_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=1596251064]
 layout_mode = 2
 bbcode_enabled = true
 text = "Origens"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Classes_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=599054872]
 layout_mode = 2
 bbcode_enabled = true
 text = "Classes"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Affinities_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=1871772193]
 layout_mode = 2
 bbcode_enabled = true
 text = "Afinidades"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="HUDToggleButton" type="Button" parent="." unique_id=1460861161]
 anchors_preset = 1

@@ -43,12 +43,13 @@ func show_report(round_number: int, player_won: bool, entries: Array[Dictionary]
 	_entries = entries.duplicate(true)
 	_selected_metric = &"damage_dealt"
 	_round_label.text = "RELATÓRIO DE COMBATE · TURNO %d" % round_number
-	_result_label.text = "EMPATE" if is_draw else ("VITÓRIA" if player_won else "DERROTA")
+	_result_label.text = "EMPATE (+1 OURO)" if is_draw else ("VITÓRIA" if player_won else "DERROTA")
 	var result_color := Color("#91c9d8") if is_draw else (Color("#e8cf83") if player_won else Color("#d98272"))
 	_result_label.add_theme_color_override("font_color", result_color)
-	_legend_label.text = "%d unidades · ambos os times" % _entries.size()
-	if is_draw and not draw_reason.is_empty():
-		_legend_label.text = draw_reason
+	if is_draw:
+		_legend_label.text = "Empate: +1 ouro concedido · " + (draw_reason if not draw_reason.is_empty() else "%d unidades" % _entries.size())
+	else:
+		_legend_label.text = "%d unidades · ambos os times" % _entries.size()
 	_legend_label.tooltip_text = _legend_label.text
 	visible = true
 	_render_rows()

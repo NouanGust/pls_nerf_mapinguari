@@ -71,6 +71,7 @@ var mana_bar_3d: ProgressBar
 var name_label: Label
 var hp_label: Label
 var mana_label: Label
+var star_container: HBoxContainer
 var ui_sprite: Sprite3D
 var ui_viewport: SubViewport
 
@@ -92,6 +93,7 @@ var _detour_timer: float = 0.0
 
 const CombatFeedback = preload("res://Scripts/Systems/combat_feedback.gd")
 const UNIT_LABEL_ATLAS: Texture2D = preload("res://Assets/UI/GUI_4x.png")
+const UIAtlasCatalog = preload("res://Scripts/UI/ui_atlas_catalog.gd")
 const UnitVisual = preload("res://Scripts/Units/unit_visual.gd")
 const UNIT_VISUAL_SCENE: PackedScene = preload("res://Scenes/Units/unit_visual.tscn")
 
@@ -247,10 +249,8 @@ func promote_to_star(new_star_level: int) -> void:
 		return
 	current_health = get_max_health()
 	if name_label:
-		var star_text := ""
-		for _star in star_level:
-			star_text += "★"
-		name_label.text = "%s %s" % [stats.unit_name, star_text]
+		name_label.text = stats.unit_name
+	_update_star_display()
 	if health_bar_3d:
 		health_bar_3d.max_value = get_max_health()
 	update_health_bar()
@@ -430,7 +430,7 @@ func setup_team_indicator() -> void:
 func setup_stats_display() -> void:
 	ui_viewport = SubViewport.new()
 	ui_viewport.name = "UnitLabelViewport"
-	ui_viewport.size = Vector2i(144, 64)
+	ui_viewport.size = Vector2i(288, 128)
 	ui_viewport.transparent_bg = true
 	ui_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(ui_viewport)
@@ -441,7 +441,7 @@ func setup_stats_display() -> void:
 	ui_viewport.add_child(root)
 
 	var panel_fill := ColorRect.new()
-	panel_fill.color = Color(0.07, 0.055, 0.075, 0.9)
+	panel_fill.color = Color(0.06, 0.08, 0.11, 0.94) if team == 0 else Color(0.12, 0.05, 0.07, 0.94)
 	panel_fill.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(panel_fill)
@@ -457,43 +457,110 @@ func setup_stats_display() -> void:
 	frame.draw_center = false
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if team == 0:
+		frame.modulate = Color(0.9, 0.95, 1.0)
+	else:
+		frame.modulate = Color(1.0, 0.8, 0.8)
 	root.add_child(frame)
 
-	name_label = _make_unit_label("NameLabel", Rect2(8, 3, 128, 17), 12, Color("#f4dfb3"))
-	var star_text := ""
-	for _star in star_level:
-		star_text += "★"
-	name_label.text = "%s %s" % [stats.unit_name, star_text]
-	root.add_child(name_label)
+	# --- Cabeçalho: Estrelas, Nome Legível e Tier ---
+	var header := HBoxContainer.new()
+	header.name = "HeaderRow"
+	header.position = Vector2(12, 8)
+	header.size = Vector2(264, 28)
+	header.alignment = BoxContainer.ALIGNMENT_CENTER
+	header.add_theme_constant_override("separation", 6)
+	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(header)
 
-	hp_label = _make_unit_label("HPLabel", Rect2(8, 21, 62, 14), 10, Color("#f1d8c5"))
-	root.add_child(hp_label)
-	mana_label = _make_unit_label("ManaLabel", Rect2(74, 21, 62, 14), 10, Color("#c5ddff"))
-	root.add_child(mana_label)
+	star_container = HBoxContainer.new()
+	star_container.name = "StarContainer"
+	star_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	star_container.add_theme_constant_override("separation", 2)
+	star_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_child(star_container)
+	_update_star_display()
 
-	health_bar_3d = _make_unit_bar("HealthBar", Rect2(9, 38, 126, 8), Color("#65bf69"))
+	name_label = Label.new()
+	name_label.name = "NameLabel"
+	name_label.text = stats.unit_name
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 18)
+	name_label.add_theme_color_override("font_color", Color("#fff5e4") if team == 0 else Color("#ffe4e0"))
+	name_label.add_theme_color_override("font_outline_color", Color("#120d18"))
+	name_label.add_theme_constant_override("outline_size", 4)
+	name_label.clip_text = true
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_child(name_label)
+
+	var tier_label := Label.new()
+	tier_label.name = "TierBadge"
+	tier_label.text = "T%d" % stats.tier
+	tier_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tier_label.add_theme_font_size_override("font_size", 13)
+	tier_label.add_theme_color_override("font_color", stats.get_tier_color())
+	tier_label.add_theme_color_override("font_outline_color", Color("#120d18"))
+	tier_label.add_theme_constant_override("outline_size", 3)
+	tier_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_child(tier_label)
+
+	# --- Barra de Vida (com ícone Heart do atlas) ---
+	health_bar_3d = _make_unit_bar("HealthBar", Rect2(12, 40, 264, 26), Color("#4ade80"), Color("#111822"))
 	root.add_child(health_bar_3d)
-	# Faixa ciano separada da vida: nunca confunde escudo com cura.
-	shield_bar_3d = _make_unit_bar("ShieldBar", Rect2(9, 46, 126, 3), Color("#74e6f5"))
+
+	var hp_icon := UIAtlasCatalog.create_icon_rect("heart", Vector2(18, 18))
+	hp_icon.name = "HPIcon"
+	hp_icon.position = Vector2(16, 44)
+	hp_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(hp_icon)
+
+	hp_label = _make_unit_label("HPLabel", Rect2(38, 41, 234, 24), 14, Color("#fdfefe"))
+	root.add_child(hp_label)
+
+	# Faixa de escudo ciano
+	shield_bar_3d = _make_unit_bar("ShieldBar", Rect2(12, 68, 264, 5), Color("#38bdf8"), Color.TRANSPARENT)
 	shield_bar_3d.add_theme_stylebox_override("background", StyleBoxEmpty.new())
 	shield_bar_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(shield_bar_3d)
-	mana_bar_3d = _make_unit_bar("ManaBar", Rect2(9, 50, 126, 6), stats.get_tier_color())
+
+	# --- Barra de Mana (com ícone Mana Drop do atlas) ---
+	mana_bar_3d = _make_unit_bar("ManaBar", Rect2(12, 78, 264, 22), Color("#3b82f6"), Color("#0d1320"))
 	root.add_child(mana_bar_3d)
+
+	var mana_icon := UIAtlasCatalog.create_icon_rect("mana_drop", Vector2(16, 16))
+	mana_icon.name = "ManaIcon"
+	mana_icon.position = Vector2(16, 81)
+	mana_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(mana_icon)
+
+	mana_label = _make_unit_label("ManaLabel", Rect2(38, 79, 234, 20), 13, Color("#e2f0ff"))
+	root.add_child(mana_label)
 
 	ui_sprite = Sprite3D.new()
 	ui_sprite.name = "UnitLabelSprite"
 	ui_sprite.texture = ui_viewport.get_texture()
 	ui_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	ui_sprite.no_depth_test = true
-	ui_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	ui_sprite.pixel_size = 0.011
+	ui_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	ui_sprite.pixel_size = 0.0055
 	ui_sprite.position = Vector3(0, 2.65, 0)
 	add_child(ui_sprite)
 
 	health_bar_3d.max_value = get_max_health()
 	mana_bar_3d.max_value = stats.max_mana
 	update_stats_display()
+
+func _update_star_display() -> void:
+	if not is_instance_valid(star_container):
+		return
+	for child in star_container.get_children():
+		child.queue_free()
+	var stars: int = clampi(star_level, 1, 3)
+	for i in range(stars):
+		var star_icon := UIAtlasCatalog.create_icon_rect("star", Vector2(18, 18))
+		star_container.add_child(star_icon)
 
 func _make_unit_label(label_name: String, rect: Rect2, font_size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -504,25 +571,26 @@ func _make_unit_label(label_name: String, rect: Rect2, font_size: int, color: Co
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color("#211923"))
-	label.add_theme_constant_override("outline_size", 2)
+	label.add_theme_color_override("font_outline_color", Color("#120d18"))
+	label.add_theme_constant_override("outline_size", 3)
 	label.clip_text = true
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 
-func _make_unit_bar(bar_name: String, rect: Rect2, fill_color: Color) -> ProgressBar:
+func _make_unit_bar(bar_name: String, rect: Rect2, fill_color: Color, bg_color: Color = Color("#111822")) -> ProgressBar:
 	var bar := ProgressBar.new()
 	bar.name = bar_name
 	bar.position = rect.position
 	bar.size = rect.size
 	bar.show_percentage = false
 	var background := StyleBoxFlat.new()
-	background.bg_color = Color("#211c28")
+	background.bg_color = bg_color
 	background.set_border_width_all(1)
-	background.border_color = Color("#594653")
+	background.border_color = Color("#2e3d52")
+	background.set_corner_radius_all(3)
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = fill_color
-	fill.set_corner_radius_all(2)
+	fill.set_corner_radius_all(3)
 	bar.add_theme_stylebox_override("background", background)
 	bar.add_theme_stylebox_override("fill", fill)
 	return bar
@@ -530,30 +598,34 @@ func _make_unit_bar(bar_name: String, rect: Rect2, fill_color: Color) -> Progres
 func update_stats_display() -> void:
 	if not is_instance_valid(hp_label) or not is_instance_valid(mana_label) or not is_instance_valid(health_bar_3d) or not is_instance_valid(mana_bar_3d):
 		return
-	var mana_percent := current_mana / maxf(stats.max_mana, 1.0)
-	var hp_percent := current_health / maxf(get_max_health(), 1.0)
-	hp_label.text = "HP %d" % int(current_health)
-	mana_label.text = "MP %.0f%%" % (mana_percent * 100.0)
+	var max_hp := maxf(get_max_health(), 1.0)
+	var hp_percent := current_health / max_hp
+	var max_mp := maxf(stats.max_mana, 1.0)
+	var mana_percent := current_mana / max_mp
+	hp_label.text = "%d / %d" % [int(current_health), int(max_hp)]
 	if has_active_shield():
-		mana_label.text = "ESC %d" % ceili(current_shield)
+		mana_label.text = "ESC %d  |  MP %d%%" % [ceili(current_shield), int(mana_percent * 100.0)]
+	else:
+		mana_label.text = "%d / %d" % [int(current_mana), int(max_mp)]
 	if is_instance_valid(shield_bar_3d):
 		shield_bar_3d.visible = has_active_shield()
-		shield_bar_3d.max_value = maxf(get_max_health(), current_shield)
+		shield_bar_3d.max_value = max_hp
 		shield_bar_3d.value = current_shield
-	mana_bar_3d.modulate = Color(0.45, 0.45, 0.45) if has_active_shield() else Color.WHITE
+	mana_bar_3d.modulate = Color(0.65, 0.85, 1.0) if has_active_shield() else Color.WHITE
 	health_bar_3d.value = current_health
 	mana_bar_3d.value = current_mana
 	var health_fill := health_bar_3d.get_theme_stylebox("fill") as StyleBoxFlat
-	if hp_percent > 0.7:
-		health_fill.bg_color = Color("#65bf69")
-	elif hp_percent > 0.3:
-		health_fill.bg_color = Color("#e7b84d")
-	else:
-		health_fill.bg_color = Color("#d85852")
+	if is_instance_valid(health_fill):
+		if hp_percent > 0.6:
+			health_fill.bg_color = Color("#4ade80")
+		elif hp_percent > 0.3:
+			health_fill.bg_color = Color("#facc15")
+		else:
+			health_fill.bg_color = Color("#f87171")
 
-	mana_label.add_theme_color_override("font_color", Color("#f5da80") if mana_percent >= 1.0 else Color("#c5ddff"))
+	mana_label.add_theme_color_override("font_color", Color("#fbbf24") if mana_percent >= 1.0 else Color("#e0f2fe"))
 	if has_active_shield():
-		mana_label.add_theme_color_override("font_color", Color("#74e6f5"))
+		mana_label.add_theme_color_override("font_color", Color("#7dd3fc"))
 
 
 

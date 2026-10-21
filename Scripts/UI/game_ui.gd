@@ -2,6 +2,8 @@ class_name GameUI
 extends CanvasLayer
 
 const UIStyle = preload("res://Scripts/UI/ui_style.gd")
+const ResponsiveLayout = preload("res://Scripts/UI/responsive_layout.gd")
+const UIAtlasCatalog = preload("res://Scripts/UI/ui_atlas_catalog.gd")
 
 signal hud_visibility_changed(is_visible: bool)
 
@@ -19,6 +21,16 @@ signal hud_visibility_changed(is_visible: bool)
 @onready var timer_label: Label = get_node_or_null("Control/TopBar/Content/TimerBox/TimerLabel")
 @onready var milestones_container: HBoxContainer = get_node_or_null("Control/TopBar/Content/MilestonesContainer")
 @onready var enemy_level_label: Label = get_node_or_null("Control/TopBar/Content/EnemyBox/EnemyLevelLabel")
+@onready var streak_box: HBoxContainer = get_node_or_null("Control/TopBar/Content/StreakBox")
+@onready var streak_icon: TextureRect = get_node_or_null("Control/TopBar/Content/StreakBox/StreakIcon") as TextureRect
+@onready var streak_label: Label = get_node_or_null("Control/TopBar/Content/StreakBox/StreakLabel") as Label
+
+# Elementos do Banner de Rendimento
+@onready var resolution_banner: PanelContainer = get_node_or_null("Control/RoundResolutionBanner")
+@onready var banner_title: Label = get_node_or_null("Control/RoundResolutionBanner/Content/VBox/BannerTitle") as Label
+@onready var banner_detail: Label = get_node_or_null("Control/RoundResolutionBanner/Content/VBox/BannerDetail") as Label
+@onready var banner_icon: TextureRect = get_node_or_null("Control/RoundResolutionBanner/Content/BannerIcon") as TextureRect
+var _banner_tween: Tween
 
 # Elementos de Status
 @onready var board_count_label: Label = get_node_or_null("Control/BoardCountLabel")
@@ -209,6 +221,99 @@ func update_player_stats(gold: int, health: int, level: int, xp: int, required_x
 	var leg_lvl := get_node_or_null("Control/TopBar/LegacyNodes/LevelLabel") as Label
 	if leg_lvl:
 		leg_lvl.text = "Nível %d" % level
+
+func update_streak(win_streak: int, loss_streak: int) -> void:
+	if not streak_label:
+		streak_label = get_node_or_null("Control/TopBar/Content/StreakBox/StreakLabel") as Label
+	if not streak_icon:
+		streak_icon = get_node_or_null("Control/TopBar/Content/StreakBox/StreakIcon") as TextureRect
+	if not streak_label:
+		return
+	
+	if win_streak > 0:
+		var bonus := clampi(win_streak, 1, 5)
+		streak_label.text = "%dV (+%dg)" % [win_streak, bonus]
+		streak_label.add_theme_color_override("font_color", Color("#2ecc71"))
+		if streak_icon:
+			streak_icon.texture = UIAtlasCatalog.get_icon_texture("lightning")
+		streak_label.tooltip_text = (
+			"Sequência de Vitórias: %d consecutivas\n" +
+			"Bônus de ouro por round: +%dg (máximo: +5g)\n\n" +
+			"Regras de Economia:\n" +
+			"• Vitória: +2g base + 1..5g por sequência\n" +
+			"• Empate: +1g fixo (mantém sequência)\n" +
+			"• Derrota: +1g base + 1..5g por sequência\n" +
+			"• Juros: +1g a cada 10g no banco (máx +5g)"
+		) % [win_streak, bonus]
+	elif loss_streak > 0:
+		var bonus := clampi(loss_streak, 1, 5)
+		streak_label.text = "%dD (+%dg)" % [loss_streak, bonus]
+		streak_label.add_theme_color_override("font_color", Color("#e74c3c"))
+		if streak_icon:
+			streak_icon.texture = UIAtlasCatalog.get_icon_texture("skull")
+		streak_label.tooltip_text = (
+			"Sequência de Derrotas: %d consecutivas\n" +
+			"Bônus de compensação: +%dg (máximo: +5g)\n\n" +
+			"Regras de Economia:\n" +
+			"• Vitória: +2g base + 1..5g por sequência\n" +
+			"• Empate: +1g fixo (mantém sequência)\n" +
+			"• Derrota: +1g base + 1..5g por sequência\n" +
+			"• Juros: +1g a cada 10g no banco (máx +5g)"
+		) % [loss_streak, bonus]
+	else:
+		streak_label.text = "0 STREAK"
+		streak_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8, 1))
+		if streak_icon:
+			streak_icon.texture = UIAtlasCatalog.get_icon_texture("lightning")
+		streak_label.tooltip_text = (
+			"Sequência de Rounds: Nenhuma ativa\n" +
+			"Acumule vitórias ou derrotas seguidas para receber bônus de ouro!\n\n" +
+			"Regras de Economia:\n" +
+			"• Vitória: +2g base + 1..5g por sequência\n" +
+			"• Empate: +1g fixo (sem perda de sequência)\n" +
+			"• Derrota: +1g base + 1..5g por sequência\n" +
+			"• Juros: +1g a cada 10g no banco (máx +5g)"
+		)
+
+func show_round_resolution_banner(outcome_title: String, earned_gold: int, is_draw: bool, player_won: bool) -> void:
+	if not resolution_banner:
+		resolution_banner = get_node_or_null("Control/RoundResolutionBanner")
+	if not resolution_banner:
+		return
+	if not banner_title:
+		banner_title = get_node_or_null("Control/RoundResolutionBanner/Content/VBox/BannerTitle") as Label
+	if not banner_detail:
+		banner_detail = get_node_or_null("Control/RoundResolutionBanner/Content/VBox/BannerDetail") as Label
+	if not banner_icon:
+		banner_icon = get_node_or_null("Control/RoundResolutionBanner/Content/BannerIcon") as TextureRect
+	
+	if banner_icon:
+		banner_icon.texture = UIAtlasCatalog.get_icon_texture("coin")
+	
+	if is_draw:
+		banner_title.text = "EMPATE! +%d OURO" % earned_gold
+		banner_title.add_theme_color_override("font_color", Color("#91c9d8"))
+		banner_detail.text = "Recompensa fixa por empate (+1g)"
+	elif player_won:
+		banner_title.text = "VITÓRIA! +%d OURO" % earned_gold
+		banner_title.add_theme_color_override("font_color", Color("#2ecc71"))
+		var streak_g := maxi(0, earned_gold - 2)
+		banner_detail.text = "+2g base · +%dg sequência" % streak_g if streak_g > 0 else "+2g recompensa base"
+	else:
+		banner_title.text = "DERROTA! +%d OURO" % earned_gold
+		banner_title.add_theme_color_override("font_color", Color("#e74c3c"))
+		var streak_g := maxi(0, earned_gold - 1)
+		banner_detail.text = "+1g base · +%dg compensação" % streak_g if streak_g > 0 else "+1g compensação base"
+	
+	resolution_banner.show()
+	resolution_banner.modulate.a = 0.0
+	if _banner_tween and _banner_tween.is_running():
+		_banner_tween.kill()
+	_banner_tween = create_tween()
+	_banner_tween.tween_property(resolution_banner, "modulate:a", 1.0, 0.22)
+	_banner_tween.tween_interval(1.8)
+	_banner_tween.tween_property(resolution_banner, "modulate:a", 0.0, 0.3)
+	_banner_tween.tween_callback(resolution_banner.hide)
 
 func toggle_hud() -> void:
 	hud_visible = not hud_visible
@@ -575,8 +680,12 @@ func _layout_extra_panels() -> void:
 	var compact: bool = metrics["compact"]
 	
 	# 1. TopBar Centralizado (TFT)
-	var top_w := minf(520.0, viewport_size.x - 40.0)
+	var top_w := minf(640.0, viewport_size.x - 40.0)
 	ResponsiveLayout.place(top_bar, Rect2((viewport_size.x - top_w) * 0.5, 12.0, top_w, 56.0))
+	
+	if is_instance_valid(resolution_banner):
+		var banner_w := minf(340.0, viewport_size.x - 40.0)
+		ResponsiveLayout.place(resolution_banner, Rect2((viewport_size.x - banner_w) * 0.5, 74.0, banner_w, 54.0))
 	
 	## 2. Informações sob o TopBar (No Campo & Região)
 	#ResponsiveLayout.place(board_count_label, Rect2((viewport_size.x - 260.0) * 0.5, 72.0, 260.0, 22.0))
@@ -682,6 +791,8 @@ func _setup_inspector() -> void:
 		UIStyle.apply_button_skin(close_btn, UIStyle.BORDER_SLATE)
 		close_btn.pressed.connect(hide_inspector)
 		right_bar.add_child(close_btn)
+	close_btn.z_index = 5
+	right_bar.move_child(close_btn, -1)
 
 func show_inspector() -> void:
 	if not right_bar:

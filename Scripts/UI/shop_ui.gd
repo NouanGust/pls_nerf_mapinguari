@@ -2,6 +2,8 @@ class_name ShopUI
 extends HBoxContainer
 
 const UIStyle = preload("res://Scripts/UI/ui_style.gd")
+const UIAtlasCatalog = preload("res://Scripts/UI/ui_atlas_catalog.gd")
+const ResponsiveLayout = preload("res://Scripts/UI/responsive_layout.gd")
 
 signal unit_selected(unit_stats: UnitStats, slot_index: int)
 signal unit_drag_requested(unit_stats: UnitStats, slot_index: int)
@@ -58,6 +60,8 @@ func _apply_button_styles() -> void:
 	if shop_toggle_button:
 		UIStyle.apply_button_skin(shop_toggle_button, UIStyle.BORDER_SLATE)
 	if lock_button:
+		lock_button.icon = UIAtlasCatalog.get_icon_texture("padlock")
+		lock_button.expand_icon = true
 		UIStyle.apply_button_skin(lock_button, UIStyle.BORDER_GOLD)
 	var buy_xp := get_node_or_null("../ControlsContainer/BuyXPButton") as Button
 	if buy_xp:
@@ -127,6 +131,20 @@ func update_tier_odds(player_level: int) -> void:
 func update_player_info(gold: int, level: int, current_xp: int, required_xp: int, is_max_level: bool) -> void:
 	if gold_label:
 		gold_label.text = "%d" % gold
+		var interest := mini(5, floori(float(gold) / 10.0))
+		var economy_tip := (
+			"Ouro Atual: %d moedas\n\n" +
+			"Rendimento por Round:\n" +
+			"• Vitória: +2g base (+ bônus de sequência até +5g)\n" +
+			"• Empate: +1g fixo\n" +
+			"• Derrota: +1g base (+ bônus de sequência até +5g)\n" +
+			"• Juros previstos: +%dg (+1g a cada 10g guardados, máx 5g)\n" +
+			"• Renda básica de turno: +5g"
+		) % [gold, interest]
+		gold_label.tooltip_text = economy_tip
+		var parent_box := gold_label.get_parent() as Control
+		if parent_box:
+			parent_box.tooltip_text = economy_tip
 	if level_label:
 		level_label.text = "NÍVEL %d" % level if not is_max_level else "NÍVEL 9 · MÁX"
 	if xp_progress_label:
@@ -226,7 +244,9 @@ func _on_shop_refreshed(units: Array[UnitStats]) -> void:
 			has_upgrade_hint = true
 			break
 	if has_upgrade_hint:
-		AudioManager.play_evol_hint_shop()
+		var am = get_node_or_null("/root/AudioManager")
+		if am and am.has_method("play_evol_hint_shop"):
+			am.play_evol_hint_shop()
 
 func set_owned_star_counts(counts: Dictionary, in_combat: bool) -> void:
 	owned_star_counts = counts.duplicate(true)
@@ -281,7 +301,9 @@ func _on_drag_started(unit_stats: UnitStats, slot_index: int) -> void:
 
 func _on_lock_changed(is_locked: bool) -> void:
 	if lock_button:
-		lock_button.text = "🔓 Destravar" if is_locked else "🔒 Travar"
+		lock_button.icon = UIAtlasCatalog.get_icon_texture("padlock")
+		lock_button.expand_icon = true
+		lock_button.text = "Destravar" if is_locked else "Travar"
 		UIStyle.apply_button_skin(lock_button, UIStyle.BORDER_CYAN if is_locked else UIStyle.BORDER_GOLD)
 
 func _on_card_hover_started(stats: UnitStats, card_pos: Vector2) -> void:
@@ -325,7 +347,7 @@ func update_tooltip_labels(stats: UnitStats) -> void:
 		var upgrade_star := _get_purchase_upgrade_star(stats.unit_id)
 		var is_owned := _is_unit_owned(stats.unit_id)
 		if upgrade_star > 0:
-			name_lbl.text += " [color=#ffd16b]★ Evolui para %d★%s[/color]" % [
+			name_lbl.text += " [color=#ffd16b]◆ Evolui para Nível %d%s[/color]" % [
 				upgrade_star,
 				" no próximo round" if upgrades_deferred else " ao comprar"
 			]

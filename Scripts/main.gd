@@ -54,6 +54,8 @@ var battle_time_remaining: float = 0.0
 
 @export var gold_on_win: int = 2
 @export var gold_on_loss: int = 1
+@export var gold_on_draw: int = 1
+@export var round_transition_seconds: float = 2.5
 @export var battle_duration_seconds: float = 60.0
 @export_range(1.0, 10.0, 0.25) var stationary_stalemate_seconds: float = 3.0
 @export var win_streak_bonus_step: int = 1
@@ -829,34 +831,50 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 		dragging_unit = null
 		drag_handler.interaction_enabled = false
 	
+	var earned_gold: int = 0
+	var outcome_name: String = ""
 	if is_draw:
 		win_streak = 0
 		loss_streak = 0
-		player_gold += roundi(float(gold_on_win) * 0.5)
+		earned_gold = gold_on_draw
+		player_gold += earned_gold
 		player_health -= 5
 		round_outcomes[current_round] = false
+		outcome_name = "Empate"
 	elif player_won:
 		win_streak = mini(win_streak + 1, 5)
 		loss_streak = 0
 		AudioManager.play_win_streak(win_streak)
 		
 		var streak_bonus: int = clampi(win_streak, 1, max_win_streak_bonus)
-		player_gold += gold_on_win + streak_bonus
+		earned_gold = gold_on_win + streak_bonus
+		player_gold += earned_gold
 		round_outcomes[current_round] = true
+		outcome_name = "Vitória"
 	else:
 		loss_streak = mini(loss_streak + 1, 5)
 		win_streak = 0
 		AudioManager.play_loss_streak(loss_streak)
 		
 		var streak_bonus: int = clampi(loss_streak, 1, max_loss_streak_bonus)
-		player_gold += gold_on_loss + streak_bonus
+		earned_gold = gold_on_loss + streak_bonus
+		player_gold += earned_gold
 		player_health -= 10
 		round_outcomes[current_round] = false
+		outcome_name = "Derrota"
 	# Todo resultado encerra um round, inclusive derrota e empate.
 	current_round += 1
 	_grant_round_xp()
 	revive_dead_player_units()
 	update_ui()
+	
+	# Exibir notificação / banner de rendimento na interface
+	if ui and ui.has_method("show_round_resolution_banner"):
+		ui.show_round_resolution_banner(outcome_name, earned_gold, is_draw, player_won)
+	
+	# Pequeno tempo entre o fim de um round e o próximo para o jogador ver as moedas ganhas
+	if round_transition_seconds > 0.0:
+		await get_tree().create_timer(round_transition_seconds, false).timeout
 	var is_game_over := player_health <= 0
 	_campaign_state = "won" if region_completed else ("lost" if is_game_over else "active")
 	_save_campaign()
@@ -932,6 +950,8 @@ func update_ui() -> void:
 	ui.update_enemy_level(enemy_level)
 	ui.update_board_capacity(get_player_units_on_board_count(), get_board_unit_limit())
 	_update_round_label()
+	if ui.has_method("update_streak"):
+		ui.update_streak(win_streak, loss_streak)
 	
 	var region_label := ui.get_node_or_null("Control/RegionLabel") as Label
 	if region_label:
@@ -1090,8 +1110,7 @@ func buy_xp() -> void:
 	var progress := Progression.gain_xp(player_level, player_xp, Progression.PURCHASE_XP)
 	player_level = progress.x
 	player_xp = progress.y
-	if player_level != previous_level:
-		_refresh_shop()
+	# A loja não é mais rerrolada ao subir de nível
 	
 	update_ui()
 
@@ -1159,7 +1178,7 @@ func show_unit_inspector(unit: BaseUnit3D) -> void:
 	
 	var name_lbl = panel.find_child("Name_label", true, false)
 	if name_lbl:
-		name_lbl.text = "[b]%s[/b] %s (Tier %d)" % [stats.unit_name, "★".repeat(unit.star_level), stats.tier]
+		name_lbl.text = "[b]%s[/b] [color=#f1c40f]%s[/color] [color=#95a5a6](Tier %d)[/color]" % [stats.unit_name, "★".repeat(unit.star_level), stats.tier]
 	
 	var img = panel.find_child("Image_container", true, false) as TextureRect
 	if img:
@@ -1167,31 +1186,31 @@ func show_unit_inspector(unit: BaseUnit3D) -> void:
 	
 	var hp_lbl = panel.find_child("Hp_label", true, false)
 	if hp_lbl:
-		hp_lbl.text = "Vida: [color=#2ecc71]%d[/color] / %d" % [int(unit.current_health), int(unit.get_max_health())]
+		hp_lbl.text = "[color=#2ecc71]VIDA[/color]  [b]%d[/b] / %d" % [int(unit.current_health), int(unit.get_max_health())]
 	
 	var mana_lbl = panel.find_child("Mana_label", true, false)
 	if mana_lbl:
-		mana_lbl.text = "Mana: [color=#3498db]%d[/color] / %d" % [int(unit.current_mana), int(stats.max_mana)]
+		mana_lbl.text = "[color=#3498db]MANA[/color]  [b]%d[/b] / %d" % [int(unit.current_mana), int(stats.max_mana)]
 	
 	var range_lbl = panel.find_child("Range_label", true, false)
 	if range_lbl:
-		range_lbl.text = "Alcance: %s (%d hexes)" % ["À Distância" if stats.is_ranged else "Corpo a Corpo", stats.get_attack_range_hexes()]
+		range_lbl.text = "[color=#bdc3c7]ALCANCE[/color]  %s (%d hex)" % ["À Distância" if stats.is_ranged else "Corpo a Corpo", stats.get_attack_range_hexes()]
 	
 	var type_lbl = panel.find_child("Type_label", true, false)
 	if type_lbl:
-		type_lbl.text = "Ataque: [color=#e67e22]%d[/color] (%s)" % [int(unit.get_attack_damage()), "Físico" if stats.ability_damage_type == 0 else "Mágico"]
+		type_lbl.text = "[color=#e67e22]ATAQUE[/color]  [b]%d[/b] (%s)" % [int(unit.get_attack_damage()), "Físico" if stats.ability_damage_type == 0 else "Mágico"]
 	
 	var origins_lbl = panel.find_child("Origins_label", true, false)
 	if origins_lbl:
-		origins_lbl.text = "Origens: [color=#f1c40f]%s[/color]" % (" · ".join(stats.origins) if not stats.origins.is_empty() else "—")
+		origins_lbl.text = "[color=#f1c40f]ORIGENS[/color]  %s" % (" · ".join(stats.origins) if not stats.origins.is_empty() else "—")
 	
 	var classes_lbl = panel.find_child("Classes_label", true, false)
 	if classes_lbl:
-		classes_lbl.text = "Classes: [color=#9b59b6]%s[/color]" % (" · ".join(stats.classes) if not stats.classes.is_empty() else "—")
+		classes_lbl.text = "[color=#9b59b6]CLASSES[/color]  %s" % (" · ".join(stats.classes) if not stats.classes.is_empty() else "—")
 	
 	var aff_lbl = panel.find_child("Affinities_label", true, false)
 	if aff_lbl:
-		aff_lbl.text = "Habilidade: [b]%s[/b]\n[color=#bdc3c7]%s[/color]" % [stats.ability_name, stats.ability_description]
+		aff_lbl.text = "[color=#5dade2]HABILIDADE[/color] · [b]%s[/b]\n[color=#ecf0f1]%s[/color]" % [stats.ability_name, stats.ability_description]
 	
 	ui.show_inspector()
 

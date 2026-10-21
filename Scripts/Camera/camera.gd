@@ -1,6 +1,8 @@
 class_name GameCamera
 extends Node3D
 
+const ResponsiveLayout = preload("res://Scripts/UI/responsive_layout.gd")
+
 @export_group("Enquadramento inicial")
 ## 0 graus mantém o jogador na parte inferior da tela.
 @export_range(-180.0, 180.0, 1.0) var initial_yaw_degrees: float = 0.0

@@ -2,6 +2,7 @@ extends SceneTree
 
 const BattleClock = preload("res://Scripts/Systems/battle_clock.gd")
 const BiodiversityModels = preload("res://Scripts/Units/biodiversity_models.gd")
+const ResponsiveLayout = preload("res://Scripts/UI/responsive_layout.gd")
 
 func _initialize() -> void:
 	call_deferred("_run")
@@ -15,6 +16,10 @@ func _run() -> void:
 		var clock = BattleClock.new()
 		clock.name = "BattleClock"
 		root.add_child(clock)
+	if not root.has_node("ResponsiveLayout"):
+		var rl = ResponsiveLayout.new()
+		rl.name = "ResponsiveLayout"
+		root.add_child(rl)
 
 	# [TESTE 1] Ouro inicial = 3
 	print("\n[TESTE 1] Verificando ouro inicial do jogador:")
@@ -88,7 +93,10 @@ func _run() -> void:
 	print("  ✓ Streaks de derrota testadas com sucesso: sequência até 5 e bônus de 1 a 5 gold")
 
 	# [TESTE 5] Shader de unidade possuída na loja
-	print("\n[TESTE 5] Verificando shader de unidade possuída na loja:")
+	for i in 10:
+		if main.shop_ui:
+			break
+		await process_frame
 	var shop_ui: ShopUI = main.shop_ui
 	assert(shop_ui != null, "ShopUI deve existir")
 	

@@ -31,7 +31,7 @@ static func load_all_units() -> Dictionary:
 	# ResourceLoader preserva os nomes originais no PCK, inclusive recursos convertidos.
 	for file_name in ResourceLoader.list_directory(units_path):
 		if file_name.ends_with(".tres"):
-			var unit_stats: UnitStats = ResourceLoader.load(units_path + file_name, "", ResourceLoader.CACHE_MODE_REPLACE)
+			var unit_stats: UnitStats = ResourceLoader.load(units_path + file_name)
 			if unit_stats and unit_stats.is_valid():
 				_units_cache[unit_stats.unit_id] = unit_stats
 				loaded_count += 1
@@ -52,7 +52,7 @@ static func load_unit_stats(unit_id: String) -> UnitStats:
 	# Tentar carregar do disco
 	var path := "res://resources/units/%s.tres" % unit_id
 	if ResourceLoader.exists(path):
-		var unit_stats: UnitStats = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_REPLACE)
+		var unit_stats: UnitStats = ResourceLoader.load(path)
 		if unit_stats and unit_stats.is_valid():
 			_units_cache[unit_id] = unit_stats
 			return unit_stats

@@ -7,8 +7,6 @@
 [ext_resource type="Script" uid="uid://dqroqn18qtmvr" path="res://Scripts/Board/navigation_setup.gd" id="5_p6jpk"]
 [ext_resource type="PackedScene" uid="uid://bu1o8iehokw1k" path="res://Scenes/env.tscn" id="7_xlvfx"]
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_xlvfx"]
-
 [sub_resource type="NavigationMesh" id="NavigationMesh_2a143"]
 geometry_parsed_geometry_type = 1
 geometry_collision_mask = 4278190084
@@ -86,9 +84,6 @@ offset_right = 0.0
 offset_bottom = 0.0
 grow_horizontal = 1
 grow_vertical = 1
-
-[node name="RightBar" parent="GameUi/Control" index="7" unique_id=1903512356]
-theme_override_styles/panel = SubResource("StyleBoxTexture_xlvfx")
 
 [node name="HUDToggleButton" parent="GameUi" index="1" unique_id=1900415997]
 offset_left = -56.0

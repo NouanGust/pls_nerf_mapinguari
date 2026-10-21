@@ -437,6 +437,12 @@ func _ensure_synergy_tooltip() -> void:
 		hud.add_child(synergy_tooltip)
 	if is_instance_valid(synergy_tooltip):
 		synergy_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		synergy_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		synergy_tooltip.custom_minimum_size.x = clampf(300.0, 240.0, get_viewport().get_visible_rect().size.x - 30.0)
+		var vbox_node := synergy_tooltip.get_node_or_null("VBoxContainer")
+		if vbox_node:
+			vbox_node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		synergy_tooltip.reset_size()
 		synergy_tooltip.hide()
 
 func _on_synergy_row_hover_started(synergy: Dictionary, row: Control) -> void:
@@ -447,6 +453,7 @@ func _on_synergy_row_hover_started(synergy: Dictionary, row: Control) -> void:
 	var panel_global: Vector2 = synergy_panel.global_position if is_instance_valid(synergy_panel) else row.global_position
 	var panel_width: float = synergy_panel.size.x if is_instance_valid(synergy_panel) else row.size.x
 	_synergy_tooltip_origin = Vector2(panel_global.x + panel_width + 12.0, row.global_position.y)
+	_fit_synergy_tooltip(true)
 	synergy_tooltip.show()
 	_fit_synergy_tooltip.call_deferred()
 
@@ -454,8 +461,10 @@ func _on_synergy_row_hover_ended() -> void:
 	if is_instance_valid(synergy_tooltip):
 		synergy_tooltip.hide()
 
-func _fit_synergy_tooltip() -> void:
-	if not is_instance_valid(synergy_tooltip) or not synergy_tooltip.visible:
+func _fit_synergy_tooltip(force: bool = false) -> void:
+	if not is_instance_valid(synergy_tooltip):
+		return
+	if not force and not synergy_tooltip.visible:
 		return
 	var viewport_size := get_viewport().get_visible_rect().size
 	synergy_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -657,6 +666,11 @@ func _layout_extra_panels() -> void:
 func _setup_inspector() -> void:
 	if not right_bar:
 		return
+	var panel_style := UIStyle.make_panel_style(UIStyle.BG_DARK, UIStyle.BORDER_GOLD, 2, 6)
+	panel_style.shadow_color = Color(0, 0, 0, 0.6)
+	panel_style.shadow_size = 8
+	right_bar.add_theme_stylebox_override("panel", panel_style)
+	
 	var close_btn := right_bar.get_node_or_null("CloseButton") as Button
 	if not close_btn:
 		close_btn = Button.new()

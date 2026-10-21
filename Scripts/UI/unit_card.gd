@@ -3,6 +3,7 @@ extends PanelContainer
 
 const UIStyle = preload("res://Scripts/UI/ui_style.gd")
 const UPGRADE_HINT_SHADER: Shader = preload("res://Assets/Shaders/shop_upgrade_hint.gdshader")
+const OWNED_HINT_SHADER: Shader = preload("res://Assets/Shaders/shop_owned_hint.gdshader")
 
 signal card_clicked(slot_index: int)
 signal drag_started(unit_stats: UnitStats, slot_index: int)
@@ -19,7 +20,9 @@ var press_position: Vector2 = Vector2.ZERO
 
 var upgrade_glow: ColorRect
 var upgrade_material: ShaderMaterial
+var owned_material: ShaderMaterial
 var purchase_upgrade_star: int = 0
+var is_unit_owned: bool = false
 var base_tooltip_text: String = ""
 
 # Referências dos nós da interface
@@ -64,6 +67,8 @@ func fit_card(width: float) -> void:
 func _setup_upgrade_glow() -> void:
 	upgrade_material = ShaderMaterial.new()
 	upgrade_material.shader = UPGRADE_HINT_SHADER
+	owned_material = ShaderMaterial.new()
+	owned_material.shader = OWNED_HINT_SHADER
 	upgrade_glow = ColorRect.new()
 	upgrade_glow.name = "UpgradeGlow"
 	upgrade_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -77,6 +82,8 @@ func _setup_upgrade_glow() -> void:
 func _resize_upgrade_glow() -> void:
 	if upgrade_material:
 		upgrade_material.set_shader_parameter("card_size", size)
+	if owned_material:
+		owned_material.set_shader_parameter("card_size", size)
 
 func setup_styles() -> void:
 	default_style = UIStyle.make_card_style(current_tier, false)
@@ -161,26 +168,37 @@ func update_tier_style() -> void:
 	hover_style = UIStyle.make_card_style(current_tier, true)
 	add_theme_stylebox_override("panel", hover_style if is_hovered else default_style)
 
-func set_purchase_upgrade(stars: int, deferred_until_next_round: bool = false) -> void:
+func set_purchase_upgrade(stars: int, deferred_until_next_round: bool = false, unit_owned: bool = false) -> void:
 	purchase_upgrade_star = clampi(stars, 2, 4) if stars >= 2 and unit_stats and not is_sold else 0
+	is_unit_owned = unit_owned and unit_stats != null and not is_sold
 	if not is_instance_valid(upgrade_glow):
 		return
-	upgrade_glow.visible = purchase_upgrade_star > 0
 	tooltip_text = ""
-	if purchase_upgrade_star == 0:
+	
+	if purchase_upgrade_star > 0:
+		upgrade_glow.material = upgrade_material
+		upgrade_glow.visible = true
+		var tint := Color("#ffd16b")
+		if purchase_upgrade_star == 3:
+			tint = Color("#dca1ff")
+		elif purchase_upgrade_star == 4:
+			tint = Color("#88f4ff")
+		upgrade_material.set_shader_parameter("glow_color", tint)
+		if tier_badge:
+			tier_badge.text = "★".repeat(purchase_upgrade_star)
+			tier_badge.add_theme_color_override("font_color", tint)
+	elif is_unit_owned:
+		upgrade_glow.material = owned_material
+		upgrade_glow.visible = true
+		owned_material.set_shader_parameter("glow_color", Color(0.24, 0.82, 0.95, 0.85))
+		if tier_badge and unit_stats:
+			tier_badge.text = "T%d" % unit_stats.tier
+			tier_badge.add_theme_color_override("font_color", Color(0.35, 0.88, 1.0))
+	else:
+		upgrade_glow.visible = false
 		if tier_badge and unit_stats:
 			tier_badge.text = "T%d" % unit_stats.tier
 			tier_badge.add_theme_color_override("font_color", UIStyle.TIER_COLORS.get(unit_stats.tier, Color.WHITE))
-		return
-	var tint := Color("#ffd16b")
-	if purchase_upgrade_star == 3:
-		tint = Color("#dca1ff")
-	elif purchase_upgrade_star == 4:
-		tint = Color("#88f4ff")
-	upgrade_material.set_shader_parameter("glow_color", tint)
-	if tier_badge:
-		tier_badge.text = "★".repeat(purchase_upgrade_star)
-		tier_badge.add_theme_color_override("font_color", tint)
 
 func mark_as_sold() -> void:
 	is_sold = true

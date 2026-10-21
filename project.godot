@@ -20,10 +20,6 @@ run/main_scene="res://Scenes/UI/Menu.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://Assets/UI/folchess_icon.svg"
 
-[audio]
-
-buses/default_bus_layout="res://default_bus_layout.tres"
-
 [autoload]
 
 ResponsiveLayout="*res://Scripts/UI/responsive_layout.gd"
@@ -53,4 +49,5 @@ window/stretch/aspect="expand"
 [rendering]
 
 renderer/rendering_method.mobile="gl_compatibility"
+renderer/rendering_method.web="gl_compatibility"
 anti_aliasing/quality/msaa_2d=1

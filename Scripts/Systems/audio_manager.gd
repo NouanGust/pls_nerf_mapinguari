@@ -34,6 +34,7 @@ var _last_evol_hint_played_round: int = -1
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_ensure_audio_buses()
+	_init_sfx_pool()
 	if menu_music_player == null:
 		menu_music_player = AudioStreamPlayer.new()
 		menu_music_player.name = "MenuMusicPlayer"
@@ -112,16 +113,37 @@ func play_win_streak(streak: int) -> void:
 func play_loss_streak(_streak: int = 1) -> void:
 	play_sfx(loss_streak_1_sfx, false)
 
-## --- Tocador genérico de SFX ---
+## --- Pool e tocador genérico de SFX ---
+const SFX_POOL_SIZE := 12
+var _sfx_pool: Array[AudioStreamPlayer] = []
+var _sfx_pool_index: int = 0
+
+func _init_sfx_pool() -> void:
+	if not _sfx_pool.is_empty():
+		return
+	for i in SFX_POOL_SIZE:
+		var p := AudioStreamPlayer.new()
+		p.name = "SfxPoolPlayer_%d" % i
+		p.bus = &"SFX"
+		add_child(p)
+		_sfx_pool.append(p)
+
 func play_sfx(stream: AudioStream, randomize_pitch: bool = false, volume_offset_db: float = 0.0) -> void:
 	if stream == null:
 		return
-	var player := AudioStreamPlayer.new()
+	if _sfx_pool.is_empty():
+		_init_sfx_pool()
+	
+	var player: AudioStreamPlayer = null
+	for p in _sfx_pool:
+		if is_instance_valid(p) and not p.playing:
+			player = p
+			break
+	if player == null:
+		player = _sfx_pool[_sfx_pool_index]
+		_sfx_pool_index = (_sfx_pool_index + 1) % _sfx_pool.size()
+	
 	player.stream = stream
-	player.bus = &"SFX"
 	player.volume_db = volume_offset_db
-	if randomize_pitch:
-		player.pitch_scale = randf_range(0.92, 1.08)
-	add_child(player)
+	player.pitch_scale = randf_range(0.92, 1.08) if randomize_pitch else 1.0
 	player.play()
-	player.finished.connect(player.queue_free)

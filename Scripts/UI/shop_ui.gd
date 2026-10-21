@@ -46,6 +46,12 @@ func _ready() -> void:
 	if shop_system:
 		_on_shop_refreshed(shop_system.current_units)
 	if stats_tooltip:
+		stats_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		stats_tooltip.custom_minimum_size.x = minf(320.0, get_viewport_rect().size.x - 24.0)
+		var vbox_node := stats_tooltip.get_node_or_null("VBoxContainer")
+		if vbox_node:
+			vbox_node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stats_tooltip.reset_size()
 		stats_tooltip.hide()
 
 func _apply_button_styles() -> void:
@@ -230,14 +236,25 @@ func set_owned_star_counts(counts: Dictionary, in_combat: bool) -> void:
 func _refresh_upgrade_hints() -> void:
 	for card in unit_cards:
 		var stars := 0
+		var is_owned := false
 		if card.unit_stats and not card.is_sold:
 			stars = _get_purchase_upgrade_star(card.unit_stats.unit_id)
-		card.set_purchase_upgrade(stars, upgrades_deferred)
+			is_owned = _is_unit_owned(card.unit_stats.unit_id)
+		card.set_purchase_upgrade(stars, upgrades_deferred, is_owned)
 		if card.is_hovered:
 			if card.unit_stats and not card.is_sold:
 				update_tooltip_labels(card.unit_stats)
 			elif stats_tooltip:
 				stats_tooltip.hide()
+
+func _is_unit_owned(unit_id: String) -> bool:
+	if not owned_star_counts.has(unit_id):
+		return false
+	var counts: Array = owned_star_counts[unit_id]
+	for s in range(1, counts.size()):
+		if int(counts[s]) > 0:
+			return true
+	return false
 
 func _get_purchase_upgrade_star(unit_id: String) -> int:
 	if not owned_star_counts.has(unit_id):
@@ -272,6 +289,7 @@ func _on_card_hover_started(stats: UnitStats, card_pos: Vector2) -> void:
 		return
 	update_tooltip_labels(stats)
 	_tooltip_origin = card_pos
+	_fit_tooltip()
 	stats_tooltip.show()
 	_fit_tooltip.call_deferred()
 
@@ -305,11 +323,14 @@ func update_tooltip_labels(stats: UnitStats) -> void:
 		name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		name_lbl.text = "[b]%s[/b] (Tier %d · %dg)" % [stats.unit_name, stats.tier, stats.cost]
 		var upgrade_star := _get_purchase_upgrade_star(stats.unit_id)
+		var is_owned := _is_unit_owned(stats.unit_id)
 		if upgrade_star > 0:
 			name_lbl.text += " [color=#ffd16b]★ Evolui para %d★%s[/color]" % [
 				upgrade_star,
 				" no próximo round" if upgrades_deferred else " ao comprar"
 			]
+		elif is_owned:
+			name_lbl.text += " [color=#42d1e8]◆ Já possui no time[/color]"
 	
 	var hp_lbl := v_box.get_node_or_null("Tooltip_hp") as RichTextLabel
 	if hp_lbl:

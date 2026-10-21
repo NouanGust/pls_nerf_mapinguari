@@ -35,7 +35,7 @@ var synergy_system: SynergySystem
 
 
 ## Estado do jogador
-var player_gold: int = 10
+var player_gold: int = 3
 var player_health: int = 100
 var player_level: int = 1
 var player_xp: int = 0
@@ -58,6 +58,7 @@ var battle_time_remaining: float = 0.0
 @export_range(1.0, 10.0, 0.25) var stationary_stalemate_seconds: float = 3.0
 @export var win_streak_bonus_step: int = 1
 @export var max_win_streak_bonus: int = 5
+@export var max_loss_streak_bonus: int = 5
 
 var win_streak: int = 0
 var loss_streak: int = 0
@@ -77,6 +78,7 @@ func _ready() -> void:
 	UnitSpawner.load_all_units()
 	UnitSpawner.print_all_units()
 	UnitSpawner.get_all_unit_info()
+	BiodiversityModels.preload_all_models()
 	
 	await get_tree().process_frame
 	
@@ -834,19 +836,20 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 		player_health -= 5
 		round_outcomes[current_round] = false
 	elif player_won:
-		win_streak += 1
+		win_streak = mini(win_streak + 1, 5)
 		loss_streak = 0
 		AudioManager.play_win_streak(win_streak)
 		
-		var streak_bonus = min((win_streak - 1) * win_streak_bonus_step, max_win_streak_bonus)
+		var streak_bonus: int = clampi(win_streak, 1, max_win_streak_bonus)
 		player_gold += gold_on_win + streak_bonus
 		round_outcomes[current_round] = true
 	else:
-		loss_streak += 1
+		loss_streak = mini(loss_streak + 1, 5)
 		win_streak = 0
 		AudioManager.play_loss_streak(loss_streak)
 		
-		player_gold += gold_on_loss
+		var streak_bonus: int = clampi(loss_streak, 1, max_loss_streak_bonus)
+		player_gold += gold_on_loss + streak_bonus
 		player_health -= 10
 		round_outcomes[current_round] = false
 	# Todo resultado encerra um round, inclusive derrota e empate.

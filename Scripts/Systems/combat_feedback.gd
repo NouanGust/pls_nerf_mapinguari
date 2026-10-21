@@ -88,35 +88,46 @@ static func create_ability_effect(position: Vector3, ability_name: String, color
 	tween.chain().tween_property(label, "scale", Vector3(1.0, 1.0, 1.0), 0.2)
 	tween.chain().tween_callback(label.queue_free)
 
+static var _shared_particle_mesh: SphereMesh = null
+
+static func _get_particle_mesh() -> SphereMesh:
+	if not _shared_particle_mesh:
+		_shared_particle_mesh = SphereMesh.new()
+		_shared_particle_mesh.radius = 0.08
+		_shared_particle_mesh.height = 0.16
+		_shared_particle_mesh.radial_segments = 6
+		_shared_particle_mesh.rings = 3
+	return _shared_particle_mesh
+
 ## Criar partículas de impacto
 static func create_hit_particles(position: Vector3, color: Color) -> void:
-	var particles := GPUParticles3D.new()
+	var particles := CPUParticles3D.new()
 	particles.position = position + Vector3(0, 1.0, 0)
 	particles.emitting = true
 	particles.one_shot = true
-	particles.amount = 15
-	particles.lifetime = 0.6
-	
-	# Material de partícula
-	var material := ParticleProcessMaterial.new()
-	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	material.emission_sphere_radius = 0.3
-	material.initial_velocity_min = 2.0
-	material.initial_velocity_max = 4.0
-	material.gravity = Vector3(0, -5, 0)
-	material.scale_min = 0.1
-	material.scale_max = 0.2
-	material.color = color
-	
-	particles.process_material = material
-	particles.draw_pass_1 = SphereMesh.new()
+	particles.amount = 12
+	particles.lifetime = 0.5
+	particles.explosiveness = 0.9
+	particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	particles.emission_sphere_radius = 0.25
+	particles.initial_velocity_min = 2.0
+	particles.initial_velocity_max = 3.5
+	particles.gravity = Vector3(0, -5, 0)
+	particles.scale_amount_min = 0.1
+	particles.scale_amount_max = 0.2
+	particles.color = color
+	particles.mesh = _get_particle_mesh()
 	
 	var scene_root = Engine.get_main_loop().root.get_child(0)
+	if not scene_root:
+		particles.queue_free()
+		return
 	scene_root.add_child(particles)
 	
 	# Auto-destruir
-	await Engine.get_main_loop().create_timer(particles.lifetime, false).timeout
-	particles.queue_free()
+	await Engine.get_main_loop().create_timer(particles.lifetime + 0.1, false).timeout
+	if is_instance_valid(particles):
+		particles.queue_free()
 
 ## Indicador de status
 static func create_status_indicator(unit: Node3D, status: String, duration: float) -> void:

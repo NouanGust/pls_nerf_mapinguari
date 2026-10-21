@@ -1,4 +1,5 @@
 extends RefCounted
+class_name BiodiversityModels
 ## Seleção explícita dentro do FBX, sem instanciar a biblioteca inteira por unidade.
 
 const ANIMAL_PACK := "res://Assets/Models/EverythingLibrary_Animals_001.fbx"
@@ -26,20 +27,42 @@ const PLANTS := {
 	"pau_brasil": "CommonTree_3", "sumauma": "Willow_3",
 }
 static var _animal_meshes: Dictionary = {}
+static var _plant_meshes: Dictionary = {}
+
+static func preload_all_models() -> void:
+	if _animal_meshes.is_empty():
+		var pack_scene := load(ANIMAL_PACK) as PackedScene
+		if pack_scene:
+			var library := pack_scene.instantiate()
+			for id in ANIMALS:
+				var node_path = "ANIMALS/" + ANIMALS[id]
+				var source := library.get_node_or_null(node_path) as MeshInstance3D
+				if source:
+					_animal_meshes[id] = source.mesh
+			library.free()
+	for id in PLANTS:
+		if not _plant_meshes.has(id):
+			var obj_path := "res://Assets/scenary/OBJ/%s.obj" % PLANTS[id]
+			if ResourceLoader.exists(obj_path):
+				var m := load(obj_path) as Mesh
+				if m:
+					_plant_meshes[id] = m
 
 static func create_model(stats: UnitStats) -> Node3D:
 	var mesh: Mesh
 	if ANIMALS.has(stats.unit_id):
 		if _animal_meshes.is_empty():
-			var library := (load(ANIMAL_PACK) as PackedScene).instantiate()
-			for id in ANIMALS:
-				var source := library.get_node("ANIMALS/" + ANIMALS[id]) as MeshInstance3D
-				_animal_meshes[id] = source.mesh
-			library.free()
-		mesh = _animal_meshes[stats.unit_id]
+			preload_all_models()
+		mesh = _animal_meshes.get(stats.unit_id)
 	elif PLANTS.has(stats.unit_id):
-		mesh = load("res://Assets/scenary/OBJ/%s.obj" % PLANTS[stats.unit_id]) as Mesh
+		if not _plant_meshes.has(stats.unit_id):
+			var obj_path := "res://Assets/scenary/OBJ/%s.obj" % PLANTS[stats.unit_id]
+			if ResourceLoader.exists(obj_path):
+				_plant_meshes[stats.unit_id] = load(obj_path) as Mesh
+		mesh = _plant_meshes.get(stats.unit_id)
 	else:
+		return null
+	if not mesh:
 		return null
 	var body := Node3D.new()
 	body.name = "SpeciesModel"

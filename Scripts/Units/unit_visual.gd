@@ -1,5 +1,4 @@
 extends Node3D
-## Apresentação compartilhada das unidades; o combate continua em BaseUnit3D.
 
 const IDLE := &"Idle"
 const WALK := &"Walk"

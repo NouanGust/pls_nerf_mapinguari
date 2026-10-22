@@ -1,4 +1,3 @@
-# res://scripts/units/unit_stats.gd
 class_name UnitStats
 extends Resource
 

@@ -3,24 +3,24 @@ extends CharacterBody3D
 
 const BattleClock = preload("res://Scripts/Systems/battle_clock.gd")
 
-@export var use_navigation: bool = true  # false = movimento direto (debug)
-@export var debug_movement: bool = false  # prints de debug
+@export var use_navigation: bool = true # false = movimento direto (debug)
+@export var debug_movement: bool = false # prints de debug
 
-## Signals
+# Signals
 signal died(unit: BaseUnit3D)
 signal health_changed(current: float, maximum: float)
 signal mana_changed(current: float, maximum: float)
 signal ability_cast(ability_name: String)
 signal combat_metric_recorded(unit: BaseUnit3D, metric: StringName, amount: float)
 
-## Stats
+# Stats
 var stats: UnitStats
 var current_health: float
 var current_mana: float
 var star_level: int = 1
 
-## Estado de Combate
-enum State { IDLE, MOVING, ATTACKING, CASTING, DEAD, ROOTED }
+# Estado de Combate
+enum State {IDLE, MOVING, ATTACKING, CASTING, DEAD, ROOTED}
 var current_state: State = State.IDLE
 var current_target: BaseUnit3D = null
 var invested_gold: int = 0
@@ -106,8 +106,8 @@ func _ready() -> void:
 		
 	
 	# IMPORTANTE: Configurar collision
-	collision_layer = 1  # Layer 1 para unidades
-	collision_mask = 1   # Detectar outras unidades
+	collision_layer = 1 # Layer 1 para unidades
+	collision_mask = 1 # Detectar outras unidades
 	
 	setup_navigation()
 	setup_timers()
@@ -417,7 +417,7 @@ func setup_team_indicator() -> void:
 		indicator.position.y = 0.01
 		indicator.scale = Vector3(1, 0.1, 1)
 		
-		var mat =  StandardMaterial3D.new()
+		var mat = StandardMaterial3D.new()
 		mat.albedo_color = Color("#ff4b5f")
 		mat.emission_enabled = true
 		mat.emission = Color("#ff334f")
@@ -449,11 +449,11 @@ func setup_stats_display() -> void:
 	var frame := NinePatchRect.new()
 	frame.name = "UnitLabelFrame"
 	frame.texture = UNIT_LABEL_ATLAS
-	frame.region_rect = Rect2(0, 224, 128, 96)
-	frame.patch_margin_left = 18
-	frame.patch_margin_top = 18
-	frame.patch_margin_right = 18
-	frame.patch_margin_bottom = 18
+	frame.region_rect = Rect2(0, 352, 160, 48)
+	frame.patch_margin_left = 16
+	frame.patch_margin_top = 32
+	frame.patch_margin_right = 16
+	frame.patch_margin_bottom = 32
 	frame.draw_center = false
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -626,7 +626,6 @@ func update_stats_display() -> void:
 	mana_label.add_theme_color_override("font_color", Color("#fbbf24") if mana_percent >= 1.0 else Color("#e0f2fe"))
 	if has_active_shield():
 		mana_label.add_theme_color_override("font_color", Color("#7dd3fc"))
-
 
 
 func setup_navigation() -> void:
@@ -1067,7 +1066,7 @@ func _physics_process(delta: float) -> void:
 	direction.y = 0.0
 	direction = direction.normalized()
 	
-	if debug_movement and randf() < 0.01:  # Print ocasional para não poluir
+	if debug_movement and randf() < 0.01: # Print ocasional para não poluir
 		print("%s navegando... (dist: %.2f)" % [
 			stats.unit_name,
 			global_position.distance_to(next_position)
@@ -1827,11 +1826,11 @@ func revive_at_position(world_pos: Vector3) -> void:
 	update_mana_bar()
 
 func update_health_bar() -> void:
-	update_stats_display()  # Atualizar labels ao invés de barras
+	update_stats_display() # Atualizar labels ao invés de barras
 	health_changed.emit(current_health, get_max_health())
 
 func update_mana_bar() -> void:
-	update_stats_display()  # Atualizar labels ao invés de barras
+	update_stats_display() # Atualizar labels ao invés de barras
 	mana_changed.emit(current_mana, stats.max_mana)
 
 func _process(delta: float) -> void:

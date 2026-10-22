@@ -1,9 +1,11 @@
 [gd_scene format=3 uid="uid://bxcb145mwjbmy"]
 
-[ext_resource type="Script" path="res://Scripts/Systems/audio_manager.gd" id="1_audio"]
+[ext_resource type="Script" uid="uid://bl36yfyri42u3" path="res://Scripts/Systems/audio_manager.gd" id="1_audio"]
+[ext_resource type="AudioStream" uid="uid://tmf5iydx0avw" path="res://Assets/Audio/Music/Main_menu.wav" id="2_xo1xa"]
 
-[node name="AudioManager" type="Node"]
+[node name="AudioManager" type="Node" unique_id=1959488251]
 script = ExtResource("1_audio")
+menu_music = ExtResource("2_xo1xa")
 
-[node name="MenuMusicPlayer" type="AudioStreamPlayer" parent="."]
+[node name="MenuMusicPlayer" type="AudioStreamPlayer" parent="." unique_id=2086191317]
 bus = &"Music"

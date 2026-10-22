@@ -20,6 +20,7 @@ region_min_size = 8.0
 
 [node name="Main" type="Node3D" unique_id=1271191086]
 script = ExtResource("1_5yls4")
+round_transition_seconds = 5.0
 
 [node name="board" parent="." unique_id=424220641 instance=ExtResource("2_p6jpk")]
 
@@ -28,43 +29,22 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 0)
 
 [node name="GameUi" parent="." unique_id=1710037490 instance=ExtResource("4_xlvfx")]
 
-[node name="Control" parent="GameUi" index="0" unique_id=1312105481]
+[node name="Control" parent="GameUi" index="0" unique_id=130547909]
 offset_right = -1.0
 
-[node name="TopBar" parent="GameUi/Control" index="0" unique_id=2065043646]
+[node name="TopBar" parent="GameUi/Control" index="0" unique_id=2051808828]
 offset_left = 34.0
 offset_top = 31.0
 offset_right = 591.0
 offset_bottom = 91.0
 
-[node name="ShopContainer" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1904179370) index="1" unique_id=1611297172]
-z_index = 2
+[node name="TimerIcon" parent="GameUi/Control/TopBar/Content/TimerBox" parent_id_path=PackedInt32Array(1710037490, 747864040) index="0" unique_id=924725101]
+texture_filter = 1
 
-[node name="ControlsContainer" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1904179370) index="2" unique_id=758041956]
+[node name="StreakIcon" parent="GameUi/Control/TopBar/Content/StreakBox" parent_id_path=PackedInt32Array(1710037490, 1948201961) index="0" unique_id=1948201962]
+texture_filter = 1
 
-[node name="StatsTooltip" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1904179370) index="3" unique_id=475325823]
-z_index = 2
-
-[node name="VBoxContainer" parent="GameUi/Control/BottomBar/StatsTooltip" index="0" unique_id=1071325550]
-alignment = 1
-
-[node name="Tooltip_name" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="0" unique_id=1039519784]
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Tooltip_hp" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="1" unique_id=2065744821]
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Tooltip_range" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="2" unique_id=1602243571]
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Tooltip_type" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="3" unique_id=102777709]
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="BenchPanel" parent="GameUi/Control" index="6" unique_id=1900415993]
+[node name="BenchPanel" parent="GameUi/Control" index="4" unique_id=993275518]
 anchors_preset = -1
 anchor_left = 0.504
 anchor_top = 0.75000006
@@ -75,7 +55,8 @@ offset_top = -68.00006
 offset_right = 441.82397
 offset_bottom = 21.999939
 
-[node name="BenchContent" parent="GameUi/Control/BenchPanel" index="0" unique_id=1900415994]
+[node name="BenchContent" parent="GameUi/Control/BenchPanel" index="0" unique_id=231478274]
+anchors_preset = 0
 anchor_right = 0.0
 anchor_bottom = 0.0
 offset_left = 0.0
@@ -85,7 +66,39 @@ offset_bottom = 0.0
 grow_horizontal = 1
 grow_vertical = 1
 
-[node name="HUDToggleButton" parent="GameUi" index="1" unique_id=1900415997]
+[node name="ShopContainer" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1906316000) index="4" unique_id=1007177299]
+z_index = 2
+
+[node name="StatsTooltip" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1906316000) index="5" unique_id=871767434]
+z_index = 2
+
+[node name="VBoxContainer" parent="GameUi/Control/BottomBar/StatsTooltip" index="0" unique_id=513790708]
+alignment = 1
+
+[node name="Tooltip_name" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="0" unique_id=1095462834]
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Tooltip_hp" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="1" unique_id=2080433627]
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Tooltip_range" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="2" unique_id=1485475993]
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Tooltip_type" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="3" unique_id=76565951]
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PanelFrame" parent="GameUi/Control/RightBar" parent_id_path=PackedInt32Array(1710037490, 967378360) index="0" unique_id=967378361]
+region_rect = Rect2(0, 352, 160, 48)
+patch_margin_left = 16
+patch_margin_top = 32
+patch_margin_right = 16
+patch_margin_bottom = 32
+
+[node name="HUDToggleButton" parent="GameUi" index="1" unique_id=1460861161]
 offset_left = -56.0
 offset_top = 0.0
 offset_right = 0.0
@@ -101,9 +114,9 @@ script = ExtResource("5_p6jpk")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -6.0403004, 0)
 visible = false
 
+[connection signal="pressed" from="GameUi/Control/BottomBar/ControlsContainer/BuyXPButton" to="." method="_on_buy_xp_button_pressed"]
 [connection signal="pressed" from="GameUi/Control/BottomBar/ControlsContainer/RerollButton" to="." method="_on_reroll_button_pressed"]
 [connection signal="pressed" from="GameUi/Control/BottomBar/LockButton" to="." method="_on_lock_button_pressed"]
-[connection signal="pressed" from="GameUi/Control/BottomBar/ControlsContainer/BuyXPButton" to="." method="_on_buy_xp_button_pressed"]
 
 [editable path="board"]
 [editable path="Node3D"]

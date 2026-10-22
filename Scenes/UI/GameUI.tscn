@@ -734,8 +734,13 @@ layout_mode = 0
 offset_left = 16.0
 offset_top = 48.0
 offset_right = 236.0
-offset_bottom = 196.0
+offset_bottom = 198.0
 theme_override_constants/separation = 6
+
+[node name="TierOddsContainer" type="HBoxContainer" parent="Control/BottomBar/ControlsContainer" unique_id=404951029]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
 
 [node name="LevelBox" type="PanelContainer" parent="Control/BottomBar/ControlsContainer" unique_id=2083142120]
 layout_mode = 2
@@ -804,11 +809,6 @@ custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 tooltip_text = "Atualizar loja por 2 de ouro (R)"
 text = "Rerrolar 2g"
-
-[node name="TierOddsContainer" type="HBoxContainer" parent="Control/BottomBar/ControlsContainer" unique_id=404951029]
-layout_mode = 2
-theme_override_constants/separation = 6
-alignment = 1
 
 [node name="LockButton" type="Button" parent="Control/BottomBar" unique_id=1115008750]
 layout_mode = 0

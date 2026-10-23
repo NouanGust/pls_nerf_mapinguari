@@ -1,11 +1,11 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dx6jqxpuumy16"]
 
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_8uxd0"]
-[ext_resource type="Texture2D" path="res://Assets/Units_teste/Papa-figo.png" id="1_dtdlx"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_8uxd0"]
+[ext_resource type="Texture2D" uid="uid://dtuamjegn4il7" path="res://Assets/Units/SplashArts/papa_figo.jpg" id="1_dtdlx"]
 
 [resource]
 script = ExtResource("1_8uxd0")
-unit_name = "Papa-Figo"
+unit_name = "Papa Figo"
 unit_id = "papa_figo"
 description = "Figura sinistra."
 tier = 2

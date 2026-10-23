@@ -17,6 +17,8 @@ var _stage: Control
 var _description: Label
 var _status: Label
 var _enter_button: Button
+var _reset_region_button: Button
+var _pending_restart_confirm: bool = false
 var _overlay: Overlay
 var _background: TextureRect
 var _next_background: TextureRect
@@ -81,13 +83,17 @@ func _build_interface() -> void:
 	_stage = Control.new()
 	_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_selection.add_child(_stage)
-	_previous = Overlay.button("‹", _select_region.bind(-1))
+	_previous = Overlay.button("", _select_region.bind(-1))
 	_previous.tooltip_text = "Região anterior (←)"
-	_previous.add_theme_font_size_override("font_size", 40)
+	_previous.icon = UIAtlasCatalog.get_button_texture("chevron_left")
+	_previous.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_previous.expand_icon = true
 	_selection.add_child(_previous)
-	_next = Overlay.button("›", _select_region.bind(1))
+	_next = Overlay.button("", _select_region.bind(1))
 	_next.tooltip_text = "Próxima região (→)"
-	_next.add_theme_font_size_override("font_size", 40)
+	_next.icon = UIAtlasCatalog.get_button_texture("chevron_right")
+	_next.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_next.expand_icon = true
 	_selection.add_child(_next)
 	for arrow in [_previous, _next]:
 		for state in ["normal", "hover", "pressed", "focus"]:
@@ -112,8 +118,12 @@ func _build_interface() -> void:
 	actions.add_theme_constant_override("separation", 18)
 	footer.add_child(actions)
 	actions.add_child(Overlay.button("Voltar", _show_home))
+	_reset_region_button = Overlay.button("Reiniciar Região", _on_restart_region_pressed)
+	_reset_region_button.tooltip_text = "Reiniciar o progresso da campanha desta região"
+	_reset_region_button.custom_minimum_size.x = 220
+	actions.add_child(_reset_region_button)
 	_enter_button = Overlay.button("Jogar", _start_selected_region)
-	_enter_button.custom_minimum_size.x = 310
+	_enter_button.custom_minimum_size.x = 280
 	actions.add_child(_enter_button)
 	_overlay = Overlay.new()
 	add_child(_overlay)
@@ -148,6 +158,12 @@ func _select_region(direction: int) -> void:
 	_description.text = region["description"]
 	var slot := Store.read_slot(id)
 	var state: String = slot.get("state", "new")
+	_pending_restart_confirm = false
+	if _reset_region_button:
+		_reset_region_button.text = "Reiniciar Região"
+		var has_progress: bool = not slot.is_empty() and (slot.has("run") or bool(slot.get("completed", false)) or state in ["active", "won", "lost"])
+		_reset_region_button.disabled = not has_progress
+		_reset_region_button.modulate = Color.WHITE if has_progress else Color(1, 1, 1, 0.45)
 	_enter_button.disabled = slot.has("error")
 	if slot.has("error"):
 		_enter_button.text = "Campanha indisponível"
@@ -159,6 +175,26 @@ func _select_region(direction: int) -> void:
 		_enter_button.text = "Jogar novamente" if state == "won" else ("Tentar novamente" if state == "lost" else "Iniciar campanha")
 		_status.text = "Vença a formação inimiga de nível 9 para concluir a região."
 	_fit_layout()
+
+func _on_restart_region_pressed() -> void:
+	var id: String = REGION_ORDER[_selected_index]
+	var slot := Store.read_slot(id)
+	if slot.is_empty() or not (slot.has("run") or slot.get("completed", false) or slot.get("state", "") in ["active", "won", "lost"]):
+		return
+	if not _pending_restart_confirm:
+		_pending_restart_confirm = true
+		_reset_region_button.text = "Confirmar Reinício?"
+		_status.text = "Clique novamente em 'Confirmar Reinício?' para reiniciar o progresso desta região."
+		get_tree().create_timer(5.0).timeout.connect(func() -> void:
+			if _pending_restart_confirm and is_instance_valid(_reset_region_button):
+				_pending_restart_confirm = false
+				_reset_region_button.text = "Reiniciar Região"
+		)
+		return
+	_pending_restart_confirm = false
+	Store.reset_slot(id)
+	AudioManager.play_ui_click()
+	_select_region(0)
 
 func _add_card(index: int, offset: int) -> void:
 	var id: String = REGION_ORDER[index]
@@ -194,7 +230,7 @@ func _add_card(index: int, offset: int) -> void:
 	var badge := "NOVA CAMPANHA"
 	var completed := bool(slot.get("completed", false))
 	if completed:
-		badge = "✓ REGIÃO CONCLUÍDA"
+		badge = "REGIÃO CONCLUÍDA"
 	if slot.get("state", "") == "active":
 		badge = (badge + "\n") if completed else ""
 		badge += "EM ANDAMENTO · R%d\n%d HP · Nível %d" % [int(slot["run"].get("round", 1)), int(slot["run"].get("health", 100)), int(slot["run"].get("level", 1))]

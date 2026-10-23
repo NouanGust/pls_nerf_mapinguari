@@ -2,6 +2,7 @@ class_name BenchUI
 extends HBoxContainer
 
 const UIStyle = preload("res://Scripts/UI/ui_style.gd")
+const UIAtlasCatalog = preload("res://Scripts/UI/ui_atlas_catalog.gd")
 
 signal unit_drag_started(slot_index: int)
 
@@ -11,7 +12,7 @@ const SLOT_SIZE := Vector2(82, 64)
 var slots: Array[PanelContainer] = []
 var slot_icons: Array[TextureRect] = []
 var slot_labels: Array[Label] = []
-var slot_stars: Array[Label] = []
+var slot_stars: Array[HBoxContainer] = []
 var unit_count: int = 0
 @onready var title_label: Label = get_node_or_null("../BenchTitle") as Label
 
@@ -42,17 +43,13 @@ func _build_slots() -> void:
 		content.add_theme_constant_override("separation", 1)
 		slot.add_child(content)
 
-		# Indicador de Estrelas (★ / ★★ / ★★★)
-		var star_label := Label.new()
-		star_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		star_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		star_label.add_theme_font_size_override("font_size", 10)
-		star_label.add_theme_color_override("font_color", UIStyle.TEXT_GOLD_BRIGHT)
-		star_label.add_theme_color_override("font_outline_color", Color.BLACK)
-		star_label.add_theme_constant_override("outline_size", 3)
-		star_label.text = ""
-		star_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		content.add_child(star_label)
+		# Indicador de Estrelas com ícones do asset pack
+		var star_row := HBoxContainer.new()
+		star_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		star_row.add_theme_constant_override("separation", 2)
+		star_row.custom_minimum_size.y = 12
+		star_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content.add_child(star_row)
 
 		# Retrato do personagem
 		var icon := TextureRect.new()
@@ -78,7 +75,7 @@ func _build_slots() -> void:
 		slots.append(slot)
 		slot_icons.append(icon)
 		slot_labels.append(label)
-		slot_stars.append(star_label)
+		slot_stars.append(star_row)
 
 func _fit_slots() -> void:
 	if get_parent_control():
@@ -106,7 +103,8 @@ func set_units(units: Array, combat_active: bool = false) -> void:
 			slot_icons[i].texture = null
 			slot_labels[i].text = "—"
 			slot_labels[i].add_theme_color_override("font_color", Color(0.4, 0.48, 0.55, 0.6))
-			slot_stars[i].text = ""
+			for child in slot_stars[i].get_children():
+				child.queue_free()
 			slot.tooltip_text = "Pedestal vazio do banco"
 			slot.add_theme_stylebox_override("panel", UIStyle.make_pedestal_style(UIStyle.BORDER_SLATE, false))
 			continue
@@ -117,15 +115,19 @@ func set_units(units: Array, combat_active: bool = false) -> void:
 		slot_labels[i].text = stats.unit_name
 		slot_labels[i].add_theme_color_override("font_color", UIStyle.TEXT_WHITE)
 		
-		# Exibir estrelas
+		# Exibir estrelas com ícones do asset pack
+		for child in slot_stars[i].get_children():
+			child.queue_free()
 		var stars := maxi(unit.star_level, 1)
-		slot_stars[i].text = "★".repeat(stars)
-		if stars >= 3:
-			slot_stars[i].add_theme_color_override("font_color", Color("#ffd700"))
-		elif stars == 2:
-			slot_stars[i].add_theme_color_override("font_color", Color("#c0c0c0"))
-		else:
-			slot_stars[i].add_theme_color_override("font_color", Color("#cd7f32"))
+		for s in range(stars):
+			var star_icon := UIAtlasCatalog.create_icon_rect("star", Vector2(10, 10))
+			if stars >= 3:
+				star_icon.modulate = Color("#fbbf24")
+			elif stars == 2:
+				star_icon.modulate = Color("#e2e8f0")
+			else:
+				star_icon.modulate = Color("#cd7f32")
+			slot_stars[i].add_child(star_icon)
 		
 		slot.tooltip_text = "%s · %d★ · Tier %d (%d ouro)\nArraste para o campo ou pressione S com o mouse sobre para vender" % [
 			stats.unit_name, stars, stats.tier, unit.invested_gold

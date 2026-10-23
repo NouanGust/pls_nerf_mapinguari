@@ -19,12 +19,14 @@ static func battle_metrics(viewport_size: Vector2) -> Dictionary:
 	var shop_top := viewport_size.y - shop_height - 12.0
 	var bench_top := shop_top
 	var top_height := 84.0 if compact else 60.0
-	var field_top := top_height + 78.0
-	var field_left := 12.0 if compact else 270.0
+	var field_top := top_height + 20.0
+	var margin_x := 16.0 if compact else 40.0
+	var board_width := maxf(viewport_size.x - margin_x * 2.0, 1.0)
+	var field_left := margin_x
 	return {
 		"compact": compact, "shop_height": shop_height, "shop_top": shop_top,
 		"bench_height": bench_height, "bench_top": bench_top, "top_height": top_height,
-		"board_rect": Rect2(field_left, field_top, maxf(viewport_size.x - field_left - 16.0, 1.0), maxf(shop_top - field_top - 12.0, 1.0)),
+		"board_rect": Rect2(field_left, field_top, board_width, maxf(shop_top - field_top - 12.0, 1.0)),
 	}
 
 static func place(control: Control, rectangle: Rect2) -> void:

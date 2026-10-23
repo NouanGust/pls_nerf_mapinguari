@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://c070vhq8a4hpf"]
 
-[ext_resource type="Texture2D" path="res://Assets/Units_teste/Alamoa.png" id="1_iig5i"]
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_pkwj0"]
+[ext_resource type="Texture2D" uid="uid://dwuqc7yo4r1dk" path="res://Assets/Units/SplashArts/alamoa.webp" id="1_iig5i"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_pkwj0"]
 
 [resource]
 script = ExtResource("1_pkwj0")

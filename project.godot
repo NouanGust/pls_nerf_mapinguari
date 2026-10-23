@@ -16,9 +16,13 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Folchess"
 config/version="0.1.0"
-run/main_scene="res://Scenes/UI/Menu.tscn"
+run/main_scene="res://Scenes/UI/SplashScreen.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
-config/icon="res://Assets/UI/folchess_icon.svg"
+boot_splash/show_image=false
+boot_splash/stretch_mode=4
+boot_splash/image="res://Assets/Utils/splash_screen.png"
+config/icon="uid://diqlgs6lyplec"
+boot_splash/minimum_display_time=500
 
 [autoload]
 

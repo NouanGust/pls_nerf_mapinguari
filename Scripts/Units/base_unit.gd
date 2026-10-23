@@ -3,7 +3,7 @@ extends CharacterBody3D
 
 const BattleClock = preload("res://Scripts/Systems/battle_clock.gd")
 
-@export var use_navigation: bool = true # false = movimento direto (debug)
+@export var use_navigation: bool = false # false = movimento direto (robusto para auto-chess)
 @export var debug_movement: bool = false # prints de debug
 
 # Signals
@@ -18,6 +18,8 @@ var stats: UnitStats
 var current_health: float
 var current_mana: float
 var star_level: int = 1
+var stars: int:
+	get: return star_level
 
 # Estado de Combate
 enum State {IDLE, MOVING, ATTACKING, CASTING, DEAD, ROOTED}
@@ -29,7 +31,9 @@ var current_shield: float = 0.0:
 	set(value):
 		current_shield = maxf(value, 0.0)
 		update_stats_display()
+const MAX_CERRADO_STACKS: int = 10
 var enemies_defeated: int = 0
+var is_synergy_highlighted: bool = false
 var first_attack_used: bool = false
 var first_hit_checked: bool = false
 var slowed_until_msec: int = 0
@@ -44,10 +48,26 @@ var _rooted_target_timer := 0.0
 var _aura_indicator: Node3D
 var _aura_center := Vector2i(-1, -1)
 var _aura_radius: int = -1
+var stunned_until_msec: int = 0
+var immune_until_msec: int = 0
+var reflect_until_msec: int = 0
+var reflect_pct: float = 0.0
+var armor_shred_until_msec: int = 0
+var armor_shred_amount: float = 0.0
 
 ## Posição no Board
 var board_position: Vector2i = Vector2i(-1, -1)
-var team: int = 0
+var team: int = 0:
+	set(value):
+		team = value
+		if not is_in_group("units"):
+			add_to_group("units")
+		if team == 0:
+			remove_from_group("enemy_units")
+			add_to_group("player_units")
+		else:
+			remove_from_group("player_units")
+			add_to_group("enemy_units")
 var cell_reference: GridCell3D = null
 var combat_ground_height: float = 0.0
 
@@ -72,6 +92,11 @@ var name_label: Label
 var hp_label: Label
 var mana_label: Label
 var star_container: HBoxContainer
+var nameplate_container: PanelContainer
+var bars_container: Control
+var tier_label: Label
+var _hp_ticks: Control
+var is_hovered: bool = false
 var ui_sprite: Sprite3D
 var ui_viewport: SubViewport
 
@@ -97,17 +122,33 @@ const UIAtlasCatalog = preload("res://Scripts/UI/ui_atlas_catalog.gd")
 const UnitVisual = preload("res://Scripts/Units/unit_visual.gd")
 const UNIT_VISUAL_SCENE: PackedScene = preload("res://Scenes/Units/unit_visual.tscn")
 
-func _ready() -> void:
-	add_to_group("units")
+func _enter_tree() -> void:
+	if not is_in_group("units"):
+		add_to_group("units")
 	if team == 0:
-		add_to_group("player_units")
+		if not is_in_group("player_units"):
+			add_to_group("player_units")
 	else:
-		add_to_group("enemy_units")
+		if not is_in_group("enemy_units"):
+			add_to_group("enemy_units")
+
+func _ready() -> void:
+	if not is_in_group("units"):
+		add_to_group("units")
+	if team == 0:
+		if not is_in_group("player_units"):
+			add_to_group("player_units")
+	else:
+		if not is_in_group("enemy_units"):
+			add_to_group("enemy_units")
 		
 	
 	# IMPORTANTE: Configurar collision
 	collision_layer = 1 # Layer 1 para unidades
 	collision_mask = 1 # Detectar outras unidades
+	input_ray_pickable = true
+	mouse_entered.connect(func(): set_hovered(true))
+	mouse_exited.connect(func(): set_hovered(false))
 	
 	setup_navigation()
 	setup_timers()
@@ -118,9 +159,10 @@ func move_direct_to_target(delta: float = 0.0166) -> void:
 	if stats.is_stationary:
 		_wait_rooted()
 		return
-	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		current_target = null
 		current_state = State.IDLE
+		velocity = Vector3.ZERO
 		_detour_timer = 0.0
 		_detour_dir = Vector3.ZERO
 		find_target()
@@ -129,16 +171,25 @@ func move_direct_to_target(delta: float = 0.0166) -> void:
 	if not current_target:
 		return
 	
-	current_state = State.MOVING
-	
 	var target_pos: Vector3 = current_target.global_position
 	var planar_offset := Vector3(target_pos.x - global_position.x, 0.0, target_pos.z - global_position.z)
-	var direct_dir := planar_offset.normalized()
+	
+	# Verificar se já está no range de ataque antes de se mover
+	if planar_offset.length() <= get_attack_range_meters():
+		velocity = Vector3.ZERO
+		current_state = State.IDLE
+		_detour_timer = 0.0
+		_detour_dir = Vector3.ZERO
+		check_attack_or_move()
+		return
+
+	current_state = State.MOVING
+	var direct_dir := planar_offset.normalized() if planar_offset.length_squared() > 0.0001 else Vector3.FORWARD
 	
 	# Verificar se o desvio ativo já pode ser encerrado porque o caminho direto está desobstruído
 	if _detour_timer > 0.0:
 		_detour_timer -= delta
-		if not test_move(global_transform, direct_dir * 0.6):
+		if _detour_timer <= 0.0 or not test_move(global_transform, direct_dir * 0.6):
 			_detour_timer = 0.0
 			_detour_dir = Vector3.ZERO
 
@@ -215,10 +266,21 @@ func move_direct_to_target(delta: float = 0.0166) -> void:
 		var target_rotation: float = atan2(move_dir.x, move_dir.z)
 		rotation.y = lerp_angle(rotation.y, target_rotation, 0.15)
 	
-	# Verificar se chegou perto o suficiente para atacar
+	# Verificar se chegou perto o suficiente para atacar após mover-se
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
+		current_target = null
+		current_state = State.IDLE
+		velocity = Vector3.ZERO
+		_detour_timer = 0.0
+		_detour_dir = Vector3.ZERO
+		find_target()
+		return
+
+	planar_offset = Vector3(current_target.global_position.x - global_position.x, 0.0, current_target.global_position.z - global_position.z)
 	if planar_offset.length() <= get_attack_range_meters():
 		if debug_movement:
 			print("%s chegou no range de ataque!" % stats.unit_name)
+		velocity = Vector3.ZERO
 		current_state = State.IDLE
 		_detour_timer = 0.0
 		_detour_dir = Vector3.ZERO
@@ -229,6 +291,15 @@ func initialize(unit_stats: UnitStats, star: int = 1) -> void:
 	stats = unit_stats
 	star_level = clampi(star, 1, 4)
 	invested_gold = stats.cost
+	
+	if not is_in_group("units"):
+		add_to_group("units")
+	if team == 0:
+		remove_from_group("enemy_units")
+		add_to_group("player_units")
+	else:
+		remove_from_group("player_units")
+		add_to_group("enemy_units")
 	
 	var star_multiplier: float = stats.get_star_multiplier(star_level)
 	current_health = stats.max_health * star_multiplier
@@ -360,41 +431,62 @@ func get_team_display_color() -> Color:
 	var saturated := Color.from_hsv(tier_color.h, maxf(tier_color.s, 0.78), maxf(tier_color.v, 0.92))
 	return saturated.lerp(Color("#ff4b5f"), 0.28)
 
+func _trigger_camera_shake(intensity: float = 0.5, duration: float = 0.55) -> void:
+	var cam_3d := get_viewport().get_camera_3d()
+	if cam_3d and cam_3d.get_parent() is GameCamera:
+		(cam_3d.get_parent() as GameCamera).shake(intensity, duration)
+	else:
+		var cam_node := get_tree().root.find_child("Node3D", true, false)
+		if cam_node and cam_node.has_method("shake"):
+			cam_node.shake(intensity, duration)
+
 func _play_star_upgrade_effect() -> void:
+	var is_tier_3_plus := star_level >= 3
 	if unit_visual:
 		unit_visual.flash_upgrade(Color("#ffe28a") if team == 0 else Color("#ff7588"))
+
+	if is_tier_3_plus:
+		_trigger_camera_shake(0.55, 0.65)
+		if model:
+			var hop := create_tween()
+			hop.set_trans(Tween.TRANS_QUAD)
+			hop.tween_property(model, "position:y", 0.72, 0.18).set_ease(Tween.EASE_OUT)
+			hop.parallel().tween_property(model, "scale", model_base_scale * Vector3(0.88, 1.38, 0.88), 0.18).set_ease(Tween.EASE_OUT)
+			hop.chain().tween_property(model, "position:y", 0.0, 0.22).set_ease(Tween.EASE_IN)
+			hop.parallel().tween_property(model, "scale", model_base_scale * Vector3(1.28, 0.82, 1.28), 0.16).set_ease(Tween.EASE_IN)
+			hop.chain().tween_property(model, "scale", model_base_scale, 0.18).set_ease(Tween.EASE_OUT)
 
 	var burst := GPUParticles3D.new()
 	burst.name = "StarEvolutionBurst"
 	burst.position = Vector3(0.0, 1.0, 0.0)
 	burst.one_shot = true
-	burst.amount = 54
-	burst.lifetime = 0.9
-	burst.explosiveness = 0.92
-	burst.speed_scale = 1.2
+	burst.amount = 90 if is_tier_3_plus else 54
+	burst.lifetime = 1.2 if is_tier_3_plus else 0.9
+	burst.explosiveness = 0.95
+	burst.speed_scale = 1.3
 	var particle_process := ParticleProcessMaterial.new()
 	particle_process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	particle_process.emission_sphere_radius = 0.48
+	particle_process.emission_sphere_radius = 0.65 if is_tier_3_plus else 0.48
 	particle_process.direction = Vector3(0.0, 1.0, 0.0)
 	particle_process.spread = 180.0
-	particle_process.initial_velocity_min = 1.8
-	particle_process.initial_velocity_max = 4.6
-	particle_process.gravity = Vector3(0.0, -2.0, 0.0)
+	particle_process.initial_velocity_min = 2.4 if is_tier_3_plus else 1.8
+	particle_process.initial_velocity_max = 5.8 if is_tier_3_plus else 4.6
+	particle_process.gravity = Vector3(0.0, -2.5, 0.0)
 	particle_process.damping_min = 0.25
 	particle_process.damping_max = 0.8
-	particle_process.scale_min = 0.045
-	particle_process.scale_max = 0.12
-	particle_process.color = Color("#ffe28a") if team == 0 else Color("#ff7588")
+	particle_process.scale_min = 0.06 if is_tier_3_plus else 0.045
+	particle_process.scale_max = 0.18 if is_tier_3_plus else 0.12
+	particle_process.color = (Color("#ffd700") if is_tier_3_plus else Color("#ffe28a")) if team == 0 else Color("#ff7588")
 	burst.process_material = particle_process
 	var spark_mesh := SphereMesh.new()
-	spark_mesh.radius = 0.055
-	spark_mesh.height = 0.11
+	spark_mesh.radius = 0.075 if is_tier_3_plus else 0.055
+	spark_mesh.height = 0.15 if is_tier_3_plus else 0.11
 	var spark_material := StandardMaterial3D.new()
 	spark_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	spark_material.albedo_color = particle_process.color
 	spark_material.emission_enabled = true
 	spark_material.emission = particle_process.color
-	spark_material.emission_energy_multiplier = 2.2
+	spark_material.emission_energy_multiplier = 3.2 if is_tier_3_plus else 2.2
 	spark_mesh.material = spark_material
 	burst.draw_pass_1 = spark_mesh
 	add_child(burst)
@@ -402,6 +494,7 @@ func _play_star_upgrade_effect() -> void:
 	var cleanup := create_tween()
 	cleanup.tween_interval(burst.lifetime + 0.35)
 	cleanup.tween_callback(burst.queue_free)
+
 
 #func setup_ui() -> void:
 
@@ -427,10 +520,29 @@ func setup_team_indicator() -> void:
 		indicator.material_override = mat
 		add_child(indicator)
 
+class HealthBarTicks extends Control:
+	var max_hp: float = 500.0
+
+	func _draw() -> void:
+		if max_hp <= 0.0 or size.x <= 0.0:
+			return
+		var interval := 250.0
+		var count := int(max_hp / interval)
+		if count <= 1 or count > 24:
+			return
+		for i in range(1, count):
+			var x := (float(i) * interval / max_hp) * size.x
+			draw_line(Vector2(x, 1.0), Vector2(x, size.y - 1.0), Color(0.04, 0.06, 0.08, 0.9), 2.0)
+
 func setup_stats_display() -> void:
+	if is_instance_valid(ui_viewport):
+		ui_viewport.queue_free()
+	if is_instance_valid(ui_sprite):
+		ui_sprite.queue_free()
+
 	ui_viewport = SubViewport.new()
 	ui_viewport.name = "UnitLabelViewport"
-	ui_viewport.size = Vector2i(288, 128)
+	ui_viewport.size = Vector2i(960, 320)
 	ui_viewport.transparent_bg = true
 	ui_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(ui_viewport)
@@ -438,114 +550,190 @@ func setup_stats_display() -> void:
 	var root := Control.new()
 	root.name = "UnitLabelRoot"
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_viewport.add_child(root)
 
-	var panel_fill := ColorRect.new()
-	panel_fill.color = Color(0.06, 0.08, 0.11, 0.94) if team == 0 else Color(0.12, 0.05, 0.07, 0.94)
-	panel_fill.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	panel_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(panel_fill)
+	# --- 1. Top Container para Centralizar o Nameplate no Hover ---
+	var nameplate_center := BoxContainer.new()
+	nameplate_center.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	nameplate_center.alignment = BoxContainer.ALIGNMENT_CENTER
+	nameplate_center.offset_top = 8
+	nameplate_center.offset_bottom = 124
+	nameplate_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(nameplate_center)
 
-	var frame := NinePatchRect.new()
-	frame.name = "UnitLabelFrame"
-	frame.texture = UNIT_LABEL_ATLAS
-	frame.region_rect = Rect2(0, 352, 160, 48)
-	frame.patch_margin_left = 16
-	frame.patch_margin_top = 32
-	frame.patch_margin_right = 16
-	frame.patch_margin_bottom = 32
-	frame.draw_center = false
-	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	if team == 0:
-		frame.modulate = Color(0.9, 0.95, 1.0)
-	else:
-		frame.modulate = Color(1.0, 0.8, 0.8)
-	root.add_child(frame)
+	nameplate_container = PanelContainer.new()
+	nameplate_container.name = "NameplateContainer"
+	nameplate_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nameplate_container.visible = false
 
-	# --- Cabeçalho: Estrelas, Nome Legível e Tier ---
-	var header := HBoxContainer.new()
-	header.name = "HeaderRow"
-	header.position = Vector2(12, 8)
-	header.size = Vector2(264, 28)
-	header.alignment = BoxContainer.ALIGNMENT_CENTER
-	header.add_theme_constant_override("separation", 6)
-	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(header)
+	var nameplate_style := StyleBoxFlat.new()
+	nameplate_style.bg_color = Color(0.04, 0.07, 0.12, 0.96)
+	nameplate_style.border_color = Color("#f59e0b") if team == 0 else Color("#ef4444")
+	nameplate_style.set_border_width_all(3)
+	nameplate_style.set_corner_radius_all(14)
+	nameplate_style.content_margin_left = 24.0
+	nameplate_style.content_margin_right = 24.0
+	nameplate_style.content_margin_top = 8.0
+	nameplate_style.content_margin_bottom = 8.0
+	nameplate_style.shadow_color = Color(0, 0, 0, 0.85)
+	nameplate_style.shadow_size = 12
+	nameplate_container.add_theme_stylebox_override("panel", nameplate_style)
+	nameplate_center.add_child(nameplate_container)
 
-	star_container = HBoxContainer.new()
-	star_container.name = "StarContainer"
-	star_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	star_container.add_theme_constant_override("separation", 2)
-	star_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header.add_child(star_container)
-	_update_star_display()
+	var nameplate_row := HBoxContainer.new()
+	nameplate_row.name = "NameplateRow"
+	nameplate_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	nameplate_row.add_theme_constant_override("separation", 16)
+	nameplate_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nameplate_container.add_child(nameplate_row)
+
+	tier_label = Label.new()
+	tier_label.name = "TierBadge"
+	tier_label.text = "T%d" % stats.tier
+	tier_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tier_label.add_theme_font_size_override("font_size", 46)
+	tier_label.add_theme_color_override("font_color", stats.get_tier_color())
+	tier_label.add_theme_color_override("font_outline_color", Color("#05080c"))
+	tier_label.add_theme_constant_override("outline_size", 8)
+	tier_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nameplate_row.add_child(tier_label)
 
 	name_label = Label.new()
 	name_label.name = "NameLabel"
 	name_label.text = stats.unit_name
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 18)
-	name_label.add_theme_color_override("font_color", Color("#fff5e4") if team == 0 else Color("#ffe4e0"))
-	name_label.add_theme_color_override("font_outline_color", Color("#120d18"))
-	name_label.add_theme_constant_override("outline_size", 4)
-	name_label.clip_text = true
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.add_theme_font_size_override("font_size", 54)
+	name_label.add_theme_color_override("font_color", Color("#ffffff") if team == 0 else Color("#ffe4e0"))
+	name_label.add_theme_color_override("font_outline_color", Color("#05080c"))
+	name_label.add_theme_constant_override("outline_size", 9)
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header.add_child(name_label)
+	nameplate_row.add_child(name_label)
 
-	var tier_label := Label.new()
-	tier_label.name = "TierBadge"
-	tier_label.text = "T%d" % stats.tier
-	tier_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	tier_label.add_theme_font_size_override("font_size", 13)
-	tier_label.add_theme_color_override("font_color", stats.get_tier_color())
-	tier_label.add_theme_color_override("font_outline_color", Color("#120d18"))
-	tier_label.add_theme_constant_override("outline_size", 3)
-	tier_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header.add_child(tier_label)
+	hp_label = Label.new()
+	hp_label.name = "HPLabel"
+	hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hp_label.add_theme_font_size_override("font_size", 44)
+	hp_label.add_theme_color_override("font_color", Color("#a5f3fc") if team == 0 else Color("#fca5a5"))
+	hp_label.add_theme_color_override("font_outline_color", Color("#05080c"))
+	hp_label.add_theme_constant_override("outline_size", 7)
+	hp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nameplate_row.add_child(hp_label)
 
-	# --- Barra de Vida (com ícone Heart do atlas) ---
-	health_bar_3d = _make_unit_bar("HealthBar", Rect2(12, 40, 264, 26), Color("#4ade80"), Color("#111822"))
-	root.add_child(health_bar_3d)
-
-	var hp_icon := UIAtlasCatalog.create_icon_rect("heart", Vector2(18, 18))
-	hp_icon.name = "HPIcon"
-	hp_icon.position = Vector2(16, 44)
-	hp_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(hp_icon)
-
-	hp_label = _make_unit_label("HPLabel", Rect2(38, 41, 234, 24), 14, Color("#fdfefe"))
-	root.add_child(hp_label)
-
-	# Faixa de escudo ciano
-	shield_bar_3d = _make_unit_bar("ShieldBar", Rect2(12, 68, 264, 5), Color("#38bdf8"), Color.TRANSPARENT)
-	shield_bar_3d.add_theme_stylebox_override("background", StyleBoxEmpty.new())
-	shield_bar_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(shield_bar_3d)
-
-	# --- Barra de Mana (com ícone Mana Drop do atlas) ---
-	mana_bar_3d = _make_unit_bar("ManaBar", Rect2(12, 78, 264, 22), Color("#3b82f6"), Color("#0d1320"))
-	root.add_child(mana_bar_3d)
-
-	var mana_icon := UIAtlasCatalog.create_icon_rect("mana_drop", Vector2(16, 16))
-	mana_icon.name = "ManaIcon"
-	mana_icon.position = Vector2(16, 81)
-	mana_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(mana_icon)
-
-	mana_label = _make_unit_label("ManaLabel", Rect2(38, 79, 234, 20), 13, Color("#e2f0ff"))
+	mana_label = Label.new()
+	mana_label.name = "ManaLabel"
+	mana_label.visible = false
 	root.add_child(mana_label)
 
+	# --- 2. Indicador de Estrelas (Visível no Campo Acima das Barras) ---
+	var star_center := BoxContainer.new()
+	star_center.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	star_center.alignment = BoxContainer.ALIGNMENT_CENTER
+	star_center.offset_top = 132
+	star_center.offset_bottom = 184
+	star_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(star_center)
+
+	star_container = HBoxContainer.new()
+	star_container.name = "StarContainer"
+	star_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	star_container.add_theme_constant_override("separation", 8)
+	star_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	star_center.add_child(star_container)
+	_update_star_display()
+
+	# --- 3. Container de Barras (Vida e Mana no Estilo TFT - Largas e com Ticks) ---
+	var bars_center := BoxContainer.new()
+	bars_center.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	bars_center.alignment = BoxContainer.ALIGNMENT_CENTER
+	bars_center.offset_top = 192
+	bars_center.offset_bottom = 276
+	bars_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(bars_center)
+
+	bars_container = Control.new()
+	bars_container.name = "BarsContainer"
+	bars_container.custom_minimum_size = Vector2(380, 68)
+	bars_container.size = Vector2(380, 68)
+	bars_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bars_center.add_child(bars_container)
+
+	# Barra de Vida (Verde TFT para aliados, Vermelho TFT para inimigos)
+	health_bar_3d = ProgressBar.new()
+	health_bar_3d.name = "HealthBar"
+	health_bar_3d.position = Vector2(0, 0)
+	health_bar_3d.size = Vector2(380, 30)
+	health_bar_3d.show_percentage = false
+	health_bar_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var hp_bg := StyleBoxFlat.new()
+	hp_bg.bg_color = Color("#070d14")
+	hp_bg.set_border_width_all(3)
+	hp_bg.border_color = Color("#000000")
+	hp_bg.set_corner_radius_all(4)
+
+	var hp_fill := StyleBoxFlat.new()
+	hp_fill.bg_color = Color("#22c55e") if team == 0 else Color("#ef4444")
+	hp_fill.set_corner_radius_all(4)
+
+	health_bar_3d.add_theme_stylebox_override("background", hp_bg)
+	health_bar_3d.add_theme_stylebox_override("fill", hp_fill)
+	bars_container.add_child(health_bar_3d)
+
+	# Ticks de Segmentação de HP estilo TFT
+	_hp_ticks = HealthBarTicks.new()
+	_hp_ticks.name = "HPTicks"
+	_hp_ticks.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_hp_ticks.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	health_bar_3d.add_child(_hp_ticks)
+
+	# Faixa de escudo ciano sobre a barra de vida
+	shield_bar_3d = ProgressBar.new()
+	shield_bar_3d.name = "ShieldBar"
+	shield_bar_3d.position = Vector2(0, 0)
+	shield_bar_3d.size = Vector2(380, 30)
+	shield_bar_3d.show_percentage = false
+	shield_bar_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shield_bar_3d.add_theme_stylebox_override("background", StyleBoxEmpty.new())
+	var shield_fill := StyleBoxFlat.new()
+	shield_fill.bg_color = Color(0.22, 0.74, 0.97, 0.85)
+	shield_fill.set_corner_radius_all(4)
+	shield_bar_3d.add_theme_stylebox_override("fill", shield_fill)
+	shield_bar_3d.visible = false
+	bars_container.add_child(shield_bar_3d)
+
+	# Barra de Mana estilo TFT (abaixo da vida)
+	mana_bar_3d = ProgressBar.new()
+	mana_bar_3d.name = "ManaBar"
+	mana_bar_3d.position = Vector2(0, 36)
+	mana_bar_3d.size = Vector2(380, 16)
+	mana_bar_3d.show_percentage = false
+	mana_bar_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var mp_bg := StyleBoxFlat.new()
+	mp_bg.bg_color = Color("#050b12")
+	mp_bg.set_border_width_all(2)
+	mp_bg.border_color = Color("#000000")
+	mp_bg.set_corner_radius_all(3)
+
+	var mp_fill := StyleBoxFlat.new()
+	mp_fill.bg_color = Color("#0ea5e9")
+	mp_fill.set_corner_radius_all(3)
+
+	mana_bar_3d.add_theme_stylebox_override("background", mp_bg)
+	mana_bar_3d.add_theme_stylebox_override("fill", mp_fill)
+	bars_container.add_child(mana_bar_3d)
+
+	# Sprite 3D Billboard no topo da unidade
 	ui_sprite = Sprite3D.new()
 	ui_sprite.name = "UnitLabelSprite"
 	ui_sprite.texture = ui_viewport.get_texture()
 	ui_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	ui_sprite.no_depth_test = true
 	ui_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	ui_sprite.pixel_size = 0.0055
-	ui_sprite.position = Vector3(0, 2.65, 0)
+	ui_sprite.pixel_size = 0.007
+	ui_sprite.position = Vector3(0, 2.7, 0)
 	add_child(ui_sprite)
 
 	health_bar_3d.max_value = get_max_health()
@@ -557,126 +745,126 @@ func _update_star_display() -> void:
 		return
 	for child in star_container.get_children():
 		child.queue_free()
-	var stars: int = clampi(star_level, 1, 3)
+	var stars: int = clampi(star_level, 1, 4)
+	var star_color: Color
+	if stars >= 3:
+		star_color = Color("#fbbf24") # Ouro brilhante
+	elif stars == 2:
+		star_color = Color("#e2e8f0") # Prata
+	else:
+		star_color = Color("#cd7f32") # Bronze
 	for i in range(stars):
-		var star_icon := UIAtlasCatalog.create_icon_rect("star", Vector2(18, 18))
+		var star_icon := UIAtlasCatalog.create_icon_rect("star", Vector2(40, 40))
+		star_icon.modulate = star_color
 		star_container.add_child(star_icon)
 
-func _make_unit_label(label_name: String, rect: Rect2, font_size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.name = label_name
-	label.position = rect.position
-	label.size = rect.size
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color("#120d18"))
-	label.add_theme_constant_override("outline_size", 3)
-	label.clip_text = true
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
+func set_hovered(hovered: bool) -> void:
+	if is_hovered == hovered:
+		return
+	is_hovered = hovered
+	_update_status_visibility()
 
-func _make_unit_bar(bar_name: String, rect: Rect2, fill_color: Color, bg_color: Color = Color("#111822")) -> ProgressBar:
-	var bar := ProgressBar.new()
-	bar.name = bar_name
-	bar.position = rect.position
-	bar.size = rect.size
-	bar.show_percentage = false
-	var background := StyleBoxFlat.new()
-	background.bg_color = bg_color
-	background.set_border_width_all(1)
-	background.border_color = Color("#2e3d52")
-	background.set_corner_radius_all(3)
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = fill_color
-	fill.set_corner_radius_all(3)
-	bar.add_theme_stylebox_override("background", background)
-	bar.add_theme_stylebox_override("fill", fill)
-	return bar
+func set_synergy_highlighted(highlighted: bool) -> void:
+	if is_synergy_highlighted == highlighted:
+		return
+	is_synergy_highlighted = highlighted
+	_update_status_visibility()
+	if is_instance_valid(ui_sprite):
+		if highlighted:
+			ui_sprite.modulate = Color(1.3, 1.25, 0.85, 1.0)
+		else:
+			ui_sprite.modulate = Color.WHITE
+
+func _update_status_visibility() -> void:
+	if not is_instance_valid(ui_sprite):
+		return
+	if current_state == State.DEAD:
+		ui_sprite.visible = false
+		return
+
+	var show_nameplate := is_hovered or is_synergy_highlighted
+	var on_bench := is_on_bench()
+	if on_bench:
+		# No banco: NUNCA mostra barras de vida e mana
+		if is_instance_valid(bars_container):
+			bars_container.visible = false
+		if is_instance_valid(star_container):
+			star_container.visible = false
+		# No banco: hover ou destaque de sinergia mostra o nameplate (nome, estrelas, tier)
+		if is_instance_valid(nameplate_container):
+			nameplate_container.visible = show_nameplate
+		ui_sprite.visible = show_nameplate
+	else:
+		# No campo: barras de vida e mana sempre visíveis
+		if is_instance_valid(bars_container):
+			bars_container.visible = true
+		if is_instance_valid(star_container):
+			star_container.visible = true
+		# No campo: nome da unidade visível no hover ou quando a sinergia for inspecionada!
+		if is_instance_valid(nameplate_container):
+			nameplate_container.visible = show_nameplate
+		ui_sprite.visible = true
 
 func update_stats_display() -> void:
-	if not is_instance_valid(hp_label) or not is_instance_valid(mana_label) or not is_instance_valid(health_bar_3d) or not is_instance_valid(mana_bar_3d):
+	if not is_instance_valid(health_bar_3d) or not is_instance_valid(mana_bar_3d):
 		return
 	var max_hp := maxf(get_max_health(), 1.0)
 	var hp_percent := current_health / max_hp
 	var max_mp := maxf(stats.max_mana, 1.0)
 	var mana_percent := current_mana / max_mp
-	hp_label.text = "%d / %d" % [int(current_health), int(max_hp)]
-	if has_active_shield():
-		mana_label.text = "ESC %d  |  MP %d%%" % [ceili(current_shield), int(mana_percent * 100.0)]
-	else:
-		mana_label.text = "%d / %d" % [int(current_mana), int(max_mp)]
+
+	if is_instance_valid(hp_label):
+		if has_active_shield():
+			hp_label.text = "%d / %d (+%d ESC)" % [int(current_health), int(max_hp), ceili(current_shield)]
+		else:
+			hp_label.text = "%d / %d" % [int(current_health), int(max_hp)]
+	if is_instance_valid(mana_label):
+		if has_active_shield():
+			mana_label.text = "ESC %d  |  MP %d%%" % [ceili(current_shield), int(mana_percent * 100.0)]
+		else:
+			mana_label.text = "%d / %d" % [int(current_mana), int(max_mp)]
+
 	if is_instance_valid(shield_bar_3d):
 		shield_bar_3d.visible = has_active_shield()
 		shield_bar_3d.max_value = max_hp
 		shield_bar_3d.value = current_shield
-	mana_bar_3d.modulate = Color(0.65, 0.85, 1.0) if has_active_shield() else Color.WHITE
+
+	health_bar_3d.max_value = max_hp
 	health_bar_3d.value = current_health
+	mana_bar_3d.max_value = max_mp
 	mana_bar_3d.value = current_mana
+
+	if is_instance_valid(_hp_ticks):
+		_hp_ticks.max_hp = max_hp
+		_hp_ticks.queue_redraw()
+
 	var health_fill := health_bar_3d.get_theme_stylebox("fill") as StyleBoxFlat
 	if is_instance_valid(health_fill):
-		if hp_percent > 0.6:
-			health_fill.bg_color = Color("#4ade80")
-		elif hp_percent > 0.3:
-			health_fill.bg_color = Color("#facc15")
+		if team == 0:
+			if hp_percent > 0.6:
+				health_fill.bg_color = Color("#22c55e")
+			elif hp_percent > 0.3:
+				health_fill.bg_color = Color("#facc15")
+			else:
+				health_fill.bg_color = Color("#ef4444")
 		else:
-			health_fill.bg_color = Color("#f87171")
+			health_fill.bg_color = Color("#ef4444")
 
-	mana_label.add_theme_color_override("font_color", Color("#fbbf24") if mana_percent >= 1.0 else Color("#e0f2fe"))
-	if has_active_shield():
-		mana_label.add_theme_color_override("font_color", Color("#7dd3fc"))
+	var mana_fill := mana_bar_3d.get_theme_stylebox("fill") as StyleBoxFlat
+	if is_instance_valid(mana_fill):
+		if mana_percent >= 1.0:
+			mana_fill.bg_color = Color("#38e1ff")
+		else:
+			mana_fill.bg_color = Color("#0ea5e9")
+
+	_update_status_visibility()
 
 
 func setup_navigation() -> void:
-	if has_node("NavigationAgent3D"):
-		navigation_agent = get_node("NavigationAgent3D")
-	else:
-		navigation_agent = NavigationAgent3D.new()
-		navigation_agent.name = "NavigationAgent3D"
-		add_child(navigation_agent)
-	
-	# Aguardar NavigationServer estar pronto
-	call_deferred("_setup_navigation_agent")
+	pass
 
 func _setup_navigation_agent() -> void:
-	if not navigation_agent:
-		return
-	
-	navigation_agent.debug_enabled = true
-	# Aguardar physics frame
-	await get_tree().physics_frame
-	
-	# Configurações básicas
-	navigation_agent.path_desired_distance = 0.5
-	navigation_agent.target_desired_distance = 1.5
-	navigation_agent.path_max_distance = 50.0
-	
-	# Velocidade
-	navigation_agent.max_speed = get_movement_speed()
-	
-	# Avoidance
-	navigation_agent.avoidance_enabled = true
-	navigation_agent.radius = 0.5
-	navigation_agent.neighbor_distance = 5.0
-	navigation_agent.max_neighbors = 10
-	navigation_agent.time_horizon_agents = 0.5
-	navigation_agent.time_horizon_obstacles = 0.5
-	
-	# Layers
-	navigation_agent.navigation_layers = 1
-	
-	# Conectar callback
-	if not navigation_agent.velocity_computed.is_connected(_on_velocity_computed):
-		navigation_agent.velocity_computed.connect(_on_velocity_computed)
-	
-	# Debug (ative para ver os caminhos)
-	navigation_agent.debug_enabled = false
-	navigation_agent.debug_use_custom = true
-	navigation_agent.debug_path_custom_color = Color.RED if team == 1 else Color.CYAN
-	navigation_agent.debug_path_custom_point_size = 8.0
-	
-	print("NavigationAgent configurado para %s" % stats.unit_name if stats else "unit")
+	pass
 
 func setup_timers() -> void:
 	if not has_node("AttackTimer"):
@@ -778,12 +966,45 @@ func apply_attack_weakness(duration: float, damage_multiplier: float = 0.7) -> v
 	attack_weakened_until_msec = maxi(attack_weakened_until_msec, now + int(duration * 1000.0))
 	CombatFeedback.create_status_indicator(self, "ENFRAQUECIDO", duration)
 
+func is_stunned() -> bool:
+	return BattleClock.now_msec() < stunned_until_msec
+
+func is_immune() -> bool:
+	return BattleClock.now_msec() < immune_until_msec
+
+func apply_stun(duration: float, label: String = "ATORDOADO") -> void:
+	if current_state == State.DEAD or duration <= 0.0 or is_on_bench():
+		return
+	var resist := clampf(float(synergy_bonuses.get("control_resist_pct", 0.0)) + (stats.stun_resist if stats else 0.0), 0.0, 0.9)
+	var final_duration := duration * (1.0 - resist)
+	if final_duration <= 0.0:
+		return
+	stunned_until_msec = maxi(stunned_until_msec, BattleClock.now_msec() + int(final_duration * 1000.0))
+	velocity = Vector3.ZERO
+	if attack_timer:
+		attack_timer.stop()
+	if navigation_agent:
+		navigation_agent.velocity = Vector3.ZERO
+	CombatFeedback.create_status_indicator(self, label, final_duration)
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.8, Color("#fde047"))
+
+func apply_armor_shred(duration: float, amount: float) -> void:
+	if current_state == State.DEAD or duration <= 0.0:
+		return
+	armor_shred_amount = maxf(armor_shred_amount, amount)
+	armor_shred_until_msec = maxi(armor_shred_until_msec, BattleClock.now_msec() + int(duration * 1000.0))
+	CombatFeedback.create_status_indicator(self, "ARMADURA REDUZIDA", duration)
+
 func on_enemy_defeated() -> void:
-	enemies_defeated += 1
+	enemies_defeated = mini(enemies_defeated + 1, MAX_CERRADO_STACKS)
 
 func start_combat() -> void:
 	if is_on_bench():
 		return
+	use_navigation = false
+	_detour_dir = Vector3.ZERO
+	_detour_timer = 0.0
+	velocity = Vector3.ZERO
 	combat_ground_height = global_position.y
 	var shield_multiplier := 1.0 + float(synergy_bonuses.get("shield_power_pct", 0.0))
 	shield_multiplier *= 1.0 + float(synergy_bonuses.get("shield_received_pct", 0.0))
@@ -902,7 +1123,7 @@ func has_pending_combat_effects() -> bool:
 	return current_state == State.CASTING or BattleClock.now_msec() < _burn_expires_at_msec
 
 func check_attack_or_move() -> void:
-	if current_state == State.DEAD or current_state == State.CASTING or is_on_bench():
+	if current_state == State.DEAD or current_state == State.CASTING or is_on_bench() or is_stunned():
 		return
 	if not is_instance_valid(current_target) or current_target.is_queued_for_deletion() or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		if debug_movement:
@@ -938,15 +1159,12 @@ func check_attack_or_move() -> void:
 		move_towards_target()
 
 func move_towards_target() -> void:
+	if is_stunned():
+		return
 	if stats.is_stationary:
 		_wait_rooted()
 		return
-	# MODO DEBUG: Movimento direto
-	if not use_navigation:
-		move_direct_to_target()
-		return
 	
-	# VALIDAÇÕES
 	if not is_instance_valid(current_target) or current_target.is_queued_for_deletion() or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		if debug_movement:
 			print("%s: alvo foi destruído ou no banco!" % stats.unit_name)
@@ -959,57 +1177,14 @@ func move_towards_target() -> void:
 			print("%s: sem alvo definido!" % stats.unit_name)
 		find_target()
 		return
-	
-	if not navigation_agent:
-		use_navigation = false
-		if debug_movement:
-			print("%s: sem NavigationAgent, usando movimento direto!" % stats.unit_name)
-		move_direct_to_target()
-		return
-	
-	if current_target.current_state == State.DEAD:
-		if debug_movement:
-			print("%s: alvo morreu!" % stats.unit_name)
-		current_target = null
-		find_target()
-		return
-	
-	# Obter posição do alvo
-	var target_pos: Vector3 = current_target.global_position
-	
-	if debug_movement:
-		print("%s -> NavAgent target: %v" % [stats.unit_name, target_pos])
-	
+
 	current_state = State.MOVING
-	navigation_agent.target_position = target_pos
-	
-	# Aguardar cálculo do caminho
-	await get_tree().physics_frame
-	
-	if current_state != State.MOVING:
-		return
-	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
-		current_target = null
-		current_state = State.IDLE
-		find_target()
-		return
-	
-	# Verificar alcançabilidade
-	var is_reachable: bool = navigation_agent.is_target_reachable()
-	
-	if debug_movement:
-		if is_reachable:
-			print("Caminho OK para %s" % stats.unit_name)
-		else:
-			print("Caminho BLOQUEADO para %s - usando direto" % stats.unit_name)
-	
-	# Se não alcançável, usar movimento direto
-	if not is_reachable:
-		use_navigation = false
-		move_direct_to_target()
-		
+	move_direct_to_target(0.0166)
 
 func _physics_process(delta: float) -> void:
+	if is_stunned():
+		velocity = Vector3.ZERO
+		return
 	if stats and stats.is_stationary:
 		velocity = Vector3.ZERO
 		if current_state == State.ROOTED:
@@ -1018,86 +1193,20 @@ func _physics_process(delta: float) -> void:
 				_rooted_target_timer = 0.25
 				find_target()
 		return
-	# MOVIMENTO DIRETO (sem navigation)
-	if not use_navigation:
-		if current_state == State.MOVING:
-			if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
-				current_target = null
-				current_state = State.IDLE
-				velocity = Vector3.ZERO
-				find_target()
-			else:
-				move_direct_to_target(delta)
-		return
-	
-	# MOVIMENTO COM NAVIGATION
-	if current_state != State.MOVING:
-		return
-	
-	if not navigation_agent:
-		use_navigation = false
-		move_direct_to_target(delta)
-		return
-	
-	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD:
-		current_target = null
-		current_state = State.IDLE
-		velocity = Vector3.ZERO
-		find_target()
-		return
-	
-	# Verificar se chegou
-	if navigation_agent.is_navigation_finished():
-		velocity = Vector3.ZERO
-		current_state = State.IDLE
-		
-		if debug_movement:
-			print("%s chegou ao destino!" % stats.unit_name)
-		
-		check_attack_or_move()
-		return
-	
-	# Obter próxima posição
-	var next_position: Vector3 = navigation_agent.get_next_path_position()
-	# Navigation pode devolver pontos com Y diferente do piso do campo. O combate
-	# acontece num único plano, portanto usa apenas X/Z e preserva a altura inicial.
-	var planar_next := Vector3(next_position.x, combat_ground_height, next_position.z)
-	var direction := global_position.direction_to(planar_next)
-	direction.y = 0.0
-	direction = direction.normalized()
-	
-	if debug_movement and randf() < 0.01: # Print ocasional para não poluir
-		print("%s navegando... (dist: %.2f)" % [
-			stats.unit_name,
-			global_position.distance_to(next_position)
-		])
-	
-	# Movimento
-	var desired_velocity: Vector3 = direction * get_movement_speed()
-	desired_velocity.y = 0.0
-	
-	if navigation_agent.avoidance_enabled:
-		navigation_agent.velocity = desired_velocity
-	else:
-		velocity = desired_velocity
-		move_and_slide()
-		global_position.y = combat_ground_height
-	
-	# Rotação
-	if direction.length() > 0.1:
-		var target_rotation: float = atan2(direction.x, direction.z)
-		rotation.y = lerp_angle(rotation.y, target_rotation, delta * 8.0)
 
-
-func _on_velocity_computed(safe_velocity: Vector3) -> void:
-	if stats and stats.is_stationary:
-		velocity = Vector3.ZERO
-		return
 	if current_state == State.MOVING:
-		velocity = safe_velocity
-		velocity.y = 0.0
-		move_and_slide()
-		global_position.y = combat_ground_height
+		if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+			current_target = null
+			current_state = State.IDLE
+			velocity = Vector3.ZERO
+			_detour_timer = 0.0
+			_detour_dir = Vector3.ZERO
+			find_target()
+		else:
+			move_direct_to_target(delta)
+
+func _on_velocity_computed(_safe_velocity: Vector3) -> void:
+	pass
 
 func get_movement_speed() -> float:
 	if not stats:
@@ -1120,7 +1229,7 @@ func _wait_rooted() -> void:
 		navigation_agent.velocity = Vector3.ZERO
 
 func start_attacking() -> void:
-	if current_state == State.DEAD or current_state == State.CASTING or is_on_bench():
+	if current_state == State.DEAD or current_state == State.CASTING or is_on_bench() or is_stunned():
 		return
 	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		current_target = null
@@ -1136,7 +1245,7 @@ func start_attacking() -> void:
 		attack_timer.start()
 
 func _on_attack_timer_timeout() -> void:
-	if current_state == State.DEAD or is_on_bench():
+	if current_state == State.DEAD or is_on_bench() or is_stunned():
 		if attack_timer:
 			attack_timer.stop()
 		return
@@ -1158,6 +1267,8 @@ func _on_attack_timer_timeout() -> void:
 	perform_attack()
 
 func perform_attack() -> void:
+	if is_stunned():
+		return
 	# VALIDAÇÃO
 	if not is_instance_valid(current_target) or current_target.is_on_bench():
 		if attack_timer:
@@ -1192,13 +1303,16 @@ func perform_attack() -> void:
 	
 	# Verificar crítico
 	var crit_chance := stats.critical_chance + float(synergy_bonuses.get("crit_chance", 0.0))
-	crit_chance += float(synergy_bonuses.get("crit_after_kill", 0.0)) * enemies_defeated
+	crit_chance += float(synergy_bonuses.get("crit_after_kill", 0.0)) * mini(enemies_defeated, MAX_CERRADO_STACKS)
 	var is_crit: bool = randf() < clampf(crit_chance, 0.0, 0.75)
 	if is_crit:
 		damage *= stats.critical_damage * (1.0 + float(synergy_bonuses.get("crit_damage_pct", 0.0)))
 		CombatFeedback.create_damage_number(current_target.global_position, damage, CombatFeedback.DamageType.CRITICAL)
 	
 	current_target.take_damage(damage, self, UnitStats.DamageType.PHYSICAL)
+	var am: Node = get_node_or_null("/root/AudioManager")
+	if am and am.has_method("play_melee_hit"):
+		am.play_melee_hit()
 	add_mana(stats.mana_per_attack)
 	
 	check_attack_or_move()
@@ -1233,6 +1347,9 @@ func _show_plant_projectile(target_position: Vector3) -> void:
 func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.DamageType = UnitStats.DamageType.PHYSICAL) -> void:
 	if current_state == State.DEAD or is_on_bench():
 		return
+	if is_immune():
+		CombatFeedback.create_status_indicator(self, "IMUNE", 0.5)
+		return
 	if not first_hit_checked:
 		first_hit_checked = true
 		var dodge_chance := float(synergy_bonuses.get("dodge_first_hit_chance", 0.0))
@@ -1242,15 +1359,26 @@ func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.Dam
 	var mitigation := 0.0
 	if damage_type == UnitStats.DamageType.PHYSICAL:
 		var armor := stats.armor + float(synergy_bonuses.get("armor_flat", 0.0))
+		if BattleClock.now_msec() < armor_shred_until_msec:
+			armor = maxf(armor - armor_shred_amount, 0.0)
 		mitigation = armor / (100.0 + maxf(armor, 0.0))
 	elif damage_type == UnitStats.DamageType.MAGICAL:
 		var magic_resist := stats.magic_resist + float(synergy_bonuses.get("magic_resist_flat", 0.0))
 		mitigation = magic_resist / (100.0 + maxf(magic_resist, 0.0))
-	var extra_reduction := float(synergy_bonuses.get("damage_reduction_pct", 0.0))
-	if current_health / maxf(get_max_health(), 1.0) <= 0.5:
-		extra_reduction += float(synergy_bonuses.get("low_health_resistance_pct", 0.0))
+	var extra_reduction := 0.0
+	if damage_type != UnitStats.DamageType.TRUE:
+		extra_reduction = float(synergy_bonuses.get("damage_reduction_pct", 0.0))
+		if current_health / maxf(get_max_health(), 1.0) <= 0.5:
+			extra_reduction += float(synergy_bonuses.get("low_health_resistance_pct", 0.0))
 	mitigation = clampf(mitigation, 0.0, 0.8)
 	var actual_damage: float = amount * (1.0 - mitigation) * (1.0 - clampf(extra_reduction, 0.0, 0.8))
+	if BattleClock.now_msec() < reflect_until_msec:
+		actual_damage *= 0.6
+		if is_instance_valid(attacker) and attacker != self and attacker.current_state != State.DEAD and not attacker.is_on_bench():
+			var reflected := actual_damage * reflect_pct
+			attacker.take_damage(reflected, self, UnitStats.DamageType.PHYSICAL)
+			CombatFeedback.create_damage_number(attacker.global_position, reflected, CombatFeedback.DamageType.CRITICAL)
+			CombatFeedback.create_hit_particles(attacker.global_position, Color("#94a3b8"))
 	if actual_damage <= 0.0:
 		return
 	var was_shielded := has_active_shield()
@@ -1321,7 +1449,7 @@ func add_mana(amount: float) -> void:
 		cast_ability()
 
 func cast_ability() -> void:
-	if not stats.ability_name or current_state in [State.DEAD, State.CASTING] or has_active_shield():
+	if not stats.ability_name or current_state in [State.DEAD, State.CASTING] or has_active_shield() or is_stunned():
 		return
 	
 	# IMPORTANTE: Não usar habilidade se não estiver em combate
@@ -1359,23 +1487,44 @@ func apply_ability_effect() -> void:
 	if stats.unit_id == "cumacanga":
 		_cast_cumacanga_fireball()
 		return
-	if stats.is_assassin or stats.unit_id == "jararaca":
-		_cast_assassin_strike()
-		return
 	match stats.unit_id:
+		"alamoa":
+			_cast_alamoa_charm()
+			return
 		"anhanga":
 			_cast_anhanga_roar()
+			return
+		"cabeca_de_cuia":
+			_cast_cabeca_de_cuia()
+			return
+		"mae_de_ouro":
+			_cast_mae_de_ouro()
+			return
+		"mapinguari":
+			_cast_mapinguari()
+			return
+		"matinta_perera":
+			_cast_matinta_perera()
+			return
+		"minhocao":
+			_cast_minhocao_earthquake()
 			return
 		"papa_figo":
 			_cast_papa_figo()
 			return
+		"quibungo":
+			_cast_quibungo_sack()
+			return
 		"teiniagua":
 			_cast_teiniagua_orb()
 			return
+	if (stats.is_assassin and stats.unit_id != "lobo_guara" and stats.unit_id != "matinta_perera") or stats.unit_id == "jararaca":
+		_cast_assassin_strike()
+		return
 	_apply_ability_healing()
 	_apply_ability_shield()
 	_apply_ability_energy()
-	if stats.cost <= 2 or stats.is_stationary:
+	if stats.cost <= 3 or stats.is_stationary:
 		_apply_ability_damage()
 
 func _apply_ability_shield() -> void:
@@ -1385,7 +1534,44 @@ func _apply_ability_shield() -> void:
 	shield *= 1.0 + float(synergy_bonuses.get("shield_power_pct", 0.0))
 	shield *= 1.0 + float(synergy_bonuses.get("shield_received_pct", 0.0))
 	current_shield = maxf(current_shield, shield)
-	CombatFeedback.create_status_indicator(self, "ESCUDO", 1.0)
+	
+	if stats.unit_id == "tatu_bola":
+		if model:
+			var tw := create_tween()
+			tw.tween_property(model, "scale", model_base_scale * Vector3(1.25, 0.65, 1.25), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			tw.tween_property(model, "scale", model_base_scale, 0.25).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		CombatFeedback.create_hit_particles(global_position, Color("#facc15"))
+		CombatFeedback.create_status_indicator(self, "CARAPAÇA", 1.2)
+	elif stats.unit_id == "capivara":
+		CombatFeedback.create_hit_particles(global_position, Color("#38bdf8"))
+		CombatFeedback.create_status_indicator(self, "REFÚGIO", 1.2)
+	elif stats.unit_id == "mandacaru":
+		CombatFeedback.create_hit_particles(global_position, Color("#22c55e"))
+		CombatFeedback.create_status_indicator(self, "CERCA DE ESPINHOS", 1.2)
+	elif stats.unit_id == "caranguejo_uca":
+		if model:
+			var tw := create_tween()
+			tw.tween_property(model, "scale", model_base_scale * Vector3(1.3, 0.7, 1.3), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			tw.tween_property(model, "scale", model_base_scale, 0.2).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		CombatFeedback.create_hit_particles(global_position, Color("#0284c7"))
+		CombatFeedback.create_status_indicator(self, "PINÇA E CARAPAÇA", 1.2)
+	elif stats.unit_id == "ipe_amarelo":
+		if model:
+			var tw := create_tween()
+			tw.tween_property(model, "scale", model_base_scale * Vector3(1.15, 1.25, 1.15), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			tw.tween_property(model, "scale", model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		CombatFeedback.create_hit_particles(global_position, Color("#facc15"))
+		CombatFeedback.create_status_indicator(self, "CASCA DOURADA", 1.2)
+	elif stats.unit_id == "tamandua_bandeira":
+		if model:
+			var tw := create_tween()
+			tw.tween_property(model, "rotation:y", rotation.y + 0.35, 0.1).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(model, "rotation:y", rotation.y - 0.35, 0.12).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(model, "rotation:y", rotation.y, 0.1).set_trans(Tween.TRANS_QUAD)
+		CombatFeedback.create_hit_particles(global_position, Color("#d97706"))
+		CombatFeedback.create_status_indicator(self, "GARRAS DE DEFESA", 1.2)
+	else:
+		CombatFeedback.create_status_indicator(self, "ESCUDO", 1.0)
 
 func _apply_ability_energy() -> void:
 	if stats.ability_mana <= 0.0:
@@ -1402,41 +1588,285 @@ func _apply_ability_energy() -> void:
 	allies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
 		return a.current_mana / maxf(a.stats.max_mana, 1.0) < b.current_mana / maxf(b.stats.max_mana, 1.0)
 	)
+	var mana_gain: float = stats.ability_mana * stats.get_star_multiplier(star_level)
 	for i in mini(maxi(stats.ability_targets, 1), allies.size()):
-		allies[i].add_mana(stats.ability_mana)
+		allies[i].add_mana(mana_gain)
+		CombatFeedback.create_status_indicator(allies[i], "+%d MANA" % int(mana_gain), 1.0)
 		CombatFeedback.create_hit_particles(allies[i].global_position, Color("#80d8ea"))
 
+func _cast_alamoa_charm() -> void:
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.15, 1.25, 1.15), 0.15).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "scale", model_base_scale, 0.2).set_trans(Tween.TRANS_BOUNCE)
+	CombatFeedback.create_status_indicator(self, "CANTO HIPNÓTICO", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#f472b6"))
+	
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	var enemies: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(unit):
+		return is_instance_valid(unit) and unit is BaseUnit3D and unit.current_state != State.DEAD and unit.visible and not unit.is_on_bench()
+	)
+	if enemies.is_empty():
+		return
+	
+	enemies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+		var dist_a := Vector2(global_position.x, global_position.z).distance_to(Vector2(a.global_position.x, a.global_position.z))
+		var dist_b := Vector2(global_position.x, global_position.z).distance_to(Vector2(b.global_position.x, b.global_position.z))
+		return dist_a < dist_b
+	)
+	
+	var duration := (stats.ability_duration if stats.ability_duration > 0.0 else 3.0) * (1.0 + float(star_level - 1) * 0.25)
+	var targets_count := mini(maxi(stats.ability_targets, 2), enemies.size())
+	for i in targets_count:
+		var enemy: BaseUnit3D = enemies[i]
+		enemy.apply_stun(duration, "HIPNOTIZADO")
+		CombatFeedback.create_hit_particles(enemy.global_position, Color("#ec4899"))
+
 func _cast_anhanga_roar() -> void:
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.3, 1.3, 1.3), 0.15).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "scale", model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
+	CombatFeedback.create_status_indicator(self, "RUGIDO DA FLORESTA", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#22c55e"))
+	
 	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 4.0
 	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.0
+	var weakness_mult := clampf(0.70 - float(star_level - 1) * 0.10, 0.40, 0.70)
 	var enemy_group := "enemy_units" if team == 0 else "player_units"
 	for enemy in get_tree().get_nodes_in_group(enemy_group):
 		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
 			continue
 		var distance := Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
 		if distance <= radius:
-			enemy.apply_attack_weakness(duration, 0.7)
+			enemy.apply_attack_weakness(duration, weakness_mult)
 			CombatFeedback.create_hit_particles(enemy.global_position, Color("#8ee58b"))
 
+func _cast_cabeca_de_cuia() -> void:
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+		find_target()
+	var target := current_target
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	var enemies: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(unit):
+		return is_instance_valid(unit) and unit is BaseUnit3D and unit.current_state != State.DEAD and unit.visible and not unit.is_on_bench()
+	)
+	if not enemies.is_empty():
+		enemies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+			var da := Vector2(global_position.x, global_position.z).distance_to(Vector2(a.global_position.x, a.global_position.z))
+			var db := Vector2(global_position.x, global_position.z).distance_to(Vector2(b.global_position.x, b.global_position.z))
+			return da > db
+		)
+		target = enemies[0]
+		current_target = target
+	
+	if not is_instance_valid(target) or target.current_state == State.DEAD or target.is_on_bench():
+		return
+
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "position:y", 0.6, 0.15).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "position:y", 0.0, 0.2).set_trans(Tween.TRANS_BOUNCE)
+
+	CombatFeedback.create_status_indicator(self, "ARRASTO AMALDIÇOADO", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#0284c7"))
+	
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	target.take_damage(damage, self, UnitStats.DamageType.MAGICAL)
+	
+	if is_instance_valid(target) and target.current_state != State.DEAD:
+		var shred := 15.0 * stats.get_star_multiplier(star_level)
+		target.apply_armor_shred(stats.ability_duration if stats.ability_duration > 0.0 else 4.0, shred)
+		
+		var pull_dir := (global_position - target.global_position)
+		pull_dir.y = 0.0
+		if pull_dir.length_squared() > 1.0:
+			var pull_dest := global_position - pull_dir.normalized() * 1.3
+			pull_dest.y = target.global_position.y
+			var ptw := target.create_tween()
+			ptw.tween_property(target, "global_position", pull_dest, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			var board := _get_combat_board()
+			if board:
+				ptw.tween_callback(func():
+					if is_instance_valid(target) and target.current_state != State.DEAD:
+						var cell := board.get_grid_position(board.to_local(target.global_position))
+						if cell != Vector2i(-1, -1):
+							target.board_position = cell
+				)
+		CombatFeedback.create_hit_particles(target.global_position, Color("#0284c7"))
+		CombatFeedback.create_hit_particles(target.global_position + Vector3.UP * 0.5, Color("#0f172a"))
+
+func _cast_mae_de_ouro() -> void:
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "rotation:y", rotation.y + TAU, 0.4).set_trans(Tween.TRANS_QUAD)
+	CombatFeedback.create_status_indicator(self, "CHAMAS DOURADAS", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#f59e0b"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.6, Color("#fbbf24"))
+
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	var heal_val := stats.ability_heal * stats.get_star_multiplier(star_level)
+	
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	var enemies: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(unit):
+		return is_instance_valid(unit) and unit is BaseUnit3D and unit.current_state != State.DEAD and unit.visible and not unit.is_on_bench()
+	)
+	enemies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+		var da := Vector2(global_position.x, global_position.z).distance_to(Vector2(a.global_position.x, a.global_position.z))
+		var db := Vector2(global_position.x, global_position.z).distance_to(Vector2(b.global_position.x, b.global_position.z))
+		return da < db
+	)
+	var enemy_count := mini(maxi(stats.ability_targets, 3), enemies.size())
+	for i in enemy_count:
+		var enemy: BaseUnit3D = enemies[i]
+		enemy.take_damage(damage, self, UnitStats.DamageType.MAGICAL)
+		enemy.apply_burn(2.0, self, damage * 0.1)
+		CombatFeedback.create_hit_particles(enemy.global_position, Color("#f59e0b"))
+
+	var ally_group := "player_units" if team == 0 else "enemy_units"
+	var allies: Array = get_tree().get_nodes_in_group(ally_group).filter(func(ally):
+		return is_instance_valid(ally) and ally is BaseUnit3D and ally.current_state != State.DEAD and ally.visible and not ally.is_on_bench() and ally.current_health < ally.get_max_health()
+	)
+	allies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+		return (a.get_max_health() - a.current_health) > (b.get_max_health() - b.current_health)
+	)
+	var ally_count := mini(maxi(stats.ability_targets, 3), allies.size())
+	for i in ally_count:
+		var ally: BaseUnit3D = allies[i]
+		var healed := ally.heal(heal_val, self)
+		if healed > 0.0:
+			CombatFeedback.create_status_indicator(ally, "+%d HP" % int(healed), 1.2)
+			CombatFeedback.create_hit_particles(ally.global_position, Color("#fbbf24"))
+
+func _cast_mapinguari() -> void:
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.3, 0.7, 1.3), 0.14).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "scale", model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
+	CombatFeedback.create_status_indicator(self, "COURO DE FERRO", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#94a3b8"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.6, Color("#e2e8f0"))
+	
+	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 4.0
+	reflect_until_msec = BattleClock.now_msec() + int(duration * 1000.0)
+	reflect_pct = 0.40 * (1.0 + float(star_level - 1) * 0.20)
+
+func _cast_matinta_perera() -> void:
+	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 3.0
+	immune_until_msec = BattleClock.now_msec() + int(duration * 1000.0)
+	
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "position:y", 0.8, 0.2).set_trans(Tween.TRANS_QUAD)
+		tw.tween_interval(maxf(duration - 0.4, 0.1))
+		tw.tween_property(model, "position:y", 0.0, 0.2).set_trans(Tween.TRANS_QUAD)
+	
+	CombatFeedback.create_status_indicator(self, "FORMA DE PÁSSARO", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#7c3aed"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.8, Color("#1e1b4b"))
+	
+	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.0
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	for enemy in get_tree().get_nodes_in_group(enemy_group):
+		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
+			continue
+		var distance := Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
+		if distance <= radius:
+			enemy.take_damage(damage, self, UnitStats.DamageType.MAGICAL)
+			CombatFeedback.create_hit_particles(enemy.global_position, Color("#a855f7"))
+
+func _cast_minhocao_earthquake() -> void:
+	_trigger_camera_shake(0.55, 0.65)
+	
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "position:y", -0.35, 0.12)
+		tw.tween_property(model, "position:y", 0.5, 0.15)
+		tw.tween_property(model, "position:y", 0.0, 0.15).set_trans(Tween.TRANS_BOUNCE)
+	
+	CombatFeedback.create_status_indicator(self, "TERREMOTO", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#78350f"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.3, Color("#d97706"))
+	
+	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.5
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	var stun_dur := stats.ability_duration if stats.ability_duration > 0.0 else 2.0
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	for enemy in get_tree().get_nodes_in_group(enemy_group):
+		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
+			continue
+		var distance := Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
+		if distance <= radius:
+			enemy.take_damage(damage, self, UnitStats.DamageType.PHYSICAL)
+			enemy.apply_stun(stun_dur, "ATORDOADO")
+			CombatFeedback.create_hit_particles(enemy.global_position, Color("#b45309"))
+
+func _cast_quibungo_sack() -> void:
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+		find_target()
+	var target := current_target
+	if not is_instance_valid(target) or target.current_state == State.DEAD or target.is_on_bench():
+		return
+
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.2, 1.25, 1.2), 0.15)
+		tw.tween_property(model, "scale", model_base_scale, 0.2)
+
+	CombatFeedback.create_status_indicator(self, "SACO DAS SOMBRAS", 1.2)
+	CombatFeedback.create_hit_particles(target.global_position, Color("#581c87"))
+	
+	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 3.0
+	target.apply_stun(duration, "PRESO NO SACO")
+	
+	var tick_damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	target.take_damage(tick_damage, self, UnitStats.DamageType.TRUE)
+	CombatFeedback.create_hit_particles(target.global_position, Color("#3b0764"))
+	
+	_run_quibungo_sack_ticks(target, duration, tick_damage)
+
+func _run_quibungo_sack_ticks(target: BaseUnit3D, duration: float, tick_damage: float) -> void:
+	var elapsed := 1.0
+	while elapsed < duration:
+		await get_tree().create_timer(1.0, false).timeout
+		elapsed += 1.0
+		if not is_instance_valid(target) or target.current_state == State.DEAD:
+			break
+		target.take_damage(tick_damage, self, UnitStats.DamageType.TRUE)
+		CombatFeedback.create_hit_particles(target.global_position, Color("#3b0764"))
+
 func _cast_papa_figo() -> void:
-	# take_damage pode matar o alvo e limpar current_target imediatamente.
-	# Guarda o alvo e a posição antes do dano, sem consultar novamente o alvo da IA.
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+		find_target()
 	var target := current_target
 	if is_instance_valid(target) and not target.is_queued_for_deletion() and target.current_state != State.DEAD and not target.is_on_bench():
 		var impact_position := target.global_position
-		target.take_damage(stats.ability_damage, self, stats.ability_damage_type)
-		if is_instance_valid(target) and not target.is_queued_for_deletion() and target.current_state != State.DEAD and current_state == State.CASTING:
+		var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+		target.take_damage(damage, self, stats.ability_damage_type)
+		if is_instance_valid(target) and not target.is_queued_for_deletion() and target.current_state != State.DEAD:
 			target.apply_attack_weakness(stats.ability_duration if stats.ability_duration > 0.0 else 5.0, 0.75)
-		CombatFeedback.create_hit_particles(impact_position, Color("#b8e8ff"))
+		CombatFeedback.create_hit_particles(impact_position, Color("#67e8f9"))
+		CombatFeedback.create_status_indicator(self, "TOQUE GÉLIDO", 1.2)
 	_apply_ability_healing()
 
 func _cast_teiniagua_orb() -> void:
 	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
-		return
+		find_target()
 	var target := current_target
+	if not is_instance_valid(target) or target.current_state == State.DEAD or target.is_on_bench():
+		return
+	
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.2, 1.2, 1.2), 0.15).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "scale", model_base_scale, 0.2).set_trans(Tween.TRANS_BOUNCE)
+
+	CombatFeedback.create_status_indicator(self, "ESFERA ARCANA", 1.2)
+	
 	var target_position := target.global_position
 	var enemy_group := "enemy_units" if team == 0 else "player_units"
 	var enemies: Array = get_tree().get_nodes_in_group(enemy_group)
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
 	var board := _get_combat_board()
 	if board:
 		var target_cell := board.get_grid_position(board.to_local(target.global_position))
@@ -1448,20 +1878,66 @@ func _cast_teiniagua_orb() -> void:
 				continue
 			var enemy_cell := board.get_grid_position(board.to_local(enemy.global_position))
 			if enemy_cell in affected_cells:
-				enemy.take_damage(stats.ability_damage, self, stats.ability_damage_type)
+				enemy.take_damage(damage, self, stats.ability_damage_type)
 	else:
 		for enemy in enemies:
 			if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
 				continue
 			var distance := Vector2(target_position.x, target_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
-			if distance <= 2.0:
-				enemy.take_damage(stats.ability_damage, self, stats.ability_damage_type)
+			if distance <= 2.8:
+				enemy.take_damage(damage, self, stats.ability_damage_type)
 	CombatFeedback.create_hit_particles(target_position, Color("#c994ff"))
+	CombatFeedback.create_hit_particles(target_position + Vector3.UP * 0.5, Color("#f43f5e"))
 
 func _apply_ability_damage() -> void:
-	if stats.ability_damage <= 0.0 or not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+	if stats.ability_damage <= 0.0:
 		return
-	current_target.take_damage(stats.ability_damage, self, stats.ability_damage_type)
+	
+	if stats.unit_id == "arara_azul_lear":
+		var enemy_group := "enemy_units" if team == 0 else "player_units"
+		var candidates: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(unit):
+			return is_instance_valid(unit) and unit is BaseUnit3D and unit.current_state != State.DEAD and unit.visible and not unit.is_on_bench()
+		)
+		if not candidates.is_empty():
+			candidates.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+				return a.get_attack_damage() > b.get_attack_damage()
+			)
+			current_target = candidates[0]
+	
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+		find_target()
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+		return
+	
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	
+	if stats.unit_id == "pequi":
+		_show_plant_projectile(current_target.global_position)
+		CombatFeedback.create_hit_particles(current_target.global_position, Color("#a3e635"))
+	elif stats.unit_id == "sabia_laranjeira":
+		CombatFeedback.create_hit_particles(current_target.global_position, Color("#fb923c"))
+		if model:
+			var tw := create_tween()
+			tw.tween_property(model, "position:y", 0.35, 0.12).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(model, "position:y", 0.0, 0.15).set_trans(Tween.TRANS_BOUNCE)
+	elif stats.unit_id == "mandacaru":
+		CombatFeedback.create_hit_particles(current_target.global_position, Color("#84cc16"))
+	elif stats.unit_id == "arara_azul_lear":
+		if model:
+			var tw := create_tween()
+			tw.tween_property(model, "position:y", 0.55, 0.14).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(model, "position:y", 0.0, 0.18).set_trans(Tween.TRANS_BOUNCE)
+		CombatFeedback.create_hit_particles(current_target.global_position, Color("#0284c7"))
+		CombatFeedback.create_hit_particles(current_target.global_position + Vector3(0, 0.4, 0), Color("#38bdf8"))
+		CombatFeedback.create_status_indicator(self, "VOO DE LEAR", 1.2)
+	elif stats.unit_id == "caranguejo_uca":
+		CombatFeedback.create_hit_particles(current_target.global_position, Color("#0284c7"))
+	elif stats.unit_id == "tamandua_bandeira":
+		CombatFeedback.create_hit_particles(current_target.global_position, Color("#d97706"))
+	else:
+		CombatFeedback.create_hit_particles(current_target.global_position, stats.get_tier_color())
+
+	current_target.take_damage(damage, self, stats.ability_damage_type)
 
 func _cast_cumacanga_fireball() -> void:
 	var enemy_group := "enemy_units" if team == 0 else "player_units"
@@ -1631,6 +2107,8 @@ func _cast_assassin_strike() -> void:
 	if stats.unit_id == "jararaca":
 		if is_instance_valid(target) and target.current_state != State.DEAD:
 			target.apply_slow(1.5)
+		CombatFeedback.create_hit_particles(target.global_position, Color("#22c55e"))
+		CombatFeedback.create_status_indicator(self, "BOTE CERTEIRO", 1.2)
 	
 	# Seguir atacando o alvo se vivo, senão foca no mais próximo
 	if is_instance_valid(target) and target.current_state != State.DEAD and not target.is_on_bench():
@@ -1646,13 +2124,11 @@ func _get_combat_board() -> Board3D:
 	return null
 
 func _resolve_cumacanga_impact(target: BaseUnit3D, impact_cell: Vector2i, impact_position: Vector3, board: Board3D) -> void:
-	var burn_duration := stats.ability_duration if stats.ability_duration > 0.0 else 2.0
+	var damage: float = stats.ability_damage * stats.get_star_multiplier(star_level)
+	var burn_duration := stats.ability_duration if stats.ability_duration > 0.0 else 2.5
 	var affected_cells: Array[Vector2i] = [impact_cell]
 	if board:
-		for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			var adjacent_cell = impact_cell + offset
-			if board.get_cell(adjacent_cell):
-				affected_cells.append(adjacent_cell)
+		affected_cells.append_array(board.get_neighbors(impact_cell))
 		for cell in affected_cells:
 			_create_burning_hex(board, cell, burn_duration)
 		var enemy_group := "enemy_units" if team == 0 else "player_units"
@@ -1661,12 +2137,12 @@ func _resolve_cumacanga_impact(target: BaseUnit3D, impact_cell: Vector2i, impact
 				continue
 			var victim_cell := board.get_grid_position(board.to_local(victim.global_position))
 			if victim_cell in affected_cells:
-				victim.take_damage(stats.ability_damage, self, stats.ability_damage_type)
-				victim.apply_burn(burn_duration, self, stats.ability_damage * 0.15)
+				victim.take_damage(damage, self, stats.ability_damage_type)
+				victim.apply_burn(burn_duration, self, damage * 0.15)
 	else:
 		if is_instance_valid(target) and target.current_state != State.DEAD and not target.is_on_bench():
-			target.take_damage(stats.ability_damage, self, stats.ability_damage_type)
-			target.apply_burn(burn_duration, self, stats.ability_damage * 0.15)
+			target.take_damage(damage, self, stats.ability_damage_type)
+			target.apply_burn(burn_duration, self, damage * 0.15)
 	CombatFeedback.create_hit_particles(impact_position, Color(1.0, 0.28, 0.035))
 
 func _create_burning_hex(board: Board3D, cell: Vector2i, duration: float) -> void:
@@ -1745,9 +2221,33 @@ func _apply_ability_healing() -> void:
 	if stats.ability_heal <= 0.0:
 		return
 
+	if stats.unit_id == "aguape":
+		CombatFeedback.create_status_indicator(self, "MANTO FLUTUANTE", 1.2)
+		CombatFeedback.create_hit_particles(global_position, Color("#38bdf8"))
+	elif stats.unit_id == "lobo_guara":
+		CombatFeedback.create_status_indicator(self, "RASTRO DA LOBEIRA", 1.2)
+		CombatFeedback.create_hit_particles(global_position, Color("#f59e0b"))
+		if model:
+			var tw := create_tween()
+			tw.tween_property(model, "position:y", 0.35, 0.12).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(model, "position:y", 0.0, 0.15).set_trans(Tween.TRANS_BOUNCE)
+	elif stats.unit_id == "palmito_jucara":
+		CombatFeedback.create_status_indicator(self, "FRUTOS DA FLORESTA", 1.2)
+		CombatFeedback.create_hit_particles(global_position, Color("#a855f7"))
+	elif stats.unit_id == "vitoria_regia":
+		CombatFeedback.create_status_indicator(self, "MANTO DAS ÁGUAS", 1.2)
+		CombatFeedback.create_hit_particles(global_position, Color("#22d3ee"))
+	elif stats.unit_id == "labatut":
+		CombatFeedback.create_status_indicator(self, "CORRENTE CURATIVA", 1.2)
+		CombatFeedback.create_hit_particles(global_position, Color("#38bdf8"))
+		if model:
+			var tw := create_tween()
+			tw.tween_property(model, "scale", model_base_scale * Vector3(1.2, 0.8, 1.2), 0.12).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(model, "scale", model_base_scale, 0.2).set_trans(Tween.TRANS_BOUNCE)
+
 	var ally_group := "player_units" if team == 0 else "enemy_units"
 	var allies: Array = get_tree().get_nodes_in_group(ally_group).filter(func(ally):
-		if not is_instance_valid(ally) or ally.current_state == State.DEAD or not ally.visible:
+		if not is_instance_valid(ally) or ally.current_state == State.DEAD or not ally.visible or ally.is_on_bench():
 			return false
 		var distance := Vector2(global_position.x, global_position.z).distance_to(
 			Vector2(ally.global_position.x, ally.global_position.z)
@@ -1759,9 +2259,14 @@ func _apply_ability_healing() -> void:
 		var missing_b := (b.get_max_health() - b.current_health) / maxf(b.get_max_health(), 1.0)
 		return missing_a > missing_b
 	)
+	var heal_val := stats.ability_heal * stats.get_star_multiplier(star_level)
 	var target_count := mini(maxi(stats.ability_targets, 1), allies.size())
 	for i in target_count:
-		allies[i].heal(stats.ability_heal, self)
+		var ally: BaseUnit3D = allies[i]
+		var healed := ally.heal(heal_val, self)
+		if healed > 0.0:
+			CombatFeedback.create_status_indicator(ally, "+%d HP" % int(healed), 1.2)
+			CombatFeedback.create_hit_particles(ally.global_position, Color("#4ade80"))
 
 func die() -> void:
 	if current_state == State.DEAD:
@@ -1776,6 +2281,7 @@ func die() -> void:
 	if navigation_agent:
 		navigation_agent.set_velocity(Vector3.ZERO)
 		navigation_agent.avoidance_enabled = false
+	set_hovered(false)
 	if ui_sprite:
 		ui_sprite.hide()
 	_death_generation += 1
@@ -1800,21 +2306,29 @@ func die() -> void:
 
 func revive_at_position(world_pos: Vector3) -> void:
 	_death_generation += 1
+	use_navigation = false
+	_detour_dir = Vector3.ZERO
+	_detour_timer = 0.0
 	current_state = State.IDLE
 	current_health = get_max_health()
 	current_mana = stats.starting_mana
 	current_shield = 0.0
 	current_target = null
 	velocity = Vector3.ZERO
+	stunned_until_msec = 0
+	immune_until_msec = 0
+	reflect_until_msec = 0
+	reflect_pct = 0.0
+	armor_shred_until_msec = 0
+	armor_shred_amount = 0.0
 	
 	visible = true
+	is_hovered = false
 	process_mode = Node.PROCESS_MODE_INHERIT
 	collision_layer = 1
 	collision_mask = 1
 	global_position = world_pos
 	combat_ground_height = world_pos.y
-	if navigation_agent:
-		navigation_agent.avoidance_enabled = true
 	if ui_sprite:
 		ui_sprite.show()
 	unit_visual.reset_pose()

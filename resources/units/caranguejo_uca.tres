@@ -1,20 +1,20 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://d23vq1ah5fi6d"]
 
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/caranguejo_uca.png" id="2_splash_art"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" uid="uid://g0utx4plxauj" path="res://Assets/Units/SplashArts/caranguejo_uca.png" id="2_splash_art"]
 
 [resource]
 script = ExtResource("1_stats")
-unit_name = "Caranguejo-uçá"
+unit_name = "Caranguejo Uçá"
 unit_id = "caranguejo_uca"
 description = "Linha de frente do Litorâneo, com as classes Aquático e Tank."
 tier = 2
 cost = 2
 icon = ExtResource("2_splash_art")
-max_health = 780.0
-attack_damage = 48.0
+max_health = 680.0
+attack_damage = 58.0
 attack_speed = 0.75
-armor = 35.0
+armor = 25.0
 magic_resist = 20.0
 movement_speed = 190.0
 mana_when_hit = 8.0
@@ -25,6 +25,5 @@ biomes = Array[String](["Manguezal"])
 ability_name = "Pinça e Carapaça"
 ability_description = "Causa 90 de dano físico ao alvo atual e renova um escudo próprio de 130. Não ganha mana enquanto estiver protegido."
 ability_damage = 90.0
-ability_shield = 130.0
+ability_shield = 70.0
 ability_damage_type = 0
-is_tank = true

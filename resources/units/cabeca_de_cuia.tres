@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dd72oeu6y81cq"]
 
-[ext_resource type="Texture2D" path="res://Assets/Units_teste/cabeça_cuia.png" id="1_hu2ai"]
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_m7tap"]
+[ext_resource type="Texture2D" uid="uid://bl6e2spr4jhc4" path="res://Assets/Units/SplashArts/cabeca_cuia.jpg" id="1_hu2ai"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_m7tap"]
 
 [resource]
 script = ExtResource("1_m7tap")
@@ -25,6 +25,5 @@ origins = Array[String](["Litorâneo"])
 classes = Array[String](["Aquático", "Assombração"])
 ability_name = "Arrasto Amaldiçoado"
 ability_description = "Puxa inimigo para perto, causando dano e reduzindo armadura."
-ability_damage = 150.0
+ability_damage = 110.0
 ability_duration = 4.0
-is_ranged = true

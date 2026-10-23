@@ -49,11 +49,7 @@ func _ready() -> void:
 		_on_shop_refreshed(shop_system.current_units)
 	if stats_tooltip:
 		stats_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
-		stats_tooltip.custom_minimum_size.x = minf(320.0, get_viewport_rect().size.x - 24.0)
-		var vbox_node := stats_tooltip.get_node_or_null("VBoxContainer")
-		if vbox_node:
-			vbox_node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		stats_tooltip.reset_size()
+		_prepare_tooltip_layout()
 		stats_tooltip.hide()
 
 func _apply_button_styles() -> void:
@@ -160,13 +156,13 @@ func update_board_capacity(units_on_board: int, board_limit: int) -> void:
 	if board_space_label:
 		var available := maxi(0, board_limit - units_on_board)
 		if available > 0:
-			board_space_label.text = "CAMPO: %d/%d (%d livre%s)" % [
+			board_space_label.text = "CAMPO: %d/%d (! %d vaga%s)" % [
 				units_on_board, board_limit, available, "s" if available > 1 else ""
 			]
-			board_space_label.add_theme_color_override("font_color", UIStyle.TEXT_CYAN)
+			board_space_label.add_theme_color_override("font_color", Color("#f59e0b"))
 		else:
-			board_space_label.text = "CAMPO: %d/%d (Cheio)" % [units_on_board, board_limit]
-			board_space_label.add_theme_color_override("font_color", UIStyle.TEXT_GOLD)
+			board_space_label.text = "CAMPO: %d/%d (Completo)" % [units_on_board, board_limit]
+			board_space_label.add_theme_color_override("font_color", Color("#94a3b8"))
 		board_space_label.tooltip_text = "Unidades no campo: %d/%d\nEspaços disponíveis no tabuleiro: %d\nArraste unidades do banco para posicionar." % [
 			units_on_board, board_limit, available
 		]
@@ -247,6 +243,10 @@ func _on_shop_refreshed(units: Array[UnitStats]) -> void:
 		var am = get_node_or_null("/root/AudioManager")
 		if am and am.has_method("play_evol_hint_shop"):
 			am.play_evol_hint_shop()
+	else:
+		var am = get_node_or_null("/root/AudioManager")
+		if am and am.has_method("stop_evol_hint_shop"):
+			am.stop_evol_hint_shop()
 
 func set_owned_star_counts(counts: Dictionary, in_combat: bool) -> void:
 	owned_star_counts = counts.duplicate(true)
@@ -306,10 +306,37 @@ func _on_lock_changed(is_locked: bool) -> void:
 		lock_button.text = "Destravar" if is_locked else "Travar"
 		UIStyle.apply_button_skin(lock_button, UIStyle.BORDER_CYAN if is_locked else UIStyle.BORDER_GOLD)
 
+func _prepare_tooltip_layout(target_width: float = 360.0) -> void:
+	if not stats_tooltip:
+		return
+	var viewport_size := get_viewport_rect().size
+	var target_w := clampf(target_width, 240.0, maxf(viewport_size.x - 24.0, 240.0))
+	var inner_w := maxf(target_w - 24.0, 100.0)
+	stats_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	stats_tooltip.custom_minimum_size = Vector2(target_w, 0.0)
+	stats_tooltip.size = Vector2(target_w, 0.0)
+	var vbox_node := stats_tooltip.get_node_or_null("VBoxContainer") as VBoxContainer
+	if vbox_node:
+		vbox_node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		vbox_node.custom_minimum_size = Vector2(inner_w, 0.0)
+		vbox_node.size = Vector2(inner_w, 0.0)
+		for child in vbox_node.get_children():
+			if child is Control:
+				child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				child.custom_minimum_size = Vector2(inner_w, 0.0)
+				child.size = Vector2(inner_w, 0.0)
+				if child is RichTextLabel:
+					child.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+					child.fit_content = true
+		vbox_node.reset_size()
+	stats_tooltip.reset_size()
+
 func _on_card_hover_started(stats: UnitStats, card_pos: Vector2) -> void:
 	if not stats_tooltip:
 		return
+	_prepare_tooltip_layout()
 	update_tooltip_labels(stats)
+	_prepare_tooltip_layout()
 	_tooltip_origin = card_pos
 	_fit_tooltip()
 	stats_tooltip.show()
@@ -319,12 +346,7 @@ func _fit_tooltip() -> void:
 	if not stats_tooltip:
 		return
 	var viewport_size := get_viewport_rect().size
-	stats_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	stats_tooltip.custom_minimum_size.x = minf(320.0, viewport_size.x - 24.0)
-	var vbox_node := stats_tooltip.get_node_or_null("VBoxContainer")
-	if vbox_node:
-		vbox_node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	stats_tooltip.reset_size()
+	_prepare_tooltip_layout()
 	ResponsiveLayout.clamp_popup(stats_tooltip, _tooltip_origin - Vector2(0, stats_tooltip.size.y + 12.0), viewport_size)
 
 func _on_card_hover_ended() -> void:
@@ -347,12 +369,12 @@ func update_tooltip_labels(stats: UnitStats) -> void:
 		var upgrade_star := _get_purchase_upgrade_star(stats.unit_id)
 		var is_owned := _is_unit_owned(stats.unit_id)
 		if upgrade_star > 0:
-			name_lbl.text += " [color=#ffd16b]◆ Evolui para Nível %d%s[/color]" % [
+			name_lbl.text += " [color=#ffd16b]• Evolui para Nível %d%s[/color]" % [
 				upgrade_star,
 				" no próximo round" if upgrades_deferred else " ao comprar"
 			]
 		elif is_owned:
-			name_lbl.text += " [color=#42d1e8]◆ Já possui no time[/color]"
+			name_lbl.text += " [color=#42d1e8]• Já possui no time[/color]"
 	
 	var hp_lbl := v_box.get_node_or_null("Tooltip_hp") as RichTextLabel
 	if hp_lbl:
@@ -372,17 +394,29 @@ func update_tooltip_labels(stats: UnitStats) -> void:
 	if type_lbl:
 		type_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var dmg_text := "Físico" if stats.ability_damage_type == 0 else "Mágico"
-		type_lbl.text = "Dano: [b]%s[/b] · Poder %d" % [dmg_text, int(stats.attack_damage)]
+		type_lbl.text = "Dano: [b]%s[/b] · Poder %d  ·  Defesa: [b]%d[/b] Arm / [b]%d[/b] RM" % [
+			dmg_text, int(stats.attack_damage), int(stats.armor), int(stats.magic_resist)
+		]
 		var traits_text: Array[String] = []
 		if not stats.origins.is_empty():
 			traits_text.append("[color=#74e6f5]Origens:[/color] %s" % ", ".join(stats.origins))
 		if not stats.classes.is_empty():
 			traits_text.append("[color=#ffd16b]Classes:[/color] %s" % ", ".join(stats.classes))
 		if not traits_text.is_empty():
-			type_lbl.text += "  ·  " + "  ·  ".join(traits_text)
+			type_lbl.text += "\n" + "  ·  ".join(traits_text)
 		if not stats.ability_name.is_empty():
 			type_lbl.text += "\nHabilidade: [b]%s[/b] - %s" % [stats.ability_name, stats.ability_description]
 
 func mark_slot_as_sold(slot_index: int) -> void:
 	if slot_index >= 0 and slot_index < unit_cards.size():
 		unit_cards[slot_index].mark_as_sold()
+	_refresh_upgrade_hints()
+	var has_upgrade_hint := false
+	for card in unit_cards:
+		if card.unit_stats and not card.is_sold and _get_purchase_upgrade_star(card.unit_stats.unit_id) > 0:
+			has_upgrade_hint = true
+			break
+	if not has_upgrade_hint:
+		var am = get_node_or_null("/root/AudioManager")
+		if am and am.has_method("stop_evol_hint_shop"):
+			am.stop_evol_hint_shop()

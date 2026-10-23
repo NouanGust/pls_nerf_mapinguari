@@ -13,9 +13,9 @@ const RULES: Array[Dictionary] = [
 		{"text": "Recebe 8% menos dano", "bonuses": {"damage_reduction_pct": 0.08}},
 		{"text": "Recebe 15% menos dano e resiste a controle", "bonuses": {"damage_reduction_pct": 0.15, "control_resist_pct": 0.20}},
 	]},
-	{"field": "origins", "name": "Cerrado", "thresholds": [2, 4], "effects": [
-		{"text": "Ganha 6% de crítico por inimigo derrotado", "bonuses": {"crit_after_kill": 0.06}},
-		{"text": "Ganha 12% de crítico por inimigo derrotado", "bonuses": {"crit_after_kill": 0.12}},
+	{"field": "origins", "name": "Cerrado", "thresholds": [2, 4], "max_stacks": 10, "effects": [
+		{"text": "Ganha 6% de crítico por abate (máx. 10 acúmulos)", "bonuses": {"crit_after_kill": 0.06}},
+		{"text": "Ganha 12% de crítico por abate (máx. 10 acúmulos)", "bonuses": {"crit_after_kill": 0.12}},
 	]},
 	{"field": "origins", "name": "Litorâneo", "thresholds": [2, 4], "effects": [
 		{"text": "+10% de velocidade de ataque", "bonuses": {"attack_speed_pct": 0.10}},
@@ -77,6 +77,12 @@ const RULES: Array[Dictionary] = [
 	]},
 ]
 
+static func get_rule_for_tag(tag_name: String) -> Dictionary:
+	for rule in RULES:
+		if str(rule.get("name", "")) == tag_name:
+			return rule
+	return {}
+
 func update_synergies(units: Array) -> Dictionary:
 	var all_unit_stats: Array = UnitSpawner.load_all_units().values()
 	var members_by_team := {0: [], 1: []}
@@ -119,6 +125,14 @@ func update_synergies(units: Array) -> Dictionary:
 				var unit_tags: Array = unit_stats.get(field)
 				if unit_tags.has(tag):
 					unit_names.append(unit_stats.unit_name)
+			var max_stacks := int(rule.get("max_stacks", 0))
+			var current_stacks := 0
+			if max_stacks > 0:
+				for unit in members:
+					if unit.stats and unit.stats.get(field).has(tag):
+						current_stacks = maxi(current_stacks, unit.enemies_defeated)
+				current_stacks = mini(current_stacks, max_stacks)
+
 			results[team_id].append({
 				"name": tag,
 				"category": "Origem" if field == "origins" else "Classe",
@@ -129,6 +143,8 @@ func update_synergies(units: Array) -> Dictionary:
 				"active": tier_index >= 0,
 				"description": effect.text,
 				"units": unit_names,
+				"stacks": current_stacks,
+				"max_stacks": max_stacks,
 			})
 			if tier_index < 0:
 				continue

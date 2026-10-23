@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://c0yvf2atoijg5"]
 
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_41kwa"]
-[ext_resource type="Texture2D" uid="uid://cu7i61skv142t" path="res://Assets/Units_teste/Minhocao.png" id="1_57osp"]
+[ext_resource type="Texture2D" uid="uid://6o4r4mjudnmb" path="res://Assets/Units/SplashArts/minhocao.jpg" id="1_57osp"]
 
 [resource]
 script = ExtResource("1_41kwa")

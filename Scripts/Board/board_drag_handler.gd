@@ -22,6 +22,7 @@ var highlight_cells: Array[Vector2i] = []
 var attack_range_cells: Array[Vector2i] = []
 var ghost_unit: Node3D = null
 var current_hiver_cell: Vector2i = Vector2i(-1, -1)
+var hovered_unit: BaseUnit3D = null
 
 
 func _ready() -> void:
@@ -45,9 +46,12 @@ func _input(event: InputEvent) -> void:
 	if not board or not camera or not interaction_enabled:
 		return
 	
-	if event is InputEventMouseMotion and is_dragging:
-		update_hover_highlight(event.position)
-		update_ghost_position(event.position)
+	if event is InputEventMouseMotion:
+		if is_dragging:
+			update_hover_highlight(event.position)
+			update_ghost_position(event.position)
+		else:
+			update_unit_hover(event.position)
 	
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT: 
@@ -57,6 +61,32 @@ func _input(event: InputEvent) -> void:
 				try_pickup_unit(event.position)
 			elif not event.pressed and is_dragging:
 				try_place_unit(event.position)
+
+func update_unit_hover(mouse_pos: Vector2) -> void:
+	if not board or not camera or not is_instance_valid(board):
+		_clear_hovered_unit()
+		return
+	if get_viewport().gui_get_hovered_control() != null:
+		_clear_hovered_unit()
+		return
+	var from := camera.project_ray_origin(mouse_pos)
+	var to := from + camera.project_ray_normal(mouse_pos) * 1000.0
+	var query := PhysicsRayQueryParameters3D.create(from, to)
+	query.collision_mask = 1
+	var result := board.get_world_3d().direct_space_state.intersect_ray(query)
+	if result and result.collider is BaseUnit3D:
+		var unit: BaseUnit3D = result.collider
+		if unit != hovered_unit:
+			_clear_hovered_unit()
+			hovered_unit = unit
+			hovered_unit.set_hovered(true)
+	else:
+		_clear_hovered_unit()
+
+func _clear_hovered_unit() -> void:
+	if is_instance_valid(hovered_unit):
+		hovered_unit.set_hovered(false)
+	hovered_unit = null
 
 func try_pickup_unit(mouse_pos: Vector2) -> void:
 	if not board_interaction_enabled:
@@ -94,6 +124,7 @@ func start_drag(unit_data: Dictionary) -> void:
 		return
 	if not board_interaction_enabled and unit_data.get("source", "") != "bench":
 		return
+	_clear_hovered_unit()
 	dragging_unit_data = unit_data
 	is_dragging = true
 	
@@ -175,6 +206,7 @@ func update_ghost_position(mouse_pos: Vector2) -> void:
 
 func stop_drag() -> void:
 	is_dragging = false
+	_clear_hovered_unit()
 	if sell_zone_control:
 		sell_zone_control.visible = false
 	dragging_unit_data.clear()
@@ -189,7 +221,9 @@ func stop_drag() -> void:
 func cancel_drag() -> void:
 	if not is_dragging:
 		return
-	AudioManager.play_ui_cancel()
+	var audio = get_tree().root.get_node_or_null("AudioManager") if get_tree() and get_tree().root else null
+	if audio and audio.has_method("play_ui_cancel"):
+		audio.play_ui_cancel()
 	return_unit_to_origin()
 	stop_drag()
 	
@@ -309,9 +343,8 @@ func return_unit_to_origin() -> void:
 		if old_pos != Vector2i(-1,-1):
 			board.place_unit(unit, old_pos, true)
 	elif dragging_unit_data.get("source") == "shop":
-		if dragging_unit_data.has("unit_stats"):
-			unit_returned_to_shop.emit(dragging_unit_data.unit_stats)
-		unit.queue_free()
+		# Unidades compradas por arraste que não foram posicionadas devem ir SEMPRE para o banco
+		unit_placed_on_bench.emit(unit, "shop", -1)
 	elif dragging_unit_data.get("source") == "bench":
 		unit.visible = true
 		var idx: int = int(dragging_unit_data.get("bench_index", 0))

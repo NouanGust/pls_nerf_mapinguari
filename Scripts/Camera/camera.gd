@@ -6,11 +6,11 @@ const ResponsiveLayout = preload("res://Scripts/UI/responsive_layout.gd")
 @export_group("Enquadramento inicial")
 ## 0 graus mantém o jogador na parte inferior da tela.
 @export_range(-180.0, 180.0, 1.0) var initial_yaw_degrees: float = 0.0
-@export_range(20.0, 80.0, 1.0) var initial_elevation_degrees: float = 55.0
+@export_range(20.0, 80.0, 1.0) var initial_elevation_degrees: float = 46.0
 ## Zero calcula a distância usando o tamanho do tabuleiro e da janela.
 @export_range(0.0, 80.0, 0.5) var initial_distance: float = 0.0
-@export var focus_offset: Vector3 = Vector3.ZERO
-@export_range(1.0, 2.0, 0.05) var framing_margin: float = 1.2
+@export var focus_offset: Vector3 = Vector3(0.0, 0.0, 1.1)
+@export_range(1.0, 2.0, 0.05) var framing_margin: float = 1.15
 @export var look_at_position: Vector3 = Vector3.ZERO
 @export_range(20.0, 90.0, 1.0) var fov: float = 50.0
 
@@ -51,6 +51,13 @@ var _settings_auto_orbit: bool = false
 var _last_fitted_distance: float = 20.0
 var entry_active: bool = false
 
+var _shake_intensity: float = 0.0
+var _shake_timer: float = 0.0
+
+func shake(intensity: float = 0.45, duration: float = 0.5) -> void:
+	_shake_intensity = maxf(_shake_intensity, intensity)
+	_shake_timer = maxf(_shake_timer, duration)
+
 func _ready() -> void:
 	if not camera:
 		camera = Camera3D.new()
@@ -63,10 +70,13 @@ func _ready() -> void:
 	var start_automatically := auto_orbit_enabled
 	reset_view(true)
 	auto_orbit_enabled = start_automatically
-	_settings_auto_orbit = GameSettings.auto_orbit
-	set_auto_orbit(GameSettings.auto_orbit)
-	mouse_sensitivity = GameSettings.mouse_sensitivity
-	GameSettings.settings_changed.connect(_apply_settings)
+	var gs: Node = get_node_or_null("/root/GameSettings")
+	if gs:
+		_settings_auto_orbit = gs.get("auto_orbit")
+		set_auto_orbit(_settings_auto_orbit)
+		mouse_sensitivity = gs.get("mouse_sensitivity")
+		if gs.has_signal("settings_changed") and not gs.settings_changed.is_connected(_apply_settings):
+			gs.settings_changed.connect(_apply_settings)
 	get_viewport().size_changed.connect(_refit_view)
 
 func _refit_view() -> void:
@@ -85,9 +95,13 @@ func _board_screen_rect() -> Rect2:
 	return ResponsiveLayout.battle_metrics(viewport_size)["board_rect"]
 
 func _apply_settings() -> void:
-	mouse_sensitivity = GameSettings.mouse_sensitivity
-	if _settings_auto_orbit != GameSettings.auto_orbit:
-		_settings_auto_orbit = GameSettings.auto_orbit
+	var gs: Node = get_node_or_null("/root/GameSettings")
+	if not gs:
+		return
+	mouse_sensitivity = gs.get("mouse_sensitivity")
+	var new_orbit: bool = bool(gs.get("auto_orbit"))
+	if _settings_auto_orbit != new_orbit:
+		_settings_auto_orbit = new_orbit
 		set_auto_orbit(_settings_auto_orbit)
 
 func cancel_manual_orbit() -> void:
@@ -168,6 +182,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 
 func _process(delta: float) -> void:
+	_update_shake(delta)
 	if entry_active:
 		return
 	if _is_positioning_unit():
@@ -187,9 +202,56 @@ func _process(delta: float) -> void:
 	current_distance = lerpf(current_distance, target_distance, 1.0 - exp(-maxf(zoom_smoothing, 0.1) * delta))
 	_update_transform()
 
+func _update_shake(delta: float) -> void:
+	if _shake_timer > 0.0 and camera:
+		_shake_timer -= delta
+		var damp := clampf(_shake_timer, 0.0, 1.0)
+		camera.h_offset = randf_range(-1.0, 1.0) * _shake_intensity * damp
+		camera.v_offset = randf_range(-1.0, 1.0) * _shake_intensity * damp
+	elif camera and (camera.h_offset != 0.0 or camera.v_offset != 0.0):
+		camera.h_offset = 0.0
+		camera.v_offset = 0.0
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		_manual_orbit = false
+
+func play_boss_sequence(boss_unit: Node3D, on_boss_land: Callable = Callable(), on_minions_enter: Callable = Callable()) -> void:
+	if not is_instance_valid(boss_unit):
+		return
+	entry_active = true
+	_manual_orbit = false
+	var keep_auto_orbit := auto_orbit_enabled
+	reset_view(true)
+	auto_orbit_enabled = keep_auto_orbit
+	var gameplay_pose := camera.global_transform
+	
+	var focus := boss_unit.global_position + Vector3.UP * 0.9
+	var toward_camera := Vector3(sin(_current_yaw), 0.0, cos(_current_yaw))
+	var close_position := focus + (toward_camera * 0.85 + Vector3.UP * 0.48).normalized() * 5.2
+	var close_pose := Transform3D(Basis.IDENTITY, close_position).looking_at(focus, Vector3.UP)
+	
+	var seq := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	seq.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# 1. Zoom in em direção ao boss
+	seq.tween_method(_set_entry_pose.bind(gameplay_pose, close_pose), 0.0, 1.0, 0.8)
+	# 2. Boss surge com impacto
+	if on_boss_land.is_valid():
+		seq.tween_callback(on_boss_land)
+	# 3. Segura o close-up no boss durante o impacto e o shake
+	seq.tween_interval(0.8)
+	# 4. Outras unidades surgem e ambiente muda enquanto a câmera se afasta
+	if on_minions_enter.is_valid():
+		seq.tween_callback(on_minions_enter)
+	# 5. Câmera se afasta voltando à posição normal de gameplay
+	seq.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	seq.tween_method(_set_entry_pose.bind(close_pose, gameplay_pose), 0.0, 1.0, 1.1)
+	
+	await seq.finished
+	camera.transform = Transform3D.IDENTITY
+	entry_active = false
+	_refit_view()
+	_update_transform()
 
 func play_entry(focus_unit: Node3D = null, reveal: Callable = Callable()) -> void:
 	entry_active = true
@@ -266,9 +328,9 @@ func _get_fitted_distance() -> float:
 	var up := backward.cross(right)
 	var fitted_distance := min_zoom
 	# Inclui a altura das cápsulas/rótulos, perspectiva nos cantos do campo e o banco 3D frontal.
-	var half_x := maxf(extents.x * 0.5, 7.2)
-	var z_min := -extents.y * 0.5
-	var z_max := maxf(extents.y * 0.5, 9.6)
+	var half_x := maxf(extents.x * 0.5 + 1.2, 8.5)
+	var z_min := -extents.y * 0.5 - 1.8
+	var z_max := maxf(extents.y * 0.5, 9.8)
 	for x in [-half_x, half_x]:
 		for z in [z_min, z_max]:
 			for y in [0.0, 3.0]:

@@ -281,13 +281,14 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="TopBar" type="Panel" parent="Control" unique_id=2051808828]
+texture_filter = 1
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -340.0
+offset_left = -380.0
 offset_top = 10.0
-offset_right = 340.0
+offset_right = 417.0
 offset_bottom = 66.0
 grow_horizontal = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_top_bar")
@@ -857,6 +858,8 @@ theme_override_font_sizes/normal_font_size = 14
 bbcode_enabled = true
 text = "Nome"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Tooltip_hp" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=2080433627]
 layout_mode = 2
@@ -865,6 +868,8 @@ theme_override_font_sizes/normal_font_size = 12
 bbcode_enabled = true
 text = "HP"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Tooltip_range" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=1485475993]
 layout_mode = 2
@@ -873,6 +878,8 @@ theme_override_font_sizes/normal_font_size = 12
 bbcode_enabled = true
 text = "Alcance"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Tooltip_type" type="RichTextLabel" parent="Control/BottomBar/StatsTooltip/VBoxContainer" unique_id=76565951]
 layout_mode = 2
@@ -881,6 +888,8 @@ theme_override_font_sizes/normal_font_size = 12
 bbcode_enabled = true
 text = "Tipo"
 fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="HealthWidget" type="PanelContainer" parent="Control" unique_id=152244167]
 layout_mode = 1
@@ -891,7 +900,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -211.0
 offset_top = -309.0
-offset_right = -51.0
+offset_right = -32.0
 offset_bottom = -253.0
 grow_horizontal = 0
 grow_vertical = 0
@@ -899,6 +908,8 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_health_widget")
 
 [node name="Content" type="HBoxContainer" parent="Control/HealthWidget" unique_id=98968371]
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 theme_override_constants/separation = 8
 alignment = 1
 
@@ -1024,7 +1035,6 @@ offset_top = 34.0
 offset_right = -29.0
 offset_bottom = -30.0
 grow_horizontal = 2
-grow_vertical = 2
 theme_override_constants/separation = 6
 
 [node name="Name_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=451297752]
@@ -1091,6 +1101,22 @@ vertical_alignment = 1
 layout_mode = 2
 bbcode_enabled = true
 text = "Tipo"
+fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Defense_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=2081943801]
+layout_mode = 2
+bbcode_enabled = true
+text = "Defesa"
+fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Star_scaling_label" type="RichTextLabel" parent="Control/RightBar/VBoxContainer" unique_id=2081943802]
+layout_mode = 2
+bbcode_enabled = true
+text = "Escalonamento"
 fit_content = true
 horizontal_alignment = 1
 vertical_alignment = 1

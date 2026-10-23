@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://cktqg1784gxu5"]
 
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/ipe_amarelo.png" id="2_splash_art"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" uid="uid://cyenlo6fbnh26" path="res://Assets/Units/SplashArts/ipe_amarelo.jpg" id="1_vdawl"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -10,7 +10,7 @@ unit_id = "ipe_amarelo"
 description = "Protetor de linha de frente que amplia as opções de Flora e Cerrado. Planta imóvel: ataca corpo a corpo, a uma casa de alcance. Aura: +10% de dano de ataque aos outros aliados em até 2 hexes; vale apenas a aura mais forte."
 tier = 2
 cost = 2
-icon = ExtResource("2_splash_art")
+icon = ExtResource("1_vdawl")
 max_health = 760.0
 attack_damage = 42.0
 attack_speed = 0.8

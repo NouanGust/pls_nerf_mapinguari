@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://btcehjrk5vkew"]
 
-[ext_resource type="Texture2D" path="res://Assets/Units_teste/MAtinta_pereira.png" id="1_jca3h"]
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_mrs1p"]
+[ext_resource type="Texture2D" uid="uid://k1xtpy0y0qqa" path="res://Assets/Units/SplashArts/matinta_pereira.webp" id="1_jca3h"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_mrs1p"]
 
 [resource]
 script = ExtResource("1_mrs1p")
@@ -15,7 +15,6 @@ icon = ExtResource("1_jca3h")
 max_health = 850.0
 attack_damage = 75.0
 attack_speed = 1.1
-attack_range = 3
 armor = 20.0
 magic_resist = 40.0
 movement_speed = 250.0

@@ -4,8 +4,18 @@ extends CanvasLayer
 const UIStyle = preload("res://Scripts/UI/ui_style.gd")
 const ResponsiveLayout = preload("res://Scripts/UI/responsive_layout.gd")
 const UIAtlasCatalog = preload("res://Scripts/UI/ui_atlas_catalog.gd")
+const BestiaryModal = preload("res://Scripts/UI/bestiary_modal.gd")
 
 signal hud_visibility_changed(is_visible: bool)
+signal synergy_hover_started(synergy_name: String)
+signal synergy_hover_ended()
+signal start_battle_requested()
+
+var start_battle_button: Button
+var bestiary_modal: BestiaryModal
+var bestiary_button: Button
+var _inspected_unit_stats: UnitStats
+var _inspected_unit_star_level: int = 1
 
 @onready var hud: Control = $Control
 @onready var top_bar: Control = $Control/TopBar
@@ -62,7 +72,11 @@ var _synergy_tooltip_origin: Vector2 = Vector2.ZERO
 var _responsive_ready: bool = false
 var _compact_layout: bool = false
 var _inspector_tween: Tween
-var _milestone_icons: Array[Label] = []
+var _milestone_icons: Array[Control] = []
+var _last_player_synergies: Array = []
+
+class MilestoneIcon extends TextureRect:
+	var text: String = "" # Mantido para compatibilidade com testes e leituras
 
 func _ready() -> void:
 	_apply_button_skins()
@@ -70,6 +84,8 @@ func _ready() -> void:
 	_bind_synergy_panel()
 	_setup_milestones()
 	_setup_inspector()
+	_setup_start_battle_button()
+	_setup_bestiary_modal()
 	_responsive_ready = true
 	
 	if toggle_button:
@@ -82,6 +98,24 @@ func _ready() -> void:
 	_cache_panel_positions()
 	_play_hud_transition(true, true)
 
+func _setup_start_battle_button() -> void:
+	if start_battle_button != null:
+		return
+	var content := get_node_or_null("Control/TopBar/Content") as HBoxContainer
+	if content:
+		start_battle_button = Button.new()
+		start_battle_button.name = "StartBattleButton"
+		start_battle_button.text = " INICIAR BATALHA"
+		start_battle_button.icon = UIAtlasCatalog.get_icon_texture("sword")
+		start_battle_button.expand_icon = true
+		start_battle_button.custom_minimum_size = Vector2(160, 28)
+		start_battle_button.tooltip_text = "Iniciar combate imediatamente (ou pressione Espaço)"
+		UIStyle.apply_button_skin(start_battle_button, Color("#2ecc71"))
+		content.add_child(start_battle_button)
+		start_battle_button.pressed.connect(func() -> void:
+			start_battle_requested.emit()
+		)
+
 func _setup_milestones() -> void:
 	if not milestones_container:
 		return
@@ -90,12 +124,17 @@ func _setup_milestones() -> void:
 	_milestone_icons.clear()
 	
 	for i in 5:
-		var marker := Label.new()
-		marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		marker.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		marker.add_theme_font_size_override("font_size", 14 if i < 4 else 16)
-		marker.text = "◆" if i < 4 else "👑"
-		marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var marker := MilestoneIcon.new()
+		marker.name = "Milestone_%d" % (i + 1)
+		marker.custom_minimum_size = Vector2(20, 20)
+		marker.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		marker.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		marker.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		marker.mouse_filter = Control.MOUSE_FILTER_STOP
+		var is_boss := (i == 4)
+		marker.texture = UIAtlasCatalog.get_icon_texture("skull" if is_boss else "gem_orb")
+		marker.modulate = Color(0.35, 0.45, 0.52, 0.45)
+		marker.text = ""
 		milestones_container.add_child(marker)
 		_milestone_icons.append(marker)
 	
@@ -113,7 +152,15 @@ func update_board_capacity(units_on_board: int, board_limit: int) -> void:
 		shop.update_board_capacity(units_on_board, board_limit)
 	if board_count_label:
 		var available := maxi(0, board_limit - units_on_board)
-		board_count_label.text = "NO CAMPO · %d / %d (%d livres)" % [units_on_board, board_limit, available]
+		if available > 0:
+			board_count_label.text = "NO CAMPO · %d / %d (! %d VAGA%s LIVRE%s)" % [
+				units_on_board, board_limit, available, "S" if available > 1 else "", "S" if available > 1 else ""
+			]
+			board_count_label.add_theme_color_override("font_color", Color("#f59e0b"))
+		else:
+			board_count_label.text = "NO CAMPO · %d / %d (CHEIO)" % [units_on_board, board_limit]
+			board_count_label.add_theme_color_override("font_color", Color("#cbd5e1"))
+
 
 func update_round_display(current_round: int, in_combat: bool, time_remaining: float, is_pending: bool, round_outcomes: Dictionary = {}) -> void:
 	# Cálculo de estágio no estilo TFT (1-1, 1-2, 1-3, 1-4, 1-5...)
@@ -153,33 +200,54 @@ func update_round_display(current_round: int, in_combat: bool, time_remaining: f
 		else:
 			timer_label.text = "PREP"
 			timer_label.add_theme_color_override("font_color", UIStyle.TEXT_GOLD)
+
+	# Botão de iniciar batalha
+	if start_battle_button:
+		if in_combat or is_pending:
+			start_battle_button.visible = false
+			start_battle_button.disabled = true
+		else:
+			start_battle_button.visible = true
+			start_battle_button.disabled = false
+			start_battle_button.text = " INICIAR BATALHA"
+			start_battle_button.icon = UIAtlasCatalog.get_icon_texture("sword")
+			start_battle_button.expand_icon = true
+
 	
 	# Marcos de Round (Milestones)
 	if not _milestone_icons.is_empty():
 		var active_step := ((current_round - 1) % 5)
 		for i in _milestone_icons.size():
-			var icon := _milestone_icons[i]
+			var icon := _milestone_icons[i] as MilestoneIcon
 			var is_boss := (i == 4)
 			var round_for_step := (stage_index - 1) * 5 + 1 + i
 			if i < active_step:
 				# Passado (concluído) - Verde para vitórias, vermelho para derrotas
 				var won: bool = round_outcomes.get(round_for_step, true)
-				icon.text = "●" if not is_boss else "★"
-				if won:
-					icon.add_theme_color_override("font_color", Color("#2ecc71"))  # Verde vitória vibrante
-					icon.tooltip_text = "Round %d: Vitória ✓" % round_for_step
+				icon.text = ""
+				if is_boss:
+					icon.texture = UIAtlasCatalog.get_icon_texture("star" if won else "skull")
 				else:
-					icon.add_theme_color_override("font_color", Color("#e74c3c"))  # Vermelho derrota vibrante
-					icon.tooltip_text = "Round %d: Derrota ✕" % round_for_step
+					icon.texture = UIAtlasCatalog.get_button_texture("check" if won else "cross")
+				var col := Color("#2ecc71") if won else Color("#e74c3c")
+				icon.modulate = col
+				icon.add_theme_color_override("font_color", col)
+				icon.tooltip_text = "Round %d: %s" % [round_for_step, "Vitória" if won else "Derrota"]
 			elif i == active_step:
 				# Atual (ativo / em destaque)
-				icon.text = "◆" if not is_boss else "👑"
-				icon.add_theme_color_override("font_color", UIStyle.BORDER_CYAN if in_combat else UIStyle.TEXT_GOLD_BRIGHT)
+				icon.text = ""
+				icon.texture = UIAtlasCatalog.get_icon_texture("skull" if is_boss else "gem_orb")
+				var col := UIStyle.BORDER_CYAN if in_combat else UIStyle.TEXT_GOLD_BRIGHT
+				icon.modulate = col
+				icon.add_theme_color_override("font_color", col)
 				icon.tooltip_text = "Round %d: Em andamento (%s)" % [round_for_step, "Combate" if in_combat else "Preparação"]
 			else:
 				# Futuro
-				icon.text = "○" if not is_boss else "☆"
-				icon.add_theme_color_override("font_color", Color(0.35, 0.45, 0.52, 0.45))
+				icon.text = ""
+				icon.texture = UIAtlasCatalog.get_icon_texture("skull" if is_boss else "gem_orb")
+				var col := Color(0.35, 0.45, 0.52, 0.45)
+				icon.modulate = col
+				icon.add_theme_color_override("font_color", col)
 				icon.tooltip_text = "Round %d: %s" % [round_for_step, "Chefe Regional" if is_boss else "Próximo Combate"]
 
 func update_player_stats(gold: int, health: int, level: int, xp: int, required_xp: int) -> void:
@@ -402,6 +470,7 @@ func set_sell_zone_visible(p_visible: bool) -> void:
 		sell_zone.visible = p_visible
 
 func update_synergies(synergies: Array) -> void:
+	_last_player_synergies = synergies.duplicate()
 	var active_count := 0
 	var ordered := synergies.duplicate()
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -450,7 +519,12 @@ func update_synergies(synergies: Array) -> void:
 			title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		if progress_text:
 			progress_text.add_theme_font_size_override("font_size", 13)
-			progress_text.text = "%s%d/%d" % ["✓ " if is_active else "", synergy.count, synergy.threshold]
+			var stacks: int = int(synergy.get("stacks", 0))
+			var max_stacks: int = int(synergy.get("max_stacks", 0))
+			if max_stacks > 0:
+				progress_text.text = "%d/%d [%d/%dst]" % [synergy.count, synergy.threshold, stacks, max_stacks]
+			else:
+				progress_text.text = "%d/%d" % [synergy.count, synergy.threshold]
 		if progress:
 			progress.max_value = maxi(int(synergy.threshold), 1)
 			progress.value = mini(int(synergy.count), int(synergy.threshold))
@@ -542,29 +616,53 @@ func _ensure_synergy_tooltip() -> void:
 		hud.add_child(synergy_tooltip)
 	if is_instance_valid(synergy_tooltip):
 		synergy_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		synergy_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
-		synergy_tooltip.custom_minimum_size.x = clampf(300.0, 240.0, get_viewport().get_visible_rect().size.x - 30.0)
-		var vbox_node := synergy_tooltip.get_node_or_null("VBoxContainer")
-		if vbox_node:
-			vbox_node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		synergy_tooltip.reset_size()
+		_prepare_synergy_tooltip_layout()
 		synergy_tooltip.hide()
+
+func _prepare_synergy_tooltip_layout(target_width: float = 300.0) -> void:
+	if not is_instance_valid(synergy_tooltip):
+		return
+	var viewport_size := get_viewport().get_visible_rect().size
+	var target_w := clampf(target_width, 240.0, maxf(viewport_size.x - 30.0, 240.0))
+	var inner_w := maxf(target_w - 24.0, 100.0)
+	synergy_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	synergy_tooltip.custom_minimum_size = Vector2(target_w, 0.0)
+	synergy_tooltip.size = Vector2(target_w, 0.0)
+	var vbox := synergy_tooltip.get_node_or_null("VBoxContainer") as VBoxContainer
+	if vbox:
+		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		vbox.custom_minimum_size = Vector2(inner_w, 0.0)
+		vbox.size = Vector2(inner_w, 0.0)
+		for child in vbox.get_children():
+			if child is Control:
+				child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				child.custom_minimum_size = Vector2(inner_w, 0.0)
+				child.size = Vector2(inner_w, 0.0)
+				if child is RichTextLabel:
+					child.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+					child.fit_content = true
+		vbox.reset_size()
+	synergy_tooltip.reset_size()
 
 func _on_synergy_row_hover_started(synergy: Dictionary, row: Control) -> void:
 	_ensure_synergy_tooltip()
 	if not is_instance_valid(synergy_tooltip):
 		return
+	_prepare_synergy_tooltip_layout()
 	_update_synergy_tooltip_content(synergy)
+	_prepare_synergy_tooltip_layout()
 	var panel_global: Vector2 = synergy_panel.global_position if is_instance_valid(synergy_panel) else row.global_position
 	var panel_width: float = synergy_panel.size.x if is_instance_valid(synergy_panel) else row.size.x
 	_synergy_tooltip_origin = Vector2(panel_global.x + panel_width + 12.0, row.global_position.y)
 	_fit_synergy_tooltip(true)
 	synergy_tooltip.show()
 	_fit_synergy_tooltip.call_deferred()
+	synergy_hover_started.emit(str(synergy.get("name", "")))
 
 func _on_synergy_row_hover_ended() -> void:
 	if is_instance_valid(synergy_tooltip):
 		synergy_tooltip.hide()
+	synergy_hover_ended.emit()
 
 func _fit_synergy_tooltip(force: bool = false) -> void:
 	if not is_instance_valid(synergy_tooltip):
@@ -572,12 +670,7 @@ func _fit_synergy_tooltip(force: bool = false) -> void:
 	if not force and not synergy_tooltip.visible:
 		return
 	var viewport_size := get_viewport().get_visible_rect().size
-	synergy_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	synergy_tooltip.custom_minimum_size.x = clampf(300.0, 240.0, viewport_size.x - 30.0)
-	var vbox := synergy_tooltip.get_node_or_null("VBoxContainer")
-	if vbox:
-		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	synergy_tooltip.reset_size()
+	_prepare_synergy_tooltip_layout()
 	ResponsiveLayout.clamp_popup(synergy_tooltip, _synergy_tooltip_origin, viewport_size)
 
 func _update_synergy_tooltip_content(synergy: Dictionary) -> void:
@@ -595,10 +688,11 @@ func _update_synergy_tooltip_content(synergy: Dictionary) -> void:
 	var count: int = int(synergy.get("count", 0))
 	var threshold: int = int(synergy.get("threshold", 1))
 	var cat_color := "#74e6f5" if str(synergy.get("category", "")) == "Origem" else "#ffd16b"
+	var tag_name: String = str(synergy.get("name", "Sinergia"))
 
 	if title_lbl:
 		title_lbl.text = "[b][color=#f5da80]%s[/color][/b] [color=%s]· %s[/color]" % [
-			str(synergy.get("name", "Sinergia")),
+			tag_name,
 			cat_color,
 			str(synergy.get("category", "Sinergia"))
 		]
@@ -606,10 +700,10 @@ func _update_synergy_tooltip_content(synergy: Dictionary) -> void:
 	if status_lbl:
 		var status_text: String
 		if is_active:
-			status_text = "[color=#2ecc71]● Ativa[/color] [color=#c5ddff](%d/%d)[/color]" % [count, threshold]
+			status_text = "[color=#2ecc71]Ativa[/color] [color=#c5ddff](%d/%d)[/color]" % [count, threshold]
 		else:
 			var needed := maxi(threshold - count, 0)
-			status_text = "[color=#e74c3c]○ Inativa[/color] [color=#8fa3b0](faltam %d peça%s · %d/%d)[/color]" % [
+			status_text = "[color=#e74c3c]Inativa[/color] [color=#8fa3b0](faltam %d peça%s · %d/%d)[/color]" % [
 				needed, "s" if needed > 1 else "", count, threshold
 			]
 		var thresholds: Array = synergy.get("thresholds", [])
@@ -625,8 +719,28 @@ func _update_synergy_tooltip_content(synergy: Dictionary) -> void:
 		status_lbl.text = status_text
 
 	if desc_lbl:
-		var desc: String = str(synergy.get("description", ""))
-		desc_lbl.text = "[color=#ffd32a]Efeito:[/color] %s" % (desc if not desc.is_empty() else "Nenhum bônus adicional.")
+		var rule := SynergySystem.get_rule_for_tag(tag_name)
+		var text_lines: Array[String] = []
+		if not rule.is_empty() and rule.has("effects"):
+			var rule_thresholds: Array = rule.get("thresholds", [])
+			var rule_effects: Array = rule.get("effects", [])
+			for i in rule_thresholds.size():
+				var t_val := int(rule_thresholds[i])
+				var eff_text := str(rule_effects[i].get("text", "")) if i < rule_effects.size() else ""
+				if count >= t_val:
+					text_lines.append("[b][color=#2ecc71](%d) %s[/color][/b]" % [t_val, eff_text])
+				else:
+					text_lines.append("[color=#94a3b8](%d) %s[/color]" % [t_val, eff_text])
+		else:
+			var desc: String = str(synergy.get("description", ""))
+			text_lines.append(desc if not desc.is_empty() else "Nenhum bônus adicional.")
+
+		var stacks: int = int(synergy.get("stacks", 0))
+		var max_stacks: int = int(synergy.get("max_stacks", 0))
+		if max_stacks > 0:
+			text_lines.append("[color=#ffd16b]Acúmulos Atuais:[/color] [b]%d / %d[/b] [color=#94a3b8](limite máximo)[/color]" % [stacks, max_stacks])
+
+		desc_lbl.text = "[color=#ffd32a]Efeitos e Bônus:[/color]\n%s" % "\n".join(text_lines)
 
 	if units_lbl:
 		var units: Array = synergy.get("units", [])
@@ -761,7 +875,8 @@ func _layout_extra_panels() -> void:
 		ResponsiveLayout.place(sell_zone, Rect2((viewport_size.x - 280.0) * 0.5, shop_top - 68.0, 280.0, 56.0))
 	
 	# 9. Inspetor Lateral
-	ResponsiveLayout.place(right_bar, Rect2(viewport_size.x - 290.0, 70.0, 280.0, maxf(shop_top - 80.0, 100.0)))
+	var inspector_w := minf(310.0, viewport_size.x - 20.0)
+	ResponsiveLayout.place(right_bar, Rect2(viewport_size.x - inspector_w - 10.0, 70.0, inspector_w, maxf(shop_top - 80.0, 100.0)))
 	var close_btn := right_bar.get_node_or_null("CloseButton") as Button
 	if close_btn:
 		close_btn.position = Vector2(right_bar.size.x - 34.0, 8.0)
@@ -780,19 +895,118 @@ func _setup_inspector() -> void:
 	panel_style.shadow_size = 8
 	right_bar.add_theme_stylebox_override("panel", panel_style)
 	
+	var frame := right_bar.get_node_or_null("PanelFrame") as CanvasItem
+	if frame:
+		frame.visible = false
+	var vbox := right_bar.find_child("VBoxContainer", true, false) as Control
+	if vbox:
+		vbox.grow_vertical = Control.GROW_DIRECTION_END
+		vbox.offset_left = 14.0
+		vbox.offset_top = 14.0
+		vbox.offset_right = -14.0
+		vbox.offset_bottom = -14.0
+		
+		bestiary_button = right_bar.find_child("BestiaryButton", true, false) as Button
+		if not bestiary_button:
+			bestiary_button = Button.new()
+			bestiary_button.name = "BestiaryButton"
+			bestiary_button.text = " Ver no Bestiário"
+			bestiary_button.icon = UIAtlasCatalog.get_icon_texture("scroll_horn")
+			bestiary_button.expand_icon = true
+			bestiary_button.custom_minimum_size = Vector2(0, 36)
+			UIStyle.apply_button_skin(bestiary_button, UIStyle.BORDER_GOLD)
+			bestiary_button.pressed.connect(open_bestiary_inspected)
+			vbox.add_child(bestiary_button)
+			vbox.move_child(bestiary_button, -1)
+	
 	var close_btn := right_bar.get_node_or_null("CloseButton") as Button
 	if not close_btn:
 		close_btn = Button.new()
 		close_btn.name = "CloseButton"
-		close_btn.text = "✕"
+		close_btn.icon = UIAtlasCatalog.get_button_texture("cross")
+		close_btn.expand_icon = true
+		close_btn.text = ""
 		close_btn.custom_minimum_size = Vector2(26.0, 26.0)
 		close_btn.size = Vector2(26.0, 26.0)
 		close_btn.position = Vector2(right_bar.size.x - 34.0, 8.0)
 		UIStyle.apply_button_skin(close_btn, UIStyle.BORDER_SLATE)
 		close_btn.pressed.connect(hide_inspector)
 		right_bar.add_child(close_btn)
+	else:
+		close_btn.icon = UIAtlasCatalog.get_button_texture("cross")
+		close_btn.expand_icon = true
+		close_btn.text = ""
 	close_btn.z_index = 5
 	right_bar.move_child(close_btn, -1)
+
+	var origins_lbl := right_bar.find_child("Origins_label", true, false) as RichTextLabel
+	if origins_lbl and not origins_lbl.meta_hover_started.is_connected(_on_inspector_meta_hover_started):
+		origins_lbl.meta_hover_started.connect(_on_inspector_meta_hover_started.bind(origins_lbl))
+		origins_lbl.meta_hover_ended.connect(_on_inspector_meta_hover_ended)
+
+	var classes_lbl := right_bar.find_child("Classes_label", true, false) as RichTextLabel
+	if classes_lbl and not classes_lbl.meta_hover_started.is_connected(_on_inspector_meta_hover_started):
+		classes_lbl.meta_hover_started.connect(_on_inspector_meta_hover_started.bind(classes_lbl))
+		classes_lbl.meta_hover_ended.connect(_on_inspector_meta_hover_ended)
+
+func _on_inspector_meta_hover_started(meta: Variant, source_label: Control) -> void:
+	var tag_name := str(meta)
+	var rule := SynergySystem.get_rule_for_tag(tag_name)
+	if rule.is_empty():
+		return
+	
+	_ensure_synergy_tooltip()
+	if not is_instance_valid(synergy_tooltip):
+		return
+	
+	var current_syn := _find_player_synergy_by_name(tag_name)
+	var count := int(current_syn.get("count", 0))
+	var tier_index := -1
+	for i in rule.thresholds.size():
+		if count >= int(rule.thresholds[i]):
+			tier_index = i
+	var display_tier := maxi(tier_index, 0)
+	var effect: Dictionary = rule.effects[display_tier] if display_tier < rule.effects.size() else rule.effects[0]
+	var next_threshold := int(rule.thresholds.back())
+	for threshold in rule.thresholds:
+		if count < int(threshold):
+			next_threshold = int(threshold)
+			break
+	
+	var syn_data := {
+		"name": tag_name,
+		"category": "Origem" if str(rule.get("field", "")) == "origins" else "Classe",
+		"count": count,
+		"threshold": next_threshold,
+		"thresholds": rule.thresholds.duplicate(),
+		"active": tier_index >= 0,
+		"description": effect.text,
+		"units": current_syn.get("units", []),
+		"stacks": current_syn.get("stacks", 0),
+		"max_stacks": int(rule.get("max_stacks", 0)),
+	}
+	_prepare_synergy_tooltip_layout()
+	_update_synergy_tooltip_content(syn_data)
+	_prepare_synergy_tooltip_layout()
+	
+	var panel_global: Vector2 = right_bar.global_position if is_instance_valid(right_bar) else source_label.global_position
+	_synergy_tooltip_origin = Vector2(panel_global.x - 315.0, source_label.global_position.y)
+	_fit_synergy_tooltip(true)
+	synergy_tooltip.show()
+	_fit_synergy_tooltip.call_deferred()
+	
+	synergy_hover_started.emit(tag_name)
+
+func _on_inspector_meta_hover_ended(_meta: Variant = null) -> void:
+	if is_instance_valid(synergy_tooltip):
+		synergy_tooltip.hide()
+	synergy_hover_ended.emit()
+
+func _find_player_synergy_by_name(tag_name: String) -> Dictionary:
+	for syn in _last_player_synergies:
+		if str(syn.get("name", "")) == tag_name:
+			return syn
+	return {}
 
 func show_inspector() -> void:
 	if not right_bar:
@@ -809,6 +1023,9 @@ func show_inspector() -> void:
 	_inspector_tween.tween_property(right_bar, "position", destination, 0.25)
 
 func hide_inspector(immediate: bool = false) -> void:
+	if is_instance_valid(synergy_tooltip):
+		synergy_tooltip.hide()
+	synergy_hover_ended.emit()
 	if not right_bar or not right_bar.visible:
 		return
 	if _inspector_tween and _inspector_tween.is_running():
@@ -822,3 +1039,22 @@ func hide_inspector(immediate: bool = false) -> void:
 	_inspector_tween.set_ease(Tween.EASE_IN)
 	_inspector_tween.tween_property(right_bar, "position:x", viewport_w + 20.0, 0.2)
 	_inspector_tween.tween_callback(right_bar.hide)
+
+func _setup_bestiary_modal() -> void:
+	if not is_instance_valid(bestiary_modal):
+		bestiary_modal = BestiaryModal.new()
+		add_child(bestiary_modal)
+
+func set_inspected_unit_data(stats: UnitStats, star_level: int = 1) -> void:
+	_inspected_unit_stats = stats
+	_inspected_unit_star_level = star_level
+
+func open_bestiary_inspected() -> void:
+	if _inspected_unit_stats:
+		open_bestiary(_inspected_unit_stats, _inspected_unit_star_level)
+
+func open_bestiary(stats: UnitStats, star_level: int = 1) -> void:
+	if not is_instance_valid(bestiary_modal):
+		_setup_bestiary_modal()
+	if is_instance_valid(bestiary_modal):
+		bestiary_modal.open_for_unit(stats, star_level)

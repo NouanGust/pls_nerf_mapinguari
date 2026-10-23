@@ -17,4 +17,8 @@ data_*/
 mono_crash.*.json
 
 # Pacotes locais de publicação
-builds/
+Builds/
+Build/
+
+# Configurações de agentes / IDE locais
+.agents/

@@ -160,6 +160,10 @@ func get_cell(grid_pos: Vector2i) -> bool:
 	return grid_pos.x >= 0 and grid_pos.x < columns and grid_pos.y >= 0 and grid_pos.y < rows
 
 
+func is_valid_cell(grid_pos: Vector2i) -> bool:
+	return get_cell(grid_pos)
+
+
 func get_cell_world_position(grid_pos: Vector2i) -> Vector3:
 	var extents := get_board_extents()
 	var x := -extents.x * 0.5 + get_hex_radius() + grid_pos.x * get_horizontal_pitch()
@@ -222,6 +226,7 @@ func place_unit(unit: Node3D, grid_pos: Vector2i, animate: bool = true) -> bool:
 	if unit is BaseUnit3D:
 		unit.board_position = grid_pos
 		unit.cell_reference = null
+		unit._update_status_visibility()
 	units_on_board[grid_pos] = unit
 	if unit is BaseUnit3D and not unit.died.is_connected(_on_unit_died):
 		unit.died.connect(_on_unit_died)

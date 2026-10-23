@@ -50,6 +50,7 @@ var dragging_unit: BaseUnit3D = null
 var combat_report_entries: Dictionary = {}
 var active_synergies: Dictionary = {}
 var battle_time_remaining: float = 0.0
+var cutscene_in_progress: bool = false
 
 
 @export var gold_on_win: int = 2
@@ -72,6 +73,7 @@ func _ready() -> void:
 		_entry_in_progress = true
 		ui.hide()
 		camera.entry_active = true
+	_bind_ui_signals()
 	print("\n" + "=".repeat(50))
 	print("FOLCHESS - PROTÓTIPO")
 	print("=".repeat(50) + "\n")
@@ -88,6 +90,7 @@ func _ready() -> void:
 	if board:
 		board.apply_region_environment(region_id)
 		print("\nBoard hexagonal pronto: %d × %d\n" % [board.rows, board.columns])
+	AudioManager.play_region_music(region_id)
 	
 	# Aguardar navigation
 	if nav_region:
@@ -121,11 +124,14 @@ func _ready() -> void:
 			return
 	else:
 		spawn_enemy_team()
+	_update_round_atmosphere(0.0)
 	_run_ready = true
 	update_ui()
 	_save_campaign()
 	if _entry_in_progress:
 		await _play_battle_entry(not slot.is_empty() or current_round > 1)
+	if is_boss_round() and not _load_failed:
+		_play_boss_cutscene()
 	
 	print("\n" + "=".repeat(50))
 	print("CONTROLES:")
@@ -214,6 +220,8 @@ func setup_shop_system() -> void:
 	if bench_ui:
 		bench_ui.unit_drag_started.connect(_on_bench_unit_drag_started)
 	
+	_bind_ui_signals()
+
 	shop_system.unit_purchased.connect(_on_unit_purchased)
 	
 	setup_drag_handler()
@@ -269,7 +277,7 @@ func _on_bench_unit_drag_started(slot_index: int) -> void:
 	})
 
 func _on_unit_placed_on_bench(unit: BaseUnit3D, source: String, _source_index: int) -> void:
-	if combat_active or round_resolution_pending or not unit:
+	if not unit:
 		return
 	if add_unit_to_bench(unit):
 		AudioManager.play_move_unit()
@@ -295,10 +303,10 @@ func _on_shop_unit_drag_requested(unit_stats: UnitStats, slot_index: int) -> voi
 
 
 func _purchase_shop_unit(unit_stats: UnitStats, slot_index: int, start_dragging: bool) -> void:
-	if round_resolution_pending or (drag_handler and drag_handler.is_dragging):
+	if drag_handler and drag_handler.is_dragging:
 		return
-	# Durante a luta toda compra ocupa uma vaga do banco, inclusive por arraste.
-	if combat_active:
+	# Durante a luta ou resolução de round toda compra ocupa uma vaga do banco.
+	if combat_active or round_resolution_pending:
 		start_dragging = false
 	
 	print("Selecionado: %s (Tier %d) - Custo: %dg" % [
@@ -323,6 +331,7 @@ func _purchase_shop_unit(unit_stats: UnitStats, slot_index: int, start_dragging:
 		return
 	player_gold -= purchased_unit.cost
 	AudioManager.play_buy()
+	AudioManager.stop_evol_hint_shop()
 	var unit_instance: BaseUnit3D = spawn_unit_for_drag(purchased_unit)
 	if not unit_instance:
 		player_gold += purchased_unit.cost
@@ -364,10 +373,14 @@ func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: Stri
 			_realign_bench_units()
 		elif source == "board":
 			board.place_unit(unit, unit.board_position, true)
-		else:
-			player_gold += unit.stats.cost
-			unit.queue_free()
+		elif source == "shop":
+			if not add_unit_to_bench(unit):
+				player_gold += unit.stats.cost
+				unit.queue_free()
+			else:
+				_resolve_unit_merges()
 		dragging_unit = null
+		update_ui()
 		return
 
 	if unit.team == 0 and get_player_units_on_board_count() >= get_board_unit_limit():
@@ -380,9 +393,12 @@ func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: Stri
 		else:
 			if source == "board":
 				board.place_unit(unit, unit.board_position, true)
-			else:
-				player_gold += unit.stats.cost
-				unit.queue_free()
+			elif source == "shop":
+				if not add_unit_to_bench(unit):
+					player_gold += unit.stats.cost
+					unit.queue_free()
+				else:
+					_resolve_unit_merges()
 		dragging_unit = null
 		update_ui()
 		return
@@ -406,17 +422,17 @@ func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: Stri
 			_realign_bench_units()
 		elif source == "board":
 			board.place_unit(unit, unit.board_position, true)
-		else:
-			player_gold += unit.stats.cost
-			unit.queue_free()
+		elif source == "shop":
+			if not add_unit_to_bench(unit):
+				player_gold += unit.stats.cost
+				unit.queue_free()
+			else:
+				_resolve_unit_merges()
 		dragging_unit = null
 		update_ui()
 	
 
 func _on_reroll_requested() -> void:
-	if round_resolution_pending:
-		return
-	
 	if player_gold < shop_system.reroll_cost:
 		AudioManager.play_fail()
 		print("Gold insuficiente para reroll! Precisa: %d" % shop_system.reroll_cost)
@@ -424,13 +440,18 @@ func _on_reroll_requested() -> void:
 	
 	player_gold -= shop_system.reroll_cost
 	AudioManager.play_ui_click()
+	AudioManager.stop_evol_hint_shop()
 	_refresh_shop()
 	update_ui()
 	print("Loja rerolada! (-%dg)" % shop_system.reroll_cost)
 
+func _on_reroll_button_pressed() -> void:
+	_on_reroll_requested()
+
 func _on_lock_toggled(is_locked: bool) -> void:
 	shop_system.lock_shop(is_locked)
 	_schedule_save()
+
 
 func _on_unit_purchased(unit_stats: UnitStats, cost: int) -> void:
 	print("%s comprado por %dg!" % [unit_stats.unit_name, cost])
@@ -451,6 +472,8 @@ func add_unit_to_bench(unit: BaseUnit3D) -> bool:
 	unit.debug_movement = false
 	unit.use_navigation = false
 	unit.rotation.y = 0.0
+	unit.set_hovered(false)
+	unit._update_status_visibility()
 	_realign_bench_units()
 	
 	print("%s enviado para o banco (%d/%d)" % [unit.stats.unit_name, bench_units.size(), max_bench_size])
@@ -465,6 +488,7 @@ func _realign_bench_units(animate: bool = true) -> void:
 		u.team = 0
 		u.board_position = Vector2i(i, -1)
 		u.rotation.y = 0.0
+		u._update_status_visibility()
 		var target_pos := board.get_bench_slot_world_position(i)
 		if animate and is_inside_tree():
 			var tween := create_tween()
@@ -693,14 +717,187 @@ func spawn_and_place(unit_id: String, grid_pos: Vector2i, stars: int, team_id: i
 	else:
 		print("Failed to spawn: %s" % unit_id)
 	return null
+func _auto_deploy_bench_units() -> void:
+	if not board or bench_units.is_empty():
+		return
+	var free_slots := get_board_unit_limit() - get_player_units_on_board_count()
+	if free_slots <= 0:
+		return
+	
+	var free_cells: Array[Vector2i] = []
+	for row in range(board.rows - 1, board.rows - board.player_rows - 1, -1):
+		for col in range(board.columns):
+			var cell := Vector2i(col, row)
+			if not board.is_cell_occupied(cell):
+				free_cells.append(cell)
+	
+	var deployed_count := 0
+	while deployed_count < free_slots and not bench_units.is_empty() and not free_cells.is_empty():
+		var unit: BaseUnit3D = bench_units.pop_front()
+		if not is_instance_valid(unit):
+			continue
+		var target_cell: Vector2i = free_cells.pop_front()
+		unit.visible = true
+		unit.team = 0
+		unit.use_navigation = true
+		if not unit.is_in_group("player_units"):
+			unit.add_to_group("player_units")
+		if board.place_unit(unit, target_cell, true):
+			unit.board_position = target_cell
+			deployed_count += 1
+		else:
+			bench_units.push_front(unit)
+			break
+	
+	if deployed_count > 0:
+		_realign_bench_units(false)
+		_resolve_unit_merges()
+		update_ui()
+
+func is_boss_round() -> bool:
+	if current_round % 5 == 0:
+		return true
+	if not is_inside_tree() or not get_tree():
+		return false
+	for enemy in get_tree().get_nodes_in_group("enemy_units"):
+		if enemy is BaseUnit3D and (enemy.star_level >= 3 or (enemy.stats and enemy.stats.tier >= 5)):
+			return true
+	return false
+
+func _update_round_atmosphere(duration: float = 1.2) -> void:
+	if not board:
+		return
+	var target_env: WorldEnvironment = board.get_node_or_null("WorldEnvironment")
+	if not target_env and board.get_parent():
+		target_env = board.get_parent().get_node_or_null("WorldEnvironment")
+	if not target_env:
+		target_env = board.find_child("WorldEnvironment", true, false)
+	var target_sun: DirectionalLight3D = board.get_node_or_null("DirectionalLight3D")
+	if not target_sun and board.get_parent():
+		target_sun = board.get_parent().find_child("DirectionalLight3D", true, false)
+
+	if is_boss_round():
+		RegionEnvironment.apply_boss_atmosphere(target_env, target_sun, region_id, duration)
+	else:
+		board.apply_region_environment(region_id, duration)
+
+func _find_strongest_enemy() -> BaseUnit3D:
+	if not is_inside_tree() or not get_tree():
+		return null
+	var enemies: Array = get_tree().get_nodes_in_group("enemy_units")
+	var enemy_units: Array[BaseUnit3D] = []
+	for e in enemies:
+		if e is BaseUnit3D and is_instance_valid(e) and not e.is_queued_for_deletion():
+			enemy_units.append(e)
+	if enemy_units.is_empty():
+		return null
+	enemy_units.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+		var tier_a := a.stats.tier if a.stats else 1
+		var tier_b := b.stats.tier if b.stats else 1
+		if tier_a != tier_b:
+			return tier_a > tier_b
+		if a.star_level != b.star_level:
+			return a.star_level > b.star_level
+		var hp_a := a.get_max_health()
+		var hp_b := b.get_max_health()
+		return hp_a > hp_b
+	)
+	return enemy_units[0]
+
+func _play_boss_cutscene() -> void:
+	var boss := _find_strongest_enemy()
+	if not is_instance_valid(boss):
+		_update_round_atmosphere(1.5)
+		return
+	
+	cutscene_in_progress = true
+	if drag_handler:
+		drag_handler.interaction_enabled = false
+		drag_handler.board_interaction_enabled = false
+	if ui and ui.start_battle_button:
+		ui.start_battle_button.disabled = true
+
+	# Ocultar lacaios temporariamente
+	var minions: Array[BaseUnit3D] = []
+	for e in get_tree().get_nodes_in_group("enemy_units"):
+		if e is BaseUnit3D and is_instance_valid(e) and e != boss:
+			e.visible = false
+			minions.append(e)
+
+	# Posicionar o chefe no alto para o impacto
+	boss.visible = true
+	if boss.ui_sprite:
+		boss.ui_sprite.visible = false
+	if boss.model:
+		boss.model.position.y = 4.5
+
+	var on_boss_land := func() -> void:
+		if not is_instance_valid(boss):
+			return
+		if boss.model:
+			var fall_tw := create_tween()
+			fall_tw.tween_property(boss.model, "position:y", 0.0, 0.26).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			await fall_tw.finished
+			if not is_instance_valid(boss):
+				return
+			var squash_tw := create_tween()
+			squash_tw.tween_property(boss.model, "scale", boss.model_base_scale * Vector3(1.4, 0.45, 1.4), 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			squash_tw.tween_property(boss.model, "scale", boss.model_base_scale * Vector3(0.9, 1.25, 0.9), 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			squash_tw.tween_property(boss.model, "scale", boss.model_base_scale, 0.14).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		
+		if camera and camera.has_method("shake"):
+			camera.shake(0.65, 0.75)
+		AudioManager.play_3_star_up()
+		AudioManager.play_melee_hit()
+		CombatFeedback.create_hit_particles(boss.global_position, Color("#ef4444"))
+		CombatFeedback.create_hit_particles(boss.global_position + Vector3(0.6, 0.0, 0.0), Color("#f59e0b"))
+		CombatFeedback.create_hit_particles(boss.global_position + Vector3(-0.6, 0.0, 0.0), Color("#f59e0b"))
+		var boss_name: String = boss.stats.unit_name if boss.stats else "CHEFE"
+		CombatFeedback.create_status_indicator(boss, "CHEFE: %s" % boss_name.to_upper(), 1.6)
+		if boss.ui_sprite:
+			boss.ui_sprite.visible = true
+
+	var on_minions_enter := func() -> void:
+		_update_round_atmosphere(1.4)
+		for i in minions.size():
+			var minion := minions[i]
+			if not is_instance_valid(minion):
+				continue
+			get_tree().create_timer(i * 0.09).timeout.connect(func() -> void:
+				if not is_instance_valid(minion):
+					return
+				minion.visible = true
+				if minion.model:
+					minion.model.position.y = 1.6
+					var m_tw := create_tween()
+					m_tw.tween_property(minion.model, "position:y", 0.0, 0.22).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+				CombatFeedback.create_hit_particles(minion.global_position, Color("#a855f7"))
+			)
+
+	if camera and camera.has_method("play_boss_sequence"):
+		await camera.play_boss_sequence(boss, on_boss_land, on_minions_enter)
+	else:
+		on_boss_land.call()
+		on_minions_enter.call()
+	
+	cutscene_in_progress = false
+	if drag_handler:
+		drag_handler.interaction_enabled = true
+		drag_handler.board_interaction_enabled = true
+	if ui and ui.start_battle_button:
+		ui.start_battle_button.disabled = false
+	update_ui()
+
 func start_combat() -> void:
-	if not _run_ready or _entry_in_progress or combat_active or round_resolution_pending:
-		print("Combate já está ativo!")
+	if not _run_ready or _entry_in_progress or combat_active or round_resolution_pending or cutscene_in_progress:
+		print("Combate já está ativo ou cutscene em andamento!")
 		return
 	if drag_handler and drag_handler.is_dragging:
 		drag_handler.cancel_drag()
 		dragging_unit = null
 		update_ui()
+	AudioManager.stop_evol_hint_shop()
+	_auto_deploy_bench_units()
 	_refresh_synergies()
 	
 	combat_active = true
@@ -712,6 +909,10 @@ func start_combat() -> void:
 	print("COMBATE INICIADO!")
 	print("=".repeat(50) + "\n")
 	
+	if is_boss_round():
+		if camera and camera.has_method("shake"):
+			camera.shake(0.2, 0.3)
+
 	var units: Array = board.get_all_units()
 	_capture_combat_roster(units)
 	for unit in units:
@@ -939,6 +1140,10 @@ func prepare_next_round() -> void:
 		drag_handler.board_interaction_enabled = true
 	_refresh_shop()
 	spawn_enemy_team()
+	if is_boss_round():
+		_play_boss_cutscene()
+	else:
+		_update_round_atmosphere(1.5)
 	update_ui()
 	print("Novo round")
 
@@ -967,7 +1172,7 @@ func update_ui() -> void:
 			" · ".join(stars_text), Regions.FORMATION_NAMES[Regions.get_formation_index(region_id, shown_round)]]
 	var xp_button := ui.get_node_or_null("Control/BottomBar/ControlsContainer/BuyXPButton") as Button
 	if xp_button and shop_system:
-		xp_button.disabled = round_resolution_pending or player_level >= Progression.MAX_LEVEL or player_gold < shop_system.xp_cost
+		xp_button.disabled = player_level >= Progression.MAX_LEVEL or player_gold < shop_system.xp_cost
 		xp_button.text = "Nível máximo" if player_level >= Progression.MAX_LEVEL else "+4 XP · 4g"
 		xp_button.tooltip_text = "Limite de 9 peças alcançado" if player_level >= Progression.MAX_LEVEL else "Comprar 4 XP por 4 de ouro (Q). +2 XP gratuitos ao final de cada round."
 	var board_count_label: Label = ui.get_node_or_null("Control/BoardCountLabel")
@@ -1049,16 +1254,11 @@ func _input(event: InputEvent) -> void:
 		return
 	if not _run_ready or _leaving or not shop_system or (_overlay and _overlay.is_open):
 		return
-	if round_resolution_pending:
-		if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
-			_open_pause()
-			get_viewport().set_input_as_handled()
-		return
 	# Consome pressão, repetição e soltura antes de o botão focado receber
 	# ui_accept. Enter continua disponível para navegação na interface.
 	if event is InputEventKey and event.keycode == KEY_SPACE:
 		get_viewport().set_input_as_handled()
-		if event.pressed and not event.echo and not combat_active:
+		if event.pressed and not event.echo and not combat_active and not round_resolution_pending and not cutscene_in_progress:
 			start_combat()
 		return
 	
@@ -1097,7 +1297,7 @@ func _input(event: InputEvent) -> void:
 			inspect_unit_at_mouse(event.position)
 
 func buy_xp() -> void:
-	if not shop_system or round_resolution_pending or player_level >= Progression.MAX_LEVEL:
+	if not shop_system or player_level >= Progression.MAX_LEVEL:
 		return
 	if player_gold < shop_system.xp_cost:
 		AudioManager.play_fail()
@@ -1110,14 +1310,19 @@ func buy_xp() -> void:
 	var progress := Progression.gain_xp(player_level, player_xp, Progression.PURCHASE_XP)
 	player_level = progress.x
 	player_xp = progress.y
+	if player_level > previous_level:
+		AudioManager.play_player_level_up()
 	# A loja não é mais rerrolada ao subir de nível
 	
 	update_ui()
 
 func _grant_round_xp() -> void:
+	var prev_lvl := player_level
 	var player_progress := Progression.gain_xp(player_level, player_xp, Progression.ROUND_XP)
 	player_level = player_progress.x
 	player_xp = player_progress.y
+	if player_level > prev_lvl:
+		AudioManager.play_player_level_up()
 
 #func _process(_delta: float) -> void:
 	## Atualizar debug info
@@ -1134,9 +1339,6 @@ func _grant_round_xp() -> void:
 		#debug_label.text += "Combat: %s\n" % ("YES" if combat_active else "NO")
 		#debug_label.text += "FPS: %d" % Engine.get_frames_per_second()
 		
-
-func _on_reroll_button_pressed() -> void:
-	_on_reroll_requested()
 
 func _on_lock_button_pressed() -> void:
 	_on_lock_toggled(not shop_system.is_shop_locked)
@@ -1168,6 +1370,39 @@ func inspect_unit_at_mouse(mouse_pos: Vector2) -> void:
 	else:
 		hide_unit_inspector()
 
+func _format_star_trio(v1: Variant, v2: Variant, v3: Variant, active_star: int, suffix: String = "", prefix: String = "") -> String:
+	var s1 := "%s%s%s" % [prefix, str(v1), suffix]
+	var s2 := "%s%s%s" % [prefix, str(v2), suffix]
+	var s3 := "%s%s%s" % [prefix, str(v3), suffix]
+	match active_star:
+		1:
+			s1 = "[b][color=#ffd16b]%s[/color][/b]" % s1
+		2:
+			s2 = "[b][color=#ffd16b]%s[/color][/b]" % s2
+		3, 4:
+			s3 = "[b][color=#ffd16b]%s[/color][/b]" % s3
+	return "%s / %s / %s" % [s1, s2, s3]
+
+func _get_or_create_inspector_label(panel: Node, label_name: String, insert_before_name: String = "") -> RichTextLabel:
+	var lbl = panel.find_child(label_name, true, false) as RichTextLabel
+	if not lbl:
+		var vbox = panel.find_child("VBoxContainer", true, false)
+		if vbox:
+			lbl = RichTextLabel.new()
+			lbl.name = label_name
+			lbl.bbcode_enabled = true
+			lbl.fit_content = true
+			lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			lbl.scroll_active = false
+			if not insert_before_name.is_empty():
+				var target_child = vbox.find_child(insert_before_name, false, false)
+				if target_child:
+					vbox.add_child(lbl)
+					vbox.move_child(lbl, target_child.get_index())
+					return lbl
+			vbox.add_child(lbl)
+	return lbl
+
 func show_unit_inspector(unit: BaseUnit3D) -> void:
 	if not is_instance_valid(unit) or not unit.stats or not ui:
 		return
@@ -1178,43 +1413,183 @@ func show_unit_inspector(unit: BaseUnit3D) -> void:
 	
 	var name_lbl = panel.find_child("Name_label", true, false)
 	if name_lbl:
-		name_lbl.text = "[b]%s[/b] [color=#f1c40f]%s[/color] [color=#95a5a6](Tier %d)[/color]" % [stats.unit_name, "★".repeat(unit.star_level), stats.tier]
+		name_lbl.text = "[b]%s[/b] [color=#95a5a6](Tier %d · %dg)[/color]" % [
+			stats.unit_name, stats.tier, stats.cost
+		]
+		var star_box = panel.find_child("InspectorStarBox", true, false) as HBoxContainer
+		if not star_box:
+			star_box = HBoxContainer.new()
+			star_box.name = "InspectorStarBox"
+			star_box.alignment = BoxContainer.ALIGNMENT_CENTER
+			star_box.add_theme_constant_override("separation", 3)
+			name_lbl.get_parent().add_child(star_box)
+			name_lbl.get_parent().move_child(star_box, name_lbl.get_index() + 1)
+		for child in star_box.get_children():
+			child.queue_free()
+		var stars_count: int = clampi(unit.star_level, 1, 4)
+		for s in range(stars_count):
+			var star_icon := UIAtlasCatalog.create_icon_rect("star", Vector2(16, 16))
+			if stars_count >= 3:
+				star_icon.modulate = Color("#fbbf24")
+			elif stars_count == 2:
+				star_icon.modulate = Color("#e2e8f0")
+			else:
+				star_icon.modulate = Color("#cd7f32")
+			star_box.add_child(star_icon)
 	
 	var img = panel.find_child("Image_container", true, false) as TextureRect
 	if img:
 		img.texture = stats.icon
 	
+	# 1. Vida (Atual / Máxima + Bônus)
 	var hp_lbl = panel.find_child("Hp_label", true, false)
 	if hp_lbl:
-		hp_lbl.text = "[color=#2ecc71]VIDA[/color]  [b]%d[/b] / %d" % [int(unit.current_health), int(unit.get_max_health())]
+		var cur_hp := int(unit.current_health)
+		var max_hp := int(unit.get_max_health())
+		var hp_extra := ""
+		if float(unit.synergy_bonuses.get("max_health_pct", 0.0)) > 0.0:
+			hp_extra = " [color=#2ecc71](+%d%% sinergia)[/color]" % int(float(unit.synergy_bonuses.get("max_health_pct", 0.0)) * 100.0)
+		hp_lbl.text = "[color=#2ecc71]VIDA[/color]  [b]%d[/b] / %d%s" % [cur_hp, max_hp, hp_extra]
 	
+	# 2. Mana (Atual / Máxima + Inicial)
 	var mana_lbl = panel.find_child("Mana_label", true, false)
 	if mana_lbl:
-		mana_lbl.text = "[color=#3498db]MANA[/color]  [b]%d[/b] / %d" % [int(unit.current_mana), int(stats.max_mana)]
+		var cur_mana := int(unit.current_mana)
+		var max_mana := int(stats.max_mana)
+		var init_mana := int(stats.starting_mana)
+		mana_lbl.text = "[color=#38bdf8]MANA[/color]  [b]%d[/b] / %d  [color=#94a3b8](Inicia %d)[/color]" % [cur_mana, max_mana, init_mana]
 	
-	var range_lbl = panel.find_child("Range_label", true, false)
-	if range_lbl:
-		range_lbl.text = "[color=#bdc3c7]ALCANCE[/color]  %s (%d hex)" % ["À Distância" if stats.is_ranged else "Corpo a Corpo", stats.get_attack_range_hexes()]
-	
+	# 3. Poder de Ataque & DPS
 	var type_lbl = panel.find_child("Type_label", true, false)
 	if type_lbl:
-		type_lbl.text = "[color=#e67e22]ATAQUE[/color]  [b]%d[/b] (%s)" % [int(unit.get_attack_damage()), "Físico" if stats.ability_damage_type == 0 else "Mágico"]
+		var attack_dmg := int(unit.get_attack_damage())
+		var attack_spd := unit.get_effective_attack_speed()
+		var dps := int(attack_dmg * attack_spd)
+		var dmg_kind := "Físico" if stats.ability_damage_type == 0 else "Mágico"
+		type_lbl.text = "[color=#fb923c]PODER DE ATAQUE[/color]  [b]%d[/b] (%s)\n[color=#cbd5e1]Vel. Atq:[/color] %.2f/s  ·  [color=#cbd5e1]DPS:[/color] [b]%d[/b]" % [
+			attack_dmg, dmg_kind, attack_spd, dps
+		]
 	
-	var origins_lbl = panel.find_child("Origins_label", true, false)
+	# 4. Alcance
+	var range_lbl = panel.find_child("Range_label", true, false)
+	if range_lbl:
+		range_lbl.text = "[color=#cbd5e1]ALCANCE[/color]  %s (%d hex)" % ["À Distância" if stats.is_ranged else "Corpo a Corpo", stats.get_attack_range_hexes()]
+	
+	# 5. Defesa (Armadura e Resistência Mágica com % de mitigação de dano)
+	var def_lbl = _get_or_create_inspector_label(panel, "Defense_label", "Origins_label")
+	if def_lbl:
+		var base_armor: float = stats.armor
+		var bonus_armor: float = float(unit.synergy_bonuses.get("armor_flat", 0.0))
+		var total_armor: float = maxf(base_armor + bonus_armor, 0.0)
+		if BattleClock.now_msec() < unit.armor_shred_until_msec:
+			total_armor = maxf(total_armor - unit.armor_shred_amount, 0.0)
+		var phys_reduct: int = int(round((total_armor / (100.0 + total_armor)) * 100.0))
+		
+		var base_mr: float = stats.magic_resist
+		var bonus_mr: float = float(unit.synergy_bonuses.get("magic_resist_flat", 0.0))
+		var total_mr: float = maxf(base_mr + bonus_mr, 0.0)
+		var mag_reduct: int = int(round((total_mr / (100.0 + total_mr)) * 100.0))
+		
+		var def_text := "[color=#60a5fa]DEFESA[/color]\n[color=#cbd5e1]Armadura:[/color] [b]%d[/b] [color=#94a3b8](-%d%% dano fís.)[/color]\n[color=#cbd5e1]Res. Mágica:[/color] [b]%d[/b] [color=#94a3b8](-%d%% dano mág.)[/color]" % [
+			int(total_armor), phys_reduct, int(total_mr), mag_reduct
+		]
+		if unit.current_shield > 0.0:
+			def_text += "\n[color=#38bdf8]Escudo Ativo:[/color] [b]%d[/b]" % int(unit.current_shield)
+		def_lbl.text = def_text
+	
+	# 6. Escalonamento detalhado movido para o Bestiário
+	var star_lbl = _get_or_create_inspector_label(panel, "Star_scaling_label", "Origins_label")
+	if star_lbl:
+		star_lbl.visible = false
+		star_lbl.text = ""
+	
+	# 7. Origens (com links de sinergia)
+	var origins_lbl = panel.find_child("Origins_label", true, false) as RichTextLabel
 	if origins_lbl:
-		origins_lbl.text = "[color=#f1c40f]ORIGENS[/color]  %s" % (" · ".join(stats.origins) if not stats.origins.is_empty() else "—")
+		var origin_parts: Array[String] = []
+		for orig in stats.origins:
+			var extra := ""
+			if orig == "Cerrado":
+				extra = " [color=#e67e22](%d/10 st)[/color]" % [mini(unit.enemies_defeated, BaseUnit3D.MAX_CERRADO_STACKS)]
+			origin_parts.append("[url=%s][u][color=#f5da80]%s[/color][/u]%s[/url]" % [orig, orig, extra])
+		origins_lbl.text = "[color=#f1c40f]ORIGENS[/color]  %s" % (" · ".join(origin_parts) if not origin_parts.is_empty() else "—")
 	
-	var classes_lbl = panel.find_child("Classes_label", true, false)
+	# 8. Classes (com links de sinergia)
+	var classes_lbl = panel.find_child("Classes_label", true, false) as RichTextLabel
 	if classes_lbl:
-		classes_lbl.text = "[color=#9b59b6]CLASSES[/color]  %s" % (" · ".join(stats.classes) if not stats.classes.is_empty() else "—")
+		var class_parts: Array[String] = []
+		for cls in stats.classes:
+			class_parts.append("[url=%s][u][color=#d8b4fe]%s[/color][/u][/url]" % [cls, cls])
+		classes_lbl.text = "[color=#9b59b6]CLASSES[/color]  %s" % (" · ".join(class_parts) if not class_parts.is_empty() else "—")
 	
-	var aff_lbl = panel.find_child("Affinities_label", true, false)
+	# 9. Habilidade: Descrição simples e concisa (detalhes no Bestiário)
+	var aff_lbl = panel.find_child("Affinities_label", true, false) as RichTextLabel
 	if aff_lbl:
-		aff_lbl.text = "[color=#5dade2]HABILIDADE[/color] · [b]%s[/b]\n[color=#ecf0f1]%s[/color]" % [stats.ability_name, stats.ability_description]
+		var ab_type_str := "Mágico"
+		match stats.ability_damage_type:
+			UnitStats.DamageType.PHYSICAL: ab_type_str = "Físico"
+			UnitStats.DamageType.MAGICAL: ab_type_str = "Mágico"
+			UnitStats.DamageType.TRUE: ab_type_str = "Verdadeiro"
+		
+		var ab_lines: Array[String] = []
+		ab_lines.append("[color=#c084fc]HABILIDADE[/color] · [b][color=#f5da80]%s[/color][/b] [color=#94a3b8](%s)[/color]" % [stats.ability_name, ab_type_str])
+		if not stats.ability_description.is_empty():
+			ab_lines.append("[color=#ecf0f1]%s[/color]" % stats.ability_description)
+		
+		aff_lbl.text = "\n".join(ab_lines)
 	
+	if ui and ui.has_method("set_inspected_unit_data"):
+		ui.set_inspected_unit_data(stats, unit.star_level)
 	ui.show_inspector()
 
+var _highlighted_synergy_units: Array[BaseUnit3D] = []
+var _highlighted_synergy_cells: Array[Vector2i] = []
+
+func _bind_ui_signals() -> void:
+	if ui:
+		if ui.has_signal("synergy_hover_started") and not ui.synergy_hover_started.is_connected(highlight_units_with_synergy):
+			ui.synergy_hover_started.connect(highlight_units_with_synergy)
+		if ui.has_signal("synergy_hover_ended") and not ui.synergy_hover_ended.is_connected(clear_synergy_unit_highlights):
+			ui.synergy_hover_ended.connect(clear_synergy_unit_highlights)
+		if ui.has_signal("start_battle_requested") and not ui.start_battle_requested.is_connected(start_combat):
+			ui.start_battle_requested.connect(start_combat)
+
+func highlight_units_with_synergy(synergy_name: String) -> void:
+	clear_synergy_unit_highlights()
+	if synergy_name.is_empty() or not board:
+		return
+	for unit in board.get_all_units():
+		if not is_instance_valid(unit) or not (unit is BaseUnit3D):
+			continue
+		if unit.team != 0 or unit.current_state == BaseUnit3D.State.DEAD or not unit.stats:
+			continue
+		var matches = unit.stats.origins.has(synergy_name) or unit.stats.classes.has(synergy_name)
+		if matches:
+			_highlighted_synergy_units.append(unit)
+			unit.set_synergy_highlighted(true)
+			if not unit.is_on_bench() and board.get_cell(unit.board_position):
+				board.highlight_cell(unit.board_position, true, Color("#f59e0b"))
+				_highlighted_synergy_cells.append(unit.board_position)
+	
+	for unit in bench_units:
+		if is_instance_valid(unit) and unit.stats:
+			var matches := unit.stats.origins.has(synergy_name) or unit.stats.classes.has(synergy_name)
+			if matches:
+				_highlighted_synergy_units.append(unit)
+				unit.set_synergy_highlighted(true)
+
+func clear_synergy_unit_highlights() -> void:
+	for pos in _highlighted_synergy_cells:
+		if is_instance_valid(board):
+			board.highlight_cell(pos, false)
+	_highlighted_synergy_cells.clear()
+	for unit in _highlighted_synergy_units:
+		if is_instance_valid(unit):
+			unit.set_synergy_highlighted(false)
+	_highlighted_synergy_units.clear()
+
 func hide_unit_inspector() -> void:
+	clear_synergy_unit_highlights()
 	if ui and ui.has_method("hide_inspector"):
 		ui.hide_inspector()
 	elif ui:
@@ -1305,6 +1680,7 @@ func _open_pause() -> void:
 		dragging_unit = null
 	if camera:
 		camera.cancel_manual_orbit()
+	AudioManager.play_pause_music()
 	get_tree().paused = true
 	_overlay.open("pause", true)
 
@@ -1313,6 +1689,7 @@ func _resume_game() -> void:
 		_overlay.open("pause", true)
 		_overlay.show_error("Esta campanha não pôde ser carregada. Volte ao menu para preservar o arquivo.")
 		return
+	AudioManager.resume_region_music()
 	get_tree().paused = false
 	get_viewport().gui_release_focus()
 
@@ -1334,6 +1711,7 @@ func _leave_game(quit_application: bool) -> void:
 
 func _return_to_menu() -> void:
 	get_tree().paused = false
+	AudioManager.play_menu_music()
 	get_tree().change_scene_to_file("res://Scenes/UI/Menu.tscn")
 
 func _notification(what: int) -> void:

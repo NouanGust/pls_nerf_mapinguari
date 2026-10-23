@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://du1bxhc6bhwrk"]
 
-[ext_resource type="Texture2D" path="res://Assets/Units_teste/Comadre_fulozinha.png" id="1_tlm31"]
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_v6ogt"]
+[ext_resource type="Texture2D" uid="uid://21r6hawu4hyw" path="res://Assets/Units/SplashArts/comadre_fulozimha.jpg" id="1_tlm31"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_v6ogt"]
 
 [resource]
 script = ExtResource("1_v6ogt")

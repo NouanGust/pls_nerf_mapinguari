@@ -1,14 +1,14 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://clud8ns1piko7"]
 
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/pequi.png" id="2_splash_art"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" uid="uid://c3kompscy3psc" path="res://Assets/Units/SplashArts/pequi.jpg" id="1_uw4xo"]
 
 [resource]
 script = ExtResource("1_stats")
 unit_name = "Pequi"
 unit_id = "pequi"
 description = "Planta de ataque mágico para composições do Cerrado e da classe Místico. Planta imóvel: lança sementes ou espinhos a até 4 casas."
-icon = ExtResource("2_splash_art")
+icon = ExtResource("1_uw4xo")
 max_health = 480.0
 attack_damage = 36.0
 attack_speed = 0.85

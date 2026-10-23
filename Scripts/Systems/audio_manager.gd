@@ -18,7 +18,9 @@ extends Node
 @export var star_up_2_sfx: AudioStream = preload("res://Assets/Audio/SFX/2_star_up.mp3")
 @export var star_up_2_alt_sfx: AudioStream = preload("res://Assets/Audio/SFX/2_star_up1.mp3")
 @export var star_up_3_sfx: AudioStream = preload("res://Assets/Audio/SFX/3_star_up.mp3")
-@export var sinergy_activated_sfx: AudioStream = preload("res://Assets/Audio/SFX/sinergy_activated.mp3")
+@export var sinergy_activated_sfx: AudioStream = preload("res://Assets/Audio/SFX/sinergy_activated.wav")
+@export var player_level_up_sfx: AudioStream = preload("res://Assets/Audio/SFX/player_level_up.wav")
+@export var melee_hit_sfx: AudioStream = preload("res://Assets/Audio/SFX/melee_hit.mp3")
 
 @export_group("Streak SFX")
 @export var win_streak_1_sfx: AudioStream = preload("res://Assets/Audio/SFX/win_streak1.mp3")
@@ -27,21 +29,47 @@ extends Node
 @export var loss_streak_1_sfx: AudioStream = preload("res://Assets/Audio/SFX/Loss_streak1.mp3")
 
 @export_group("Music")
-@export var menu_music: AudioStream
+@export var menu_music: AudioStream = preload("res://Assets/Audio/Music/Main_menu.wav")
+@export var pause_music: AudioStream = preload("res://Assets/Audio/Music/pause_menu.wav")
 
-var _last_evol_hint_played_round: int = -1
+var _evol_hint_player: AudioStreamPlayer
+var _current_region_id: String = ""
+var _paused_music_position: float = 0.0
+
+const REGION_TRACKS := {
+	"pantanal": preload("res://Assets/Audio/Music/Pantanal.mp3"),
+	"mata_atlantica": preload("res://Assets/Audio/Music/Sudeste.mp3"),
+	"sudeste": preload("res://Assets/Audio/Music/Sudeste.mp3"),
+	"litoral": preload("res://Assets/Audio/Music/Sudeste.mp3"),
+	"sul": preload("res://Assets/Audio/Music/Sul.mp3"),
+	"cerrado": preload("res://Assets/Audio/Music/Pantanal.mp3"),
+	"amazonia": preload("res://Assets/Audio/Music/Pantanal.mp3"),
+	"caatinga": preload("res://Assets/Audio/Music/Sul.mp3"),
+}
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_ensure_audio_buses()
 	_init_sfx_pool()
+	_init_evol_hint_player()
 	if menu_music_player == null:
 		menu_music_player = AudioStreamPlayer.new()
 		menu_music_player.name = "MenuMusicPlayer"
 		menu_music_player.bus = &"Music"
 		add_child(menu_music_player)
+	if not menu_music_player.finished.is_connected(_on_music_finished):
+		menu_music_player.finished.connect(_on_music_finished)
 	if menu_music and menu_music_player.stream == null:
+		_ensure_stream_loop(menu_music)
 		menu_music_player.stream = menu_music
+
+func _init_evol_hint_player() -> void:
+	if _evol_hint_player == null:
+		_evol_hint_player = AudioStreamPlayer.new()
+		_evol_hint_player.name = "EvolHintPlayer"
+		_evol_hint_player.bus = &"SFX"
+		_evol_hint_player.stream = evol_hint_shop_sfx
+		add_child(_evol_hint_player)
 
 func _ensure_audio_buses() -> void:
 	if AudioServer.get_bus_index("Music") == -1:
@@ -56,9 +84,57 @@ func _ensure_audio_buses() -> void:
 		AudioServer.set_bus_send(sfx_idx, "Master")
 
 ## --- Música ---
-func play_menu_music() -> void:
-	if menu_music_player and menu_music_player.stream and not menu_music_player.playing:
+func _on_music_finished() -> void:
+	if menu_music_player and menu_music_player.stream:
 		menu_music_player.play()
+
+func _ensure_stream_loop(stream: AudioStream) -> void:
+	if stream == null:
+		return
+	if stream is AudioStreamMP3:
+		(stream as AudioStreamMP3).loop = true
+	elif stream is AudioStreamWAV:
+		(stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+
+func play_menu_music() -> void:
+	if menu_music_player:
+		if menu_music:
+			_ensure_stream_loop(menu_music)
+		if menu_music_player.stream != menu_music:
+			menu_music_player.stream = menu_music
+		if not menu_music_player.playing:
+			menu_music_player.play()
+
+func play_region_music(region_id: String) -> void:
+	_current_region_id = region_id.to_lower()
+	var track: AudioStream = REGION_TRACKS.get(_current_region_id, REGION_TRACKS["pantanal"])
+	if track:
+		_ensure_stream_loop(track)
+	if menu_music_player:
+		if menu_music_player.stream == track and menu_music_player.playing:
+			return
+		menu_music_player.stop()
+		menu_music_player.stream = track
+		menu_music_player.play()
+
+func play_pause_music() -> void:
+	if menu_music_player:
+		if menu_music_player.playing:
+			_paused_music_position = menu_music_player.get_playback_position()
+			menu_music_player.stop()
+		if pause_music:
+			_ensure_stream_loop(pause_music)
+			menu_music_player.stream = pause_music
+			menu_music_player.play()
+
+func resume_region_music() -> void:
+	if menu_music_player:
+		var track: AudioStream = REGION_TRACKS.get(_current_region_id, menu_music)
+		if track:
+			_ensure_stream_loop(track)
+		if menu_music_player.stream != track or not menu_music_player.playing:
+			menu_music_player.stream = track
+			menu_music_player.play(_paused_music_position)
 
 func stop_music() -> void:
 	if menu_music_player and menu_music_player.playing:
@@ -88,7 +164,14 @@ func play_move_unit() -> void:
 	play_sfx(move_unit_sfx, true)
 
 func play_evol_hint_shop() -> void:
-	play_sfx(evol_hint_shop_sfx, false)
+	if _evol_hint_player == null:
+		_init_evol_hint_player()
+	if _evol_hint_player and not _evol_hint_player.playing:
+		_evol_hint_player.play()
+
+func stop_evol_hint_shop() -> void:
+	if _evol_hint_player and _evol_hint_player.playing:
+		_evol_hint_player.stop()
 
 func play_2_star_up() -> void:
 	var stream := star_up_2_sfx if randf() < 0.5 else star_up_2_alt_sfx
@@ -97,7 +180,9 @@ func play_2_star_up() -> void:
 	play_sfx(stream, false)
 
 func play_3_star_up() -> void:
-	play_sfx(star_up_3_sfx, false)
+	play_sfx(star_up_3_sfx, false, 3.5)
+	if win_streak_3_sfx:
+		play_sfx(win_streak_3_sfx, false, 1.0)
 
 func play_sinergy_activated() -> void:
 	play_sfx(sinergy_activated_sfx, false)
@@ -112,6 +197,13 @@ func play_win_streak(streak: int) -> void:
 
 func play_loss_streak(_streak: int = 1) -> void:
 	play_sfx(loss_streak_1_sfx, false)
+
+func play_player_level_up() -> void:
+	play_sfx(player_level_up_sfx, false)
+
+func play_melee_hit() -> void:
+	play_sfx(melee_hit_sfx, true, -3.0)
+
 
 ## --- Pool e tocador genérico de SFX ---
 const SFX_POOL_SIZE := 12

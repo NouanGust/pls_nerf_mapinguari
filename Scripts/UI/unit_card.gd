@@ -29,6 +29,7 @@ var base_tooltip_text: String = ""
 @onready var icon_rect: TextureRect = $IconRect if has_node("IconRect") else $VBox/IconRect
 @onready var name_label: Label = $Margin/CardLayout/BottomRow/NameLabel if has_node("Margin/CardLayout/BottomRow/NameLabel") else $VBox/NameLabel
 @onready var tier_badge: Label = $Margin/CardLayout/TopRow/TierBadge if has_node("Margin/CardLayout/TopRow/TierBadge") else $VBox/TierBadge
+@onready var traits_container: VBoxContainer = $Margin/CardLayout/TopRow/TraitsContainer if has_node("Margin/CardLayout/TopRow/TraitsContainer") else get_node_or_null("VBox/TraitsContainer")
 @onready var origin_label: Label = $Margin/CardLayout/TopRow/TraitsContainer/OriginLabel if has_node("Margin/CardLayout/TopRow/TraitsContainer/OriginLabel") else get_node_or_null("VBox/TraitsContainer/OriginLabel")
 @onready var class_label: Label = $Margin/CardLayout/TopRow/TraitsContainer/ClassLabel if has_node("Margin/CardLayout/TopRow/TraitsContainer/ClassLabel") else get_node_or_null("VBox/TraitsContainer/ClassLabel")
 @onready var cost_label: Label = $Margin/CardLayout/BottomRow/CostContainer/CostLabel if has_node("Margin/CardLayout/BottomRow/CostContainer/CostLabel") else $VBox/CostLabel
@@ -118,15 +119,8 @@ func set_unit(stats: UnitStats) -> void:
 		tier_badge.text = "T%d" % unit_stats.tier
 		tier_badge.add_theme_color_override("font_color", UIStyle.TIER_COLORS.get(unit_stats.tier, Color.WHITE))
 	
-	# Origem e Classe
-	var origins: Array[String] = unit_stats.origins
-	var classes: Array[String] = unit_stats.classes
-	if origin_label:
-		origin_label.text = origins[0] if not origins.is_empty() else "—"
-		origin_label.visible = not origins.is_empty()
-	if class_label:
-		class_label.text = classes[0] if not classes.is_empty() else "—"
-		class_label.visible = not classes.is_empty()
+	# Origens e Classes (mostra todas as classes e origens)
+	_update_traits_display(unit_stats.origins, unit_stats.classes)
 	
 	# Stats legados
 	if hp_icon:
@@ -185,7 +179,7 @@ func set_purchase_upgrade(stars: int, deferred_until_next_round: bool = false, u
 			tint = Color("#88f4ff")
 		upgrade_material.set_shader_parameter("glow_color", tint)
 		if tier_badge:
-			tier_badge.text = "★".repeat(purchase_upgrade_star)
+			tier_badge.text = "Nv.%d" % purchase_upgrade_star
 			tier_badge.add_theme_color_override("font_color", tint)
 	elif is_unit_owned:
 		upgrade_glow.material = owned_material
@@ -207,6 +201,55 @@ func mark_as_sold() -> void:
 		sold_overlay.show()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+func _update_traits_display(origins: Array[String], classes: Array[String]) -> void:
+	if not traits_container:
+		if origin_label:
+			origin_label.text = origins[0] if not origins.is_empty() else "—"
+			origin_label.visible = not origins.is_empty()
+		if class_label:
+			class_label.text = classes[0] if not classes.is_empty() else "—"
+			class_label.visible = not classes.is_empty()
+		return
+
+	# Ocultar os labels estáticos de fallback
+	if origin_label:
+		origin_label.visible = false
+	if class_label:
+		class_label.visible = false
+
+	# Limpar badges dinâmicos anteriores
+	for child in traits_container.get_children():
+		if child != origin_label and child != class_label:
+			child.queue_free()
+
+	var base_style: StyleBox = origin_label.get_theme_stylebox("normal") if origin_label else null
+
+	for o in origins:
+		var lbl := Label.new()
+		lbl.text = o
+		lbl.add_theme_font_size_override("font_size", 9)
+		lbl.add_theme_color_override("font_color", Color(0.85, 0.93, 0.98, 1))
+		lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		lbl.add_theme_constant_override("outline_size", 2)
+		lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		lbl.clip_text = true
+		if base_style:
+			lbl.add_theme_stylebox_override("normal", base_style)
+		traits_container.add_child(lbl)
+
+	for c in classes:
+		var lbl := Label.new()
+		lbl.text = c
+		lbl.add_theme_font_size_override("font_size", 9)
+		lbl.add_theme_color_override("font_color", Color(0.98, 0.92, 0.78, 1))
+		lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		lbl.add_theme_constant_override("outline_size", 2)
+		lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		lbl.clip_text = true
+		if base_style:
+			lbl.add_theme_stylebox_override("normal", base_style)
+		traits_container.add_child(lbl)
+
 func clear() -> void:
 	unit_stats = null
 	is_sold = false
@@ -219,8 +262,14 @@ func clear() -> void:
 		tier_badge.text = ""
 	if origin_label:
 		origin_label.text = ""
+		origin_label.visible = false
 	if class_label:
 		class_label.text = ""
+		class_label.visible = false
+	if traits_container:
+		for child in traits_container.get_children():
+			if child != origin_label and child != class_label:
+				child.queue_free()
 	if cost_label:
 		cost_label.text = ""
 	if icon_rect:
@@ -234,6 +283,7 @@ func clear() -> void:
 	if sold_overlay:
 		sold_overlay.hide()
 	mouse_filter = Control.MOUSE_FILTER_STOP
+
 
 func _on_mouse_entered() -> void:
 	if is_sold or not unit_stats:

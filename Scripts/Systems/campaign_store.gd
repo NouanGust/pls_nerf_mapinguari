@@ -60,6 +60,17 @@ static func write_slot(region_id: String, run: Dictionary, state: String = "acti
 	var rename_error := DirAccess.rename_absolute(temporary, path)
 	return rename_error
 
+static func reset_slot(region_id: String) -> Error:
+	if not Regions.REGIONS.has(region_id):
+		return ERR_INVALID_PARAMETER
+	var path := _path(region_id)
+	var bak := path + ".bak"
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(path)
+	if FileAccess.file_exists(bak):
+		DirAccess.remove_absolute(bak)
+	return OK
+
 static func valid_run(value: Variant) -> bool:
 	if not value is Dictionary:
 		return false

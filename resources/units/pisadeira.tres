@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dasq7gsls68tc"]
 
-[ext_resource type="Texture2D" path="res://Assets/Units_teste/Pisadeira.png" id="1_cqwwj"]
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_wo830"]
+[ext_resource type="Texture2D" uid="uid://ss7wtrwx651a" path="res://Assets/Units_teste/Pisadeira.png" id="1_cqwwj"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_wo830"]
 
 [resource]
 script = ExtResource("1_wo830")
@@ -15,7 +15,6 @@ icon = ExtResource("1_cqwwj")
 max_health = 950.0
 attack_damage = 80.0
 attack_speed = 1.1
-attack_range = 2
 armor = 25.0
 magic_resist = 60.0
 movement_speed = 190.0

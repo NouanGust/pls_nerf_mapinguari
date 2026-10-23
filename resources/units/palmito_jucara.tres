@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://xogtmiy61b28"]
 
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/palmito_jucara.png" id="2_splash_art"]
+[ext_resource type="Texture2D" uid="uid://boc1ix40tfei0" path="res://Assets/Units/SplashArts/palmito_jucacra.jpg" id="1_2vcf5"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -11,7 +11,7 @@ description = "Palmeira ameaçada ligada à Mata Atlântica e a parte do Cerrado
 lore = "Seus frutos alimentam a vida da floresta e fortalecem os aliados."
 tier = 2
 cost = 2
-icon = ExtResource("2_splash_art")
+icon = ExtResource("1_2vcf5")
 max_health = 560.0
 attack_damage = 32.0
 attack_speed = 0.8

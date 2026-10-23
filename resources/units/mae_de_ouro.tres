@@ -1,11 +1,11 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://ku31ahyw8i1f"]
 
-[ext_resource type="Texture2D" path="res://Assets/Units_teste/Mãe_douro.png" id="1_c3y0t"]
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_whoo3"]
+[ext_resource type="Texture2D" uid="uid://6wvjudqqrvgi" path="res://Assets/Units/SplashArts/mae_ouro.jpg" id="1_c3y0t"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_whoo3"]
 
 [resource]
 script = ExtResource("1_whoo3")
-unit_name = "Mãe-de-Ouro"
+unit_name = "Mãe De Ouro"
 unit_id = "mae_de_ouro"
 description = "Bola de fogo."
 tier = 3
@@ -26,7 +26,7 @@ origins = Array[String](["Pantaneiro"])
 classes = Array[String](["Místico", "DPS"])
 ability_name = "Chamas Douradas"
 ability_description = "Explosão dupla."
-ability_damage = 150.0
+ability_damage = 220.0
 ability_heal = 120.0
-ability_targets = 3
+ability_targets = 2
 is_ranged = true

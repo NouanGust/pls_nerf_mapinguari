@@ -23,6 +23,6 @@ mana_per_attack = 8.0
 origins = Array[String](["Pantaneiro"])
 classes = Array[String](["Místico", "DPS"])
 ability_name = "Esfera Arcana"
-ability_description = "Dano em área."
+ability_description = "Conjura e arremessa uma orbe mística concentrada que explode no alvo e hexágonos adjacentes, causando 240 de dano mágico em área."
 ability_damage = 240.0
 is_ranged = true

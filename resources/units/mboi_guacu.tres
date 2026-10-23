@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://cmqj3h8koygs1"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://c31t4mjm3v7s8" path="res://Assets/Units/SplashArts/mboi_guacu.jpg" id="1_0em8i"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_1owcb"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mboi_guacu.jpg" id="1_0em8i"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_1owcb"]
 
 [resource]
 script = ExtResource("1_1owcb")
@@ -24,8 +24,9 @@ classes = Array[String](["Aquático", "Tank"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Pantanal"])
 ability_name = "Constrição Mortal"
-ability_description = "Enrola-se no alvo, causando dano massivo ao longo do tempo."
+ability_description = "Enrosca-se na presa, imobilizando-a e reduzindo sua armadura em 20 por 4.0s, enquanto ganha 160 de escudo e causa 40 de dano físico por segundo."
 ability_damage = 40.0
+ability_shield = 160.0
 ability_duration = 4.0
 ability_damage_type = 0
 is_tank = true

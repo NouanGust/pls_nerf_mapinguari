@@ -54,6 +54,10 @@ var reflect_until_msec: int = 0
 var reflect_pct: float = 0.0
 var armor_shred_until_msec: int = 0
 var armor_shred_amount: float = 0.0
+var speed_buff_until_msec: int = 0
+var speed_buff_multiplier: float = 1.0
+var _is_swooping: bool = false
+const FLYING_BASE_HEIGHT: float = 0.55
 
 ## Posição no Board
 var board_position: Vector2i = Vector2i(-1, -1)
@@ -73,6 +77,23 @@ var combat_ground_height: float = 0.0
 
 func is_on_bench() -> bool:
 	return board_position.y < 0
+
+func is_flying() -> bool:
+	if not stats:
+		return false
+	if stats.can_fly:
+		return true
+	return stats.unit_id in [
+		"sabia_laranjeira",
+		"arara_azul_lear",
+		"ararinha_azul",
+		"mutum_de_alagoas",
+		"cumacanga",
+		"matinta_perera",
+		"mae_de_ouro",
+		"alamoa",
+		"romaozinho"
+	]
 
 
 ## Componentes 3D
@@ -353,6 +374,10 @@ func setup_model() -> void:
 	model_base_scale = Vector3.ONE
 	model.scale = model_base_scale
 	model.rotation = Vector3.ZERO
+	if is_flying():
+		model.position.y = FLYING_BASE_HEIGHT
+	else:
+		model.position.y = 0.0
 	rotation.y = PI if team == 1 else 0.0
 	setup_team_indicator()
 	setup_aura_indicator()
@@ -733,7 +758,10 @@ func setup_stats_display() -> void:
 	ui_sprite.no_depth_test = true
 	ui_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	ui_sprite.pixel_size = 0.007
-	ui_sprite.position = Vector3(0, 2.7, 0)
+	var ui_height: float = 2.7
+	if is_flying():
+		ui_height += FLYING_BASE_HEIGHT
+	ui_sprite.position = Vector3(0, ui_height, 0)
 	add_child(ui_sprite)
 
 	health_bar_3d.max_value = get_max_health()
@@ -947,7 +975,16 @@ func get_effective_attack_speed() -> float:
 	var speed := stats.attack_speed * (1.0 + float(synergy_bonuses.get("attack_speed_pct", 0.0)))
 	if BattleClock.now_msec() < slowed_until_msec:
 		speed *= 0.7
+	if BattleClock.now_msec() < speed_buff_until_msec:
+		speed *= speed_buff_multiplier
 	return maxf(speed, 0.1)
+
+func apply_speed_buff(duration: float, multiplier: float = 1.35, label: String = "+VELOCIDADE") -> void:
+	speed_buff_multiplier = multiplier
+	speed_buff_until_msec = maxi(speed_buff_until_msec, BattleClock.now_msec() + int(duration * 1000.0))
+	if attack_timer:
+		attack_timer.wait_time = 1.0 / get_effective_attack_speed()
+	CombatFeedback.create_status_indicator(self, label, duration)
 
 func apply_slow(duration: float) -> void:
 	var resistance := clampf(float(synergy_bonuses.get("control_resist_pct", 0.0)), 0.0, 0.9)
@@ -1216,6 +1253,8 @@ func get_movement_speed() -> float:
 	var speed := stats.movement_speed / 100.0 * (1.0 + float(synergy_bonuses.get("move_speed_pct", 0.0)))
 	if BattleClock.now_msec() < slowed_until_msec:
 		speed *= 0.7
+	if BattleClock.now_msec() < speed_buff_until_msec:
+		speed *= speed_buff_multiplier
 	return speed
 
 func _wait_rooted() -> void:
@@ -1293,8 +1332,22 @@ func perform_attack() -> void:
 	_face_target()
 	var ranged_attack := stats.get_attack_range_hexes() > 1
 	unit_visual.play_attack(ranged_attack, 1.0 / get_effective_attack_speed())
-	if stats.is_stationary and ranged_attack:
-		_show_plant_projectile(current_target.global_position)
+	if ranged_attack:
+		var p_color: Color = get_projectile_color()
+		var is_dart: bool = stats.unit_id in ["caapora", "arara_azul_lear", "ararinha_azul", "mutum_de_alagoas", "mandacaru"]
+		var start_p: Vector3 = global_position + Vector3.UP * (1.1 if is_flying() else 0.75)
+		_spawn_ballistic_projectile(
+			start_p,
+			current_target,
+			current_target.global_position + Vector3.UP * 0.7,
+			p_color,
+			0.55,
+			0.20,
+			Callable(),
+			"%sAttackProj" % stats.unit_id,
+			0.14,
+			is_dart
+		)
 	
 	var damage: float = get_attack_damage()
 	if not first_attack_used:
@@ -1328,21 +1381,137 @@ func _face_target() -> void:
 		rotation.y = atan2(offset.x, offset.z)
 
 func _show_plant_projectile(target_position: Vector3) -> void:
-	# Rastro visual; o dano segue o instante do ataque, como nas outras unidades.
-	var projectile := MeshInstance3D.new()
-	var seed := SphereMesh.new()
-	seed.radius = 0.09
-	seed.height = 0.18
-	projectile.mesh = seed
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("#b5e66a")
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	projectile.material_override = material
-	get_parent().add_child(projectile)
-	projectile.global_position = global_position + Vector3.UP * 0.65
+	_spawn_ballistic_projectile(
+		global_position + Vector3.UP * 0.75,
+		null,
+		target_position + Vector3.UP * 0.65,
+		Color("#b5e66a"),
+		0.5,
+		0.18,
+		Callable(),
+		"PlantProjectile",
+		0.12
+	)
+
+func get_projectile_color() -> Color:
+	if not stats:
+		return Color.WHITE
+	match stats.unit_id:
+		"cumacanga":
+			return Color(1.0, 0.35, 0.05)
+		"caapora":
+			return Color(0.2, 0.9, 0.35)
+		"arara_azul_lear":
+			return Color(0.1, 0.75, 1.0)
+		"ararinha_azul":
+			return Color(0.25, 0.65, 1.0)
+		"mutum_de_alagoas":
+			return Color(0.65, 0.2, 0.9)
+		"teiniagua":
+			return Color(0.65, 0.35, 1.0)
+		"mae_de_ouro":
+			return Color(1.0, 0.85, 0.15)
+		"alamoa":
+			return Color(0.95, 0.9, 0.35)
+		"papa_figo":
+			return Color(0.45, 0.55, 0.15)
+		"pequi":
+			return Color(0.75, 0.85, 0.2)
+		"guarana":
+			return Color(0.95, 0.15, 0.2)
+		"mandacaru":
+			return Color(0.3, 0.85, 0.25)
+		"vitoria_regia", "aguape":
+			return Color(0.2, 0.85, 0.95)
+		"brinco_de_princesa":
+			return Color(0.95, 0.25, 0.65)
+		"bromelia":
+			return Color(1.0, 0.45, 0.15)
+		"palmito_jucara":
+			return Color(0.5, 0.75, 0.3)
+		_:
+			return stats.get_tier_color()
+
+func _spawn_ballistic_projectile(
+	start_pos: Vector3,
+	target: BaseUnit3D,
+	impact_pos: Vector3,
+	color: Color,
+	arc_height: float = 1.2,
+	duration: float = 0.35,
+	on_impact: Callable = Callable(),
+	projectile_name: String = "UnitProjectile",
+	radius: float = 0.16,
+	is_arrow_or_dart: bool = false
+) -> Node3D:
+	var projectile := Node3D.new()
+	projectile.name = projectile_name
+	
+	var mesh_inst := MeshInstance3D.new()
+	if is_arrow_or_dart:
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = radius * 0.3
+		cyl.bottom_radius = radius * 0.6
+		cyl.height = radius * 3.5
+		mesh_inst.mesh = cyl
+		mesh_inst.rotation.x = PI * 0.5
+	else:
+		var sphere := SphereMesh.new()
+		sphere.radius = radius
+		sphere.height = radius * 2.0
+		mesh_inst.mesh = sphere
+		
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.emission_enabled = true
+	mat.emission = color
+	mat.emission_energy_multiplier = 2.4
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mesh_inst.material_override = mat
+	projectile.add_child(mesh_inst)
+	
+	var glow := OmniLight3D.new()
+	glow.name = "OmniLight3D"
+	glow.light_color = color
+	glow.light_energy = 1.5
+	glow.omni_range = 2.8
+	projectile.add_child(glow)
+	
+	var scene_root: Node = get_tree().current_scene if get_tree() else null
+	if not scene_root:
+		scene_root = get_parent()
+	if not scene_root:
+		return projectile
+	scene_root.add_child(projectile)
+	
+	projectile.global_position = start_pos
+	
 	var flight := projectile.create_tween()
-	flight.tween_property(projectile, "global_position", target_position + Vector3.UP * 0.65, 0.18)
-	flight.tween_callback(projectile.queue_free)
+	flight.tween_method(func(progress: float) -> void:
+		if is_instance_valid(projectile):
+			var current_target_pos := impact_pos
+			if is_instance_valid(target) and target.current_state != State.DEAD:
+				current_target_pos = target.global_position + Vector3.UP * 0.7
+			var current_pos := start_pos.lerp(current_target_pos, progress) + Vector3.UP * sin(progress * PI) * arc_height
+			if is_arrow_or_dart and progress < 0.98:
+				var next_p := start_pos.lerp(current_target_pos, progress + 0.02) + Vector3.UP * sin((progress + 0.02) * PI) * arc_height
+				var forward_dir := (next_p - current_pos).normalized()
+				if forward_dir.length_squared() > 0.0001:
+					var up_vec := Vector3.UP
+					if abs(forward_dir.dot(Vector3.UP)) > 0.95:
+						up_vec = Vector3.FORWARD
+					projectile.look_at(current_pos + forward_dir, up_vec)
+			projectile.global_position = current_pos
+	, 0.0, 1.0, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	
+	flight.tween_callback(func() -> void:
+		if is_instance_valid(projectile):
+			projectile.queue_free()
+		CombatFeedback.create_hit_particles(impact_pos + Vector3.UP * 0.5, color)
+		if on_impact.is_valid():
+			on_impact.call()
+	)
+	return projectile
 
 func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.DamageType = UnitStats.DamageType.PHYSICAL) -> void:
 	if current_state == State.DEAD or is_on_bench():
@@ -1518,7 +1687,37 @@ func apply_ability_effect() -> void:
 		"teiniagua":
 			_cast_teiniagua_orb()
 			return
-	if (stats.is_assassin and stats.unit_id != "lobo_guara" and stats.unit_id != "matinta_perera") or stats.unit_id == "jararaca":
+		"araucaria":
+			_cast_araucaria_canopy()
+			return
+		"caapora":
+			_cast_caapora_piercing_arrow()
+			return
+		"comadre_fulozinha":
+			_cast_comadre_fulozinha()
+			return
+		"corpo_seco":
+			_cast_corpo_seco_drain()
+			return
+		"mboi_guacu":
+			_cast_mboi_guacu_constriction()
+			return
+		"onca_pintada":
+			_cast_onca_ambush()
+			return
+		"pau_brasil":
+			_cast_pau_brasil_bloom()
+			return
+		"pisadeira":
+			_cast_pisadeira_terror()
+			return
+		"sumauma":
+			_cast_sumauma_roots()
+			return
+		"sabia_laranjeira":
+			_cast_sabia_laranjeira()
+			return
+	if (stats.is_assassin and stats.unit_id != "lobo_guara" and stats.unit_id != "matinta_perera" and stats.unit_id != "onca_pintada") or stats.unit_id == "jararaca":
 		_cast_assassin_strike()
 		return
 	_apply_ability_healing()
@@ -1548,6 +1747,7 @@ func _apply_ability_shield() -> void:
 	elif stats.unit_id == "mandacaru":
 		CombatFeedback.create_hit_particles(global_position, Color("#22c55e"))
 		CombatFeedback.create_status_indicator(self, "CERCA DE ESPINHOS", 1.2)
+		_create_mandacaru_thorn_element(global_position, 4.0)
 	elif stats.unit_id == "caranguejo_uca":
 		if model:
 			var tw := create_tween()
@@ -1565,9 +1765,9 @@ func _apply_ability_shield() -> void:
 	elif stats.unit_id == "tamandua_bandeira":
 		if model:
 			var tw := create_tween()
-			tw.tween_property(model, "rotation:y", rotation.y + 0.35, 0.1).set_trans(Tween.TRANS_QUAD)
-			tw.tween_property(model, "rotation:y", rotation.y - 0.35, 0.12).set_trans(Tween.TRANS_QUAD)
-			tw.tween_property(model, "rotation:y", rotation.y, 0.1).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(model, "rotation:y", 0.35, 0.1).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(model, "rotation:y", -0.35, 0.12).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(model, "rotation:y", 0.0, 0.1).set_trans(Tween.TRANS_QUAD)
 		CombatFeedback.create_hit_particles(global_position, Color("#d97706"))
 		CombatFeedback.create_status_indicator(self, "GARRAS DE DEFESA", 1.2)
 	else:
@@ -1590,9 +1790,21 @@ func _apply_ability_energy() -> void:
 	)
 	var mana_gain: float = stats.ability_mana * stats.get_star_multiplier(star_level)
 	for i in mini(maxi(stats.ability_targets, 1), allies.size()):
-		allies[i].add_mana(mana_gain)
-		CombatFeedback.create_status_indicator(allies[i], "+%d MANA" % int(mana_gain), 1.0)
-		CombatFeedback.create_hit_particles(allies[i].global_position, Color("#80d8ea"))
+		var target_ally := allies[i] as BaseUnit3D
+		target_ally.add_mana(mana_gain)
+		CombatFeedback.create_status_indicator(target_ally, "+%d MANA" % int(mana_gain), 1.0)
+		CombatFeedback.create_hit_particles(target_ally.global_position, Color("#80d8ea"))
+		_spawn_ballistic_projectile(
+			global_position + Vector3.UP * 0.9,
+			target_ally,
+			target_ally.global_position + Vector3.UP * 0.6,
+			Color("#80d8ea"),
+			1.2,
+			0.30,
+			Callable(),
+			"GuaranaEnergySeed",
+			0.18
+		)
 
 func _cast_alamoa_charm() -> void:
 	if model:
@@ -1698,7 +1910,15 @@ func _cast_cabeca_de_cuia() -> void:
 func _cast_mae_de_ouro() -> void:
 	if model:
 		var tw := create_tween()
-		tw.tween_property(model, "rotation:y", rotation.y + TAU, 0.4).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "rotation:y", TAU, 0.4).from(0.0).set_trans(Tween.TRANS_QUAD)
+		tw.tween_callback(func() -> void:
+			if is_instance_valid(model):
+				model.rotation.y = 0.0
+			if is_instance_valid(current_target) and current_target.current_state != State.DEAD:
+				var offset := current_target.global_position - global_position
+				if offset.length_squared() > 0.001:
+					rotation.y = atan2(offset.x, offset.z)
+		)
 	CombatFeedback.create_status_indicator(self, "CHAMAS DOURADAS", 1.2)
 	CombatFeedback.create_hit_particles(global_position, Color("#f59e0b"))
 	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.6, Color("#fbbf24"))
@@ -1754,26 +1974,115 @@ func _cast_matinta_perera() -> void:
 	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 3.0
 	immune_until_msec = BattleClock.now_msec() + int(duration * 1000.0)
 	
-	if model:
-		var tw := create_tween()
-		tw.tween_property(model, "position:y", 0.8, 0.2).set_trans(Tween.TRANS_QUAD)
-		tw.tween_interval(maxf(duration - 0.4, 0.1))
-		tw.tween_property(model, "position:y", 0.0, 0.2).set_trans(Tween.TRANS_QUAD)
-	
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+		find_target()
+	var target := current_target
+	if not is_instance_valid(target) or target.current_state == State.DEAD or target.is_on_bench():
+		var enemy_group := "enemy_units" if team == 0 else "player_units"
+		var candidates: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(u):
+			return is_instance_valid(u) and u is BaseUnit3D and u.current_state != State.DEAD and not u.is_on_bench()
+		)
+		if not candidates.is_empty():
+			target = candidates[0]
+			current_target = target
+
 	CombatFeedback.create_status_indicator(self, "FORMA DE PÁSSARO", 1.2)
 	CombatFeedback.create_hit_particles(global_position, Color("#7c3aed"))
 	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.8, Color("#1e1b4b"))
 	
+	var damage := (stats.ability_damage if stats.ability_damage > 0.0 else 140.0) * stats.get_star_multiplier(star_level)
+	
+	if is_instance_valid(target):
+		target.take_damage(damage, self, UnitStats.DamageType.MAGICAL)
+		target.apply_stun(2.5, "CONFUSO")
+		CombatFeedback.create_hit_particles(target.global_position, Color("#a855f7"))
+		CombatFeedback.create_hit_particles(target.global_position + Vector3.UP * 0.6, Color("#3b0764"))
+		_execute_swoop_advance_and_return(target.global_position, Color("#7c3aed"), "CONFUSO")
+	
 	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.0
-	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
-	var enemy_group := "enemy_units" if team == 0 else "player_units"
-	for enemy in get_tree().get_nodes_in_group(enemy_group):
-		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
+	var enemy_grp := "enemy_units" if team == 0 else "player_units"
+	for enemy_node: Node in get_tree().get_nodes_in_group(enemy_grp):
+		var enemy := enemy_node as BaseUnit3D
+		if not is_instance_valid(enemy) or enemy == target or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
 			continue
-		var distance := Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
-		if distance <= radius:
-			enemy.take_damage(damage, self, UnitStats.DamageType.MAGICAL)
+		var dist: float = Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
+		if dist <= radius:
+			enemy.take_damage(damage * 0.5, self, UnitStats.DamageType.MAGICAL)
 			CombatFeedback.create_hit_particles(enemy.global_position, Color("#a855f7"))
+
+func _cast_sabia_laranjeira() -> void:
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+		find_target()
+	var target := current_target
+	if not is_instance_valid(target) or target.current_state == State.DEAD or target.is_on_bench():
+		var enemy_group := "enemy_units" if team == 0 else "player_units"
+		var candidates: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(u):
+			return is_instance_valid(u) and u is BaseUnit3D and u.current_state != State.DEAD and not u.is_on_bench()
+		)
+		if not candidates.is_empty():
+			target = candidates[0]
+			current_target = target
+
+	CombatFeedback.create_status_indicator(self, "BICADA", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#fb923c"))
+	
+	var damage := (stats.ability_damage if stats.ability_damage > 0.0 else 95.0) * stats.get_star_multiplier(star_level)
+	
+	var buff_dur := stats.ability_duration if stats.ability_duration > 0.0 else 4.0
+	apply_speed_buff(buff_dur, 1.35, "+VELOCIDADE")
+	
+	if is_instance_valid(target):
+		target.take_damage(damage, self, UnitStats.DamageType.PHYSICAL)
+		CombatFeedback.create_hit_particles(target.global_position, Color("#fb923c"))
+		CombatFeedback.create_hit_particles(target.global_position + Vector3.UP * 0.5, Color("#ea580c"))
+		_execute_swoop_advance_and_return(target.global_position, Color("#fb923c"), "BICADA")
+
+func _execute_swoop_advance_and_return(target_pos: Vector3, trail_color: Color, _action_label: String) -> void:
+	if not model:
+		return
+	_is_swooping = true
+	var origin_global: Vector3 = global_position
+	var to_target: Vector3 = target_pos - origin_global
+	to_target.y = 0.0
+	var dist: float = to_target.length()
+	var advance_dir: Vector3 = to_target.normalized() if dist > 0.001 else Vector3.FORWARD
+	var attack_spot_global: Vector3 = origin_global + advance_dir * maxf(dist - 0.7, 0.0)
+	
+	if dist > 0.001:
+		rotation.y = atan2(advance_dir.x, advance_dir.z)
+	
+	var tw: Tween = create_tween()
+	tw.tween_method(func(prog: float) -> void:
+		if is_instance_valid(self) and current_state != State.DEAD:
+			global_position = origin_global.lerp(attack_spot_global, prog)
+			if model:
+				model.position.y = (FLYING_BASE_HEIGHT if is_flying() else 0.0) + sin(prog * PI) * 0.4
+	, 0.0, 1.0, 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	
+	tw.tween_callback(func() -> void:
+		if is_instance_valid(self):
+			CombatFeedback.create_hit_particles(attack_spot_global + Vector3.UP * 0.5, trail_color)
+			if model:
+				var strike_tw := create_tween()
+				strike_tw.tween_property(model, "rotation:x", 0.4, 0.06)
+				strike_tw.tween_property(model, "rotation:x", 0.0, 0.06)
+	)
+	tw.tween_interval(0.12)
+	
+	tw.tween_method(func(prog: float) -> void:
+		if is_instance_valid(self) and current_state != State.DEAD:
+			global_position = attack_spot_global.lerp(origin_global, prog)
+			if model:
+				model.position.y = (FLYING_BASE_HEIGHT if is_flying() else 0.0) + sin(prog * PI) * 0.35
+	, 0.0, 1.0, 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	
+	tw.tween_callback(func() -> void:
+		if is_instance_valid(self):
+			global_position = origin_global
+			_is_swooping = false
+			if is_flying() and model:
+				model.position.y = FLYING_BASE_HEIGHT
+	)
 
 func _cast_minhocao_earthquake() -> void:
 	_trigger_camera_shake(0.55, 0.65)
@@ -1791,6 +2100,7 @@ func _cast_minhocao_earthquake() -> void:
 	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.5
 	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
 	var stun_dur := stats.ability_duration if stats.ability_duration > 0.0 else 2.0
+	_create_minhocao_crater_element(global_position, radius, stun_dur + 1.2)
 	var enemy_group := "enemy_units" if team == 0 else "player_units"
 	for enemy in get_tree().get_nodes_in_group(enemy_group):
 		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
@@ -1886,8 +2196,486 @@ func _cast_teiniagua_orb() -> void:
 			var distance := Vector2(target_position.x, target_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
 			if distance <= 2.8:
 				enemy.take_damage(damage, self, stats.ability_damage_type)
+	
+	var target_impact := target.global_position + Vector3.UP * 0.7
+	_spawn_ballistic_projectile(
+		global_position + Vector3.UP * 1.1,
+		target,
+		target_impact,
+		Color("#c084fc"),
+		1.8,
+		0.40,
+		Callable(),
+		"TeiniaguaArcaneOrb",
+		0.24
+	)
 	CombatFeedback.create_hit_particles(target_position, Color("#c994ff"))
 	CombatFeedback.create_hit_particles(target_position + Vector3.UP * 0.5, Color("#f43f5e"))
+
+# ==============================================================================
+# HABILIDADES ESPECÍFICAS - CUSTO 4
+# ==============================================================================
+
+func _cast_araucaria_canopy() -> void:
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.22, 1.3, 1.22), 0.16).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "scale", model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
+	CombatFeedback.create_status_indicator(self, "COPA PROTETORA", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#15803d"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.8, Color("#854d0e"))
+	
+	var shield_amount := (stats.ability_shield if stats.ability_shield > 0.0 else 260.0) * stats.get_star_multiplier(star_level)
+	shield_amount *= 1.0 + float(synergy_bonuses.get("shield_power_pct", 0.0))
+	current_shield = maxf(current_shield, shield_amount)
+	
+	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.0
+	_create_araucaria_canopy_element(global_position, radius, 4.0)
+	var ally_group := "player_units" if team == 0 else "enemy_units"
+	for ally_node: Node in get_tree().get_nodes_in_group(ally_group):
+		var ally := ally_node as BaseUnit3D
+		if not is_instance_valid(ally) or ally == self or ally.current_state == State.DEAD or not ally.visible or ally.is_on_bench():
+			continue
+		var dist: float = Vector2(global_position.x, global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
+		if dist <= radius:
+			var ally_shield := shield_amount * 0.85
+			ally.current_shield = maxf(ally.current_shield, ally_shield)
+			CombatFeedback.create_hit_particles(ally.global_position, Color("#15803d"))
+			CombatFeedback.create_status_indicator(ally, "COPA PROTETORA", 1.2)
+
+func _cast_caapora_piercing_arrow() -> void:
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+		find_target()
+	var target := current_target
+	if not is_instance_valid(target) or target.current_state == State.DEAD or target.is_on_bench():
+		return
+	
+	_face_target()
+	CombatFeedback.create_status_indicator(self, "FLECHA PERFURANTE", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#10b981"))
+	
+	var aim_dir := (target.global_position - global_position)
+	aim_dir.y = 0.0
+	if aim_dir.length_squared() < 0.01:
+		aim_dir = Vector3.FORWARD
+	else:
+		aim_dir = aim_dir.normalized()
+	
+	var max_range := stats.ability_range if stats.ability_range > 0.0 else 6.0
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	var shred := 20.0 * stats.get_star_multiplier(star_level)
+	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 4.0
+	
+	_spawn_piercing_arrow_visual(global_position + Vector3.UP * 0.6, aim_dir, max_range)
+	
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	var enemies: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(unit):
+		return is_instance_valid(unit) and unit is BaseUnit3D and unit.current_state != State.DEAD and unit.visible and not unit.is_on_bench()
+	)
+	
+	var hit_count := 0
+	var max_targets := stats.ability_targets if stats.ability_targets > 0 else 5
+	enemies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+		var da := (a.global_position - global_position).dot(aim_dir)
+		var db := (b.global_position - global_position).dot(aim_dir)
+		return da < db
+	)
+	
+	for enemy: BaseUnit3D in enemies:
+		if hit_count >= max_targets:
+			break
+		var to_enemy: Vector3 = enemy.global_position - global_position
+		to_enemy.y = 0.0
+		var proj_dist: float = to_enemy.dot(aim_dir)
+		if proj_dist >= 0.0 and proj_dist <= max_range:
+			var lateral_offset: float = (to_enemy - aim_dir * proj_dist).length()
+			if lateral_offset <= 1.35:
+				enemy.take_damage(damage, self, stats.ability_damage_type)
+				if hit_count == 0:
+					enemy.apply_armor_shred(duration, shred)
+				CombatFeedback.create_hit_particles(enemy.global_position, Color("#10b981"))
+				CombatFeedback.create_hit_particles(enemy.global_position + Vector3.UP * 0.5, Color("#34d399"))
+				hit_count += 1
+
+func _spawn_piercing_arrow_visual(start_pos: Vector3, dir: Vector3, distance: float) -> void:
+	var arrow := Node3D.new()
+	arrow.name = "CaaporaArrow"
+	var mesh_inst := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.04
+	cyl.bottom_radius = 0.08
+	cyl.height = 0.9
+	mesh_inst.mesh = cyl
+	mesh_inst.rotation.x = PI * 0.5
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color("#34d399")
+	mat.emission_enabled = true
+	mat.emission = Color("#10b981")
+	mat.emission_energy_multiplier = 3.0
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mesh_inst.material_override = mat
+	arrow.add_child(mesh_inst)
+	
+	var scene_root := get_tree().current_scene
+	if scene_root:
+		scene_root.add_child(arrow)
+	else:
+		get_parent().add_child(arrow)
+	
+	arrow.global_position = start_pos
+	if dir.length_squared() > 0.01:
+		arrow.look_at(start_pos + dir, Vector3.UP)
+	var end_pos := start_pos + dir * distance
+	var tw := arrow.create_tween()
+	tw.tween_property(arrow, "global_position", end_pos, 0.28).set_trans(Tween.TRANS_LINEAR)
+	tw.tween_callback(arrow.queue_free)
+
+func _cast_comadre_fulozinha() -> void:
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "rotation:y", TAU, 0.4).from(0.0).set_trans(Tween.TRANS_QUAD)
+		tw.tween_callback(func() -> void:
+			if is_instance_valid(model):
+				model.rotation.y = 0.0
+			if is_instance_valid(current_target) and current_target.current_state != State.DEAD:
+				var offset := current_target.global_position - global_position
+				if offset.length_squared() > 0.001:
+					rotation.y = atan2(offset.x, offset.z)
+		)
+	CombatFeedback.create_status_indicator(self, "INVOCAÇÃO DA FLORESTA", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#22c55e"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.8, Color("#f472b6"))
+	
+	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 10.0
+	var damage := (stats.ability_damage if stats.ability_damage > 0.0 else 45.0) * stats.get_star_multiplier(star_level)
+	var heal_val := (stats.ability_heal if stats.ability_heal > 0.0 else 35.0) * stats.get_star_multiplier(star_level)
+	
+	_spawn_forest_spirits(duration, damage, heal_val)
+
+func _spawn_forest_spirits(duration: float, strike_damage: float, heal_val: float) -> void:
+	var root_node := get_parent()
+	if not root_node:
+		root_node = self
+	
+	var spirits_container := Node3D.new()
+	spirits_container.name = "ComadreSpirits"
+	root_node.add_child(spirits_container)
+	spirits_container.global_position = global_position
+	
+	var spirit_nodes: Array[Node3D] = []
+	var colors := [Color("#22c55e"), Color("#facc15")]
+	for i in range(2):
+		var sp := MeshInstance3D.new()
+		var s_mesh := SphereMesh.new()
+		s_mesh.radius = 0.2
+		s_mesh.height = 0.4
+		sp.mesh = s_mesh
+		var s_mat := StandardMaterial3D.new()
+		s_mat.albedo_color = colors[i]
+		s_mat.emission_enabled = true
+		s_mat.emission = colors[i]
+		s_mat.emission_energy_multiplier = 2.5
+		s_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		sp.material_override = s_mat
+		spirits_container.add_child(sp)
+		sp.position = Vector3(cos(i * PI) * 1.2, 0.8, sin(i * PI) * 1.2)
+		spirit_nodes.append(sp)
+	
+	_run_forest_spirits_behavior(spirits_container, spirit_nodes, duration, strike_damage, heal_val)
+
+func _run_forest_spirits_behavior(container: Node3D, spirits: Array[Node3D], duration: float, damage: float, heal_amount: float) -> void:
+	var elapsed := 0.0
+	var tick_interval := 1.0
+	while elapsed < duration and is_instance_valid(container) and current_state != State.DEAD:
+		await get_tree().create_timer(tick_interval, false).timeout
+		elapsed += tick_interval
+		if not is_instance_valid(container) or current_state == State.DEAD:
+			break
+		
+		container.global_position = global_position
+		
+		var enemy_group := "enemy_units" if team == 0 else "player_units"
+		var enemies: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(u):
+			return is_instance_valid(u) and u is BaseUnit3D and u.current_state != State.DEAD and u.visible and not u.is_on_bench()
+		)
+		if not enemies.is_empty():
+			enemies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+				return global_position.distance_to(a.global_position) < global_position.distance_to(b.global_position)
+			)
+			var target_enemy: BaseUnit3D = enemies[0]
+			target_enemy.take_damage(damage, self, UnitStats.DamageType.MAGICAL)
+			CombatFeedback.create_hit_particles(target_enemy.global_position, Color("#22c55e"))
+			if spirits.size() > 0 and is_instance_valid(spirits[0]):
+				var tw := spirits[0].create_tween()
+				tw.tween_property(spirits[0], "position:y", 1.4, 0.15)
+				tw.tween_property(spirits[0], "position:y", 0.8, 0.2)
+		
+		var ally_group := "player_units" if team == 0 else "enemy_units"
+		var wounded_allies: Array = get_tree().get_nodes_in_group(ally_group).filter(func(a):
+			return is_instance_valid(a) and a is BaseUnit3D and a.current_state != State.DEAD and a.visible and not a.is_on_bench() and a.current_health < a.get_max_health()
+		)
+		if not wounded_allies.is_empty():
+			wounded_allies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+				return (a.get_max_health() - a.current_health) > (b.get_max_health() - b.current_health)
+			)
+			var ally_target: BaseUnit3D = wounded_allies[0]
+			var healed := ally_target.heal(heal_amount, self)
+			if healed > 0.0:
+				CombatFeedback.create_status_indicator(ally_target, "+%d HP" % int(healed), 1.0)
+				CombatFeedback.create_hit_particles(ally_target.global_position, Color("#facc15"))
+		elif not enemies.is_empty():
+			var second_enemy: BaseUnit3D = enemies[mini(1, enemies.size() - 1)]
+			second_enemy.take_damage(damage, self, UnitStats.DamageType.MAGICAL)
+			CombatFeedback.create_hit_particles(second_enemy.global_position, Color("#facc15"))
+	
+	if is_instance_valid(container):
+		CombatFeedback.create_hit_particles(container.global_position + Vector3.UP * 0.8, Color("#f472b6"))
+		container.queue_free()
+
+func _cast_corpo_seco_drain() -> void:
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.15, 1.25, 1.15), 0.15).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "scale", model_base_scale, 0.2).set_trans(Tween.TRANS_BOUNCE)
+	CombatFeedback.create_status_indicator(self, "DRENAGEM VITAL", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#15803d"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.6, Color("#581c87"))
+	
+	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 4.0
+	var total_damage := (stats.ability_damage if stats.ability_damage > 0.0 else 120.0) * stats.get_star_multiplier(star_level)
+	var total_heal := (stats.ability_heal if stats.ability_heal > 0.0 else 80.0) * stats.get_star_multiplier(star_level)
+	var radius := stats.ability_range if stats.ability_range > 0.0 else 2.5
+	
+	_run_corpo_seco_drain_pulses(duration, total_damage / 4.0, total_heal / 4.0, radius)
+
+func _run_corpo_seco_drain_pulses(duration: float, tick_damage: float, tick_heal: float, radius: float) -> void:
+	var pulses := int(duration)
+	for p in range(pulses):
+		await get_tree().create_timer(1.0, false).timeout
+		if current_state == State.DEAD:
+			break
+		var enemy_group := "enemy_units" if team == 0 else "player_units"
+		var drained_count := 0
+		for enemy_node: Node in get_tree().get_nodes_in_group(enemy_group):
+			var enemy := enemy_node as BaseUnit3D
+			if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
+				continue
+			var dist: float = Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
+			if dist <= radius:
+				enemy.take_damage(tick_damage, self, UnitStats.DamageType.TRUE)
+				enemy.apply_slow(1.5)
+				CombatFeedback.create_hit_particles(enemy.global_position, Color("#581c87"))
+				drained_count += 1
+		
+		if drained_count > 0:
+			var healed: float = heal(tick_heal * float(drained_count), self)
+			if healed > 0.0:
+				CombatFeedback.create_status_indicator(self, "+%d HP" % int(healed), 0.8)
+				CombatFeedback.create_hit_particles(global_position, Color("#22c55e"))
+
+func _cast_mboi_guacu_constriction() -> void:
+	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
+		find_target()
+	var target := current_target
+	if not is_instance_valid(target) or target.current_state == State.DEAD or target.is_on_bench():
+		return
+	
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.3, 0.75, 1.3), 0.15).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "scale", model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
+	CombatFeedback.create_status_indicator(self, "CONSTRIÇÃO MORTAL", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#0284c7"))
+	
+	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 4.0
+	var tick_damage := (stats.ability_damage if stats.ability_damage > 0.0 else 40.0) * stats.get_star_multiplier(star_level)
+	var shield_amount := (stats.ability_shield if stats.ability_shield > 0.0 else 160.0) * stats.get_star_multiplier(star_level)
+	current_shield = maxf(current_shield, shield_amount)
+	
+	target.apply_stun(duration, "CONSTRITO")
+	target.apply_armor_shred(duration, 25.0)
+	_create_mboi_guacu_coil_element(target, duration)
+	
+	_run_mboi_guacu_constriction_ticks(target, duration, tick_damage)
+
+func _run_mboi_guacu_constriction_ticks(target: BaseUnit3D, duration: float, tick_damage: float) -> void:
+	var elapsed := 0.0
+	while elapsed < duration and is_instance_valid(target) and target.current_state != State.DEAD and current_state != State.DEAD:
+		target.take_damage(tick_damage, self, UnitStats.DamageType.PHYSICAL)
+		CombatFeedback.create_hit_particles(target.global_position, Color("#0284c7"))
+		CombatFeedback.create_hit_particles(target.global_position + Vector3.UP * 0.4, Color("#166534"))
+		await get_tree().create_timer(1.0, false).timeout
+		elapsed += 1.0
+
+func _cast_onca_ambush() -> void:
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	var enemies: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(unit):
+		return is_instance_valid(unit) and unit is BaseUnit3D and unit.current_state != State.DEAD and unit.visible and not unit.is_on_bench()
+	)
+	if enemies.is_empty():
+		return
+	
+	enemies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+		return a.current_health < b.current_health
+	)
+	var target: BaseUnit3D = enemies[0]
+	
+	CombatFeedback.create_hit_particles(global_position, Color("#f59e0b"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.5, Color("#b45309"))
+	
+	var board := _get_combat_board()
+	var landing_pos: Vector3 = target.global_position
+	var found_cell := false
+	if board:
+		var target_cell := board.get_grid_position(board.to_local(target.global_position))
+		if target_cell != Vector2i(-1, -1):
+			var neighbors := board.get_neighbors(target_cell)
+			var empty_neighbors: Array[Vector2i] = []
+			for n in neighbors:
+				if not board.is_cell_occupied(n):
+					empty_neighbors.append(n)
+			var chosen_cell := Vector2i(-1, -1)
+			if not empty_neighbors.is_empty():
+				chosen_cell = empty_neighbors[0]
+			elif not neighbors.is_empty():
+				chosen_cell = neighbors[0]
+			if chosen_cell != Vector2i(-1, -1):
+				landing_pos = board.get_cell_world_position(chosen_cell)
+				found_cell = true
+	if not found_cell:
+		var offset := (global_position - target.global_position)
+		offset.y = 0.0
+		if offset.length_squared() < 0.04:
+			offset = Vector3.BACK
+		landing_pos = target.global_position + offset.normalized() * 1.3
+	
+	landing_pos.y = combat_ground_height
+	global_position = landing_pos
+	
+	_face_target()
+	CombatFeedback.create_status_indicator(self, "BOTE DE EMBOSCADA", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#f59e0b"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.6, Color("#dc2626"))
+	
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	CombatFeedback.create_damage_number(target.global_position, damage, CombatFeedback.DamageType.CRITICAL)
+	target.take_damage(damage, self, UnitStats.DamageType.PHYSICAL)
+	
+	if is_instance_valid(target) and target.current_state != State.DEAD:
+		target.apply_burn(3.0, self, damage * 0.12)
+		target.apply_stun(1.0, "ATORDOADO")
+		current_target = target
+	else:
+		current_target = null
+		find_target()
+
+func _cast_pau_brasil_bloom() -> void:
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.2, 1.25, 1.2), 0.15).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "scale", model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
+	CombatFeedback.create_status_indicator(self, "FLORADA DOURADA", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#fbbf24"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.8, Color("#dc2626"))
+	
+	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.0
+	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 4.0
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	var shield_val := (stats.ability_shield if stats.ability_shield > 0.0 else 170.0) * stats.get_star_multiplier(star_level)
+	_create_pau_brasil_bloom_element(global_position, radius, duration)
+	
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	for enemy_node: Node in get_tree().get_nodes_in_group(enemy_group):
+		var enemy := enemy_node as BaseUnit3D
+		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
+			continue
+		var dist: float = Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
+		if dist <= radius:
+			enemy.take_damage(damage, self, stats.ability_damage_type)
+			enemy.apply_attack_weakness(duration, 0.70)
+			CombatFeedback.create_hit_particles(enemy.global_position, Color("#fbbf24"))
+	
+	var ally_group := "player_units" if team == 0 else "enemy_units"
+	for ally_node: Node in get_tree().get_nodes_in_group(ally_group):
+		var ally := ally_node as BaseUnit3D
+		if not is_instance_valid(ally) or ally.current_state == State.DEAD or not ally.visible or ally.is_on_bench():
+			continue
+		var dist: float = Vector2(global_position.x, global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
+		if dist <= radius:
+			ally.current_shield = maxf(ally.current_shield, shield_val)
+			CombatFeedback.create_status_indicator(ally, "FLORADA", 1.2)
+			CombatFeedback.create_hit_particles(ally.global_position, Color("#fbbf24"))
+
+func _cast_pisadeira_terror() -> void:
+	_trigger_camera_shake(0.4, 0.5)
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "position:y", 0.7, 0.14).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "position:y", 0.0, 0.16).set_trans(Tween.TRANS_BOUNCE)
+	CombatFeedback.create_status_indicator(self, "PARALISIA DO TERROR", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#7e22ce"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.7, Color("#0f172a"))
+	
+	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.5
+	var base_dur := stats.ability_duration if stats.ability_duration > 0.0 else 2.5
+	var duration := base_dur * (1.0 + float(star_level - 1) * 0.20)
+	var damage := (stats.ability_damage if stats.ability_damage > 0.0 else 130.0) * stats.get_star_multiplier(star_level)
+	
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	for enemy_node: Node in get_tree().get_nodes_in_group(enemy_group):
+		var enemy := enemy_node as BaseUnit3D
+		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
+			continue
+		var dist: float = Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
+		if dist <= radius:
+			enemy.apply_stun(duration, "PARALISADO")
+			enemy.take_damage(damage, self, stats.ability_damage_type)
+			enemy.current_mana = maxf(enemy.current_mana - 25.0, 0.0)
+			enemy.update_mana_bar()
+			CombatFeedback.create_hit_particles(enemy.global_position, Color("#7e22ce"))
+			CombatFeedback.create_hit_particles(enemy.global_position + Vector3.UP * 0.6, Color("#3b0764"))
+
+func _cast_sumauma_roots() -> void:
+	_trigger_camera_shake(0.45, 0.55)
+	if model:
+		var tw := create_tween()
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.25, 0.75, 1.25), 0.15).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "scale", model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
+	CombatFeedback.create_status_indicator(self, "RAÍZES GUARDIÃS", 1.2)
+	CombatFeedback.create_hit_particles(global_position, Color("#16a34a"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.8, Color("#78350f"))
+	
+	var radius := stats.ability_range if stats.ability_range > 0.0 else 4.0
+	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 3.0
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	var heal_val := stats.ability_heal * stats.get_star_multiplier(star_level)
+	var shield_val := (stats.ability_shield if stats.ability_shield > 0.0 else 180.0) * stats.get_star_multiplier(star_level)
+	_create_sumauma_roots_element(global_position, radius, duration)
+	
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	for enemy_node: Node in get_tree().get_nodes_in_group(enemy_group):
+		var enemy := enemy_node as BaseUnit3D
+		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
+			continue
+		var dist: float = Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
+		if dist <= radius:
+			enemy.apply_stun(duration, "ENRAIZADO")
+			enemy.take_damage(damage, self, UnitStats.DamageType.PHYSICAL)
+			CombatFeedback.create_hit_particles(enemy.global_position, Color("#15803d"))
+			CombatFeedback.create_hit_particles(enemy.global_position + Vector3.UP * 0.4, Color("#78350f"))
+	
+	var ally_group := "player_units" if team == 0 else "enemy_units"
+	for ally_node: Node in get_tree().get_nodes_in_group(ally_group):
+		var ally := ally_node as BaseUnit3D
+		if not is_instance_valid(ally) or ally.current_state == State.DEAD or not ally.visible or ally.is_on_bench():
+			continue
+		var dist: float = Vector2(global_position.x, global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
+		if dist <= radius:
+			var healed: float = ally.heal(heal_val, self)
+			ally.current_shield = maxf(ally.current_shield, shield_val)
+			if healed > 0.0:
+				CombatFeedback.create_status_indicator(ally, "+%d HP" % int(healed), 1.2)
+			CombatFeedback.create_hit_particles(ally.global_position, Color("#22c55e"))
 
 func _apply_ability_damage() -> void:
 	if stats.ability_damage <= 0.0:
@@ -1912,22 +2700,42 @@ func _apply_ability_damage() -> void:
 	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
 	
 	if stats.unit_id == "pequi":
-		_show_plant_projectile(current_target.global_position)
-		CombatFeedback.create_hit_particles(current_target.global_position, Color("#a3e635"))
+		var pequi_color := Color("#a3e635")
+		_spawn_ballistic_projectile(
+			global_position + Vector3.UP * 0.9,
+			current_target,
+			current_target.global_position + Vector3.UP * 0.7,
+			pequi_color,
+			1.4,
+			0.30,
+			Callable(),
+			"PequiSeedBurst",
+			0.20
+		)
+		CombatFeedback.create_hit_particles(current_target.global_position, pequi_color)
 	elif stats.unit_id == "sabia_laranjeira":
 		CombatFeedback.create_hit_particles(current_target.global_position, Color("#fb923c"))
-		if model:
-			var tw := create_tween()
-			tw.tween_property(model, "position:y", 0.35, 0.12).set_trans(Tween.TRANS_QUAD)
-			tw.tween_property(model, "position:y", 0.0, 0.15).set_trans(Tween.TRANS_BOUNCE)
 	elif stats.unit_id == "mandacaru":
 		CombatFeedback.create_hit_particles(current_target.global_position, Color("#84cc16"))
 	elif stats.unit_id == "arara_azul_lear":
 		if model:
 			var tw := create_tween()
-			tw.tween_property(model, "position:y", 0.55, 0.14).set_trans(Tween.TRANS_QUAD)
-			tw.tween_property(model, "position:y", 0.0, 0.18).set_trans(Tween.TRANS_BOUNCE)
-		CombatFeedback.create_hit_particles(current_target.global_position, Color("#0284c7"))
+			tw.tween_property(model, "position:y", (FLYING_BASE_HEIGHT + 0.35 if is_flying() else 0.55), 0.14).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(model, "position:y", (FLYING_BASE_HEIGHT if is_flying() else 0.0), 0.18).set_trans(Tween.TRANS_BOUNCE)
+		var arara_color := Color("#0284c7")
+		_spawn_ballistic_projectile(
+			global_position + Vector3.UP * (1.1 if is_flying() else 0.8),
+			current_target,
+			current_target.global_position + Vector3.UP * 0.7,
+			arara_color,
+			0.8,
+			0.24,
+			Callable(),
+			"AraraLearSonicFeather",
+			0.18,
+			true
+		)
+		CombatFeedback.create_hit_particles(current_target.global_position, arara_color)
 		CombatFeedback.create_hit_particles(current_target.global_position + Vector3(0, 0.4, 0), Color("#38bdf8"))
 		CombatFeedback.create_status_indicator(self, "VOO DE LEAR", 1.2)
 	elif stats.unit_id == "caranguejo_uca":
@@ -2224,6 +3032,7 @@ func _apply_ability_healing() -> void:
 	if stats.unit_id == "aguape":
 		CombatFeedback.create_status_indicator(self, "MANTO FLUTUANTE", 1.2)
 		CombatFeedback.create_hit_particles(global_position, Color("#38bdf8"))
+		_create_water_sanctuary_element(global_position, 3.5)
 	elif stats.unit_id == "lobo_guara":
 		CombatFeedback.create_status_indicator(self, "RASTRO DA LOBEIRA", 1.2)
 		CombatFeedback.create_hit_particles(global_position, Color("#f59e0b"))
@@ -2237,6 +3046,7 @@ func _apply_ability_healing() -> void:
 	elif stats.unit_id == "vitoria_regia":
 		CombatFeedback.create_status_indicator(self, "MANTO DAS ÁGUAS", 1.2)
 		CombatFeedback.create_hit_particles(global_position, Color("#22d3ee"))
+		_create_water_sanctuary_element(global_position, 3.5)
 	elif stats.unit_id == "labatut":
 		CombatFeedback.create_status_indicator(self, "CORRENTE CURATIVA", 1.2)
 		CombatFeedback.create_hit_particles(global_position, Color("#38bdf8"))
@@ -2335,6 +3145,10 @@ func revive_at_position(world_pos: Vector3) -> void:
 	
 	if model:
 		model.scale = model_base_scale
+		if is_flying():
+			model.position.y = FLYING_BASE_HEIGHT
+		else:
+			model.position.y = 0.0
 	
 	update_health_bar()
 	update_mana_bar()
@@ -2351,6 +3165,9 @@ func _process(delta: float) -> void:
 	_update_aura_indicator()
 	if unit_visual:
 		unit_visual.update_locomotion(current_state == State.MOVING, get_movement_speed(), current_state == State.IDLE)
+	if is_flying() and model and current_state != State.DEAD and not _is_swooping:
+		var hover: float = sin(float(Time.get_ticks_msec()) * 0.003 + float(get_instance_id() % 100)) * 0.07
+		model.position.y = FLYING_BASE_HEIGHT + hover
 	if current_state == State.DEAD or current_state == State.IDLE:
 		_health_regen_accumulator = 0.0
 		return
@@ -2363,3 +3180,342 @@ func _process(delta: float) -> void:
 			var elapsed_seconds := floorf(_health_regen_accumulator)
 			_health_regen_accumulator -= elapsed_seconds
 			heal(regen_per_second * elapsed_seconds, self)
+
+# ==============================================================================
+# ELEMENTOS VISUAIS DE COMBATE NO TABULEIRO
+# ==============================================================================
+
+func _create_araucaria_canopy_element(center_pos: Vector3, radius: float, duration: float) -> void:
+	var scene_root: Node = get_tree().current_scene if get_tree() else null
+	if not scene_root:
+		scene_root = get_parent()
+	if not scene_root:
+		return
+	
+	var canopy := Node3D.new()
+	canopy.name = "AraucariaCanopyVisual"
+	scene_root.add_child(canopy)
+	canopy.global_position = center_pos
+	
+	var root_mat := StandardMaterial3D.new()
+	root_mat.albedo_color = Color("#78350f")
+	root_mat.emission_enabled = true
+	root_mat.emission = Color("#15803d")
+	root_mat.emission_energy_multiplier = 0.8
+	
+	var leaf_mat := StandardMaterial3D.new()
+	leaf_mat.albedo_color = Color("#16a34a")
+	leaf_mat.emission_enabled = true
+	leaf_mat.emission = Color("#22c55e")
+	leaf_mat.emission_energy_multiplier = 1.2
+	leaf_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	
+	for i in 6:
+		var angle := (TAU / 6.0) * float(i)
+		var arch := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.08
+		cyl.bottom_radius = 0.18
+		cyl.height = 1.6
+		arch.mesh = cyl
+		arch.material_override = root_mat
+		arch.position = Vector3(cos(angle) * (radius * 0.7), 0.7, sin(angle) * (radius * 0.7))
+		arch.rotation = Vector3(sin(angle) * 0.35, angle, cos(angle) * 0.35)
+		canopy.add_child(arch)
+		
+		var foliage := MeshInstance3D.new()
+		var prism := PrismMesh.new()
+		prism.size = Vector3(0.5, 0.6, 0.5)
+		foliage.mesh = prism
+		foliage.material_override = leaf_mat
+		foliage.position = arch.position + Vector3.UP * 0.7
+		foliage.rotation.y = angle
+		canopy.add_child(foliage)
+		
+	var light := OmniLight3D.new()
+	light.light_color = Color("#22c55e")
+	light.light_energy = 1.4
+	light.omni_range = maxf(radius * 1.5, 4.0)
+	light.position = Vector3.UP * 1.2
+	canopy.add_child(light)
+	
+	canopy.scale = Vector3(0.1, 0.1, 0.1)
+	var tw := canopy.create_tween()
+	tw.tween_property(canopy, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(maxf(duration - 0.5, 0.1))
+	tw.tween_property(canopy, "scale", Vector3(0.01, 0.01, 0.01), 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_callback(canopy.queue_free)
+
+func _create_sumauma_roots_element(center_pos: Vector3, radius: float, duration: float) -> void:
+	var scene_root: Node = get_tree().current_scene if get_tree() else null
+	if not scene_root:
+		scene_root = get_parent()
+	if not scene_root:
+		return
+	
+	var roots_node := Node3D.new()
+	roots_node.name = "SumaumaRootsVisual"
+	scene_root.add_child(roots_node)
+	roots_node.global_position = center_pos
+	
+	var bark_mat := StandardMaterial3D.new()
+	bark_mat.albedo_color = Color("#3f2e18")
+	bark_mat.emission_enabled = true
+	bark_mat.emission = Color("#15803d")
+	bark_mat.emission_energy_multiplier = 0.9
+	
+	for i in 6:
+		var angle := (TAU / 6.0) * float(i) + 0.3
+		var pillar := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.bottom_radius = 0.26
+		cyl.top_radius = 0.10
+		cyl.height = 1.6
+		pillar.mesh = cyl
+		pillar.material_override = bark_mat
+		var local_x := cos(angle) * (radius * 0.65)
+		var local_z := sin(angle) * (radius * 0.65)
+		pillar.position = Vector3(local_x, -1.0, local_z)
+		pillar.rotation = Vector3(sin(angle) * 0.25, angle, -cos(angle) * 0.25)
+		roots_node.add_child(pillar)
+		
+		var tw_pillar := roots_node.create_tween()
+		tw_pillar.tween_property(pillar, "position:y", 0.65, 0.3 + float(i) * 0.04).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw_pillar.tween_interval(maxf(duration - 0.6, 0.1))
+		tw_pillar.tween_property(pillar, "position:y", -1.2, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	
+	var light := OmniLight3D.new()
+	light.light_color = Color("#16a34a")
+	light.light_energy = 1.6
+	light.omni_range = maxf(radius * 1.6, 5.0)
+	light.position = Vector3.UP * 1.0
+	roots_node.add_child(light)
+	
+	var lifetime := roots_node.create_tween()
+	lifetime.tween_interval(duration + 0.4)
+	lifetime.tween_callback(roots_node.queue_free)
+
+func _create_mandacaru_thorn_element(center_pos: Vector3, duration: float) -> void:
+	var scene_root: Node = get_tree().current_scene if get_tree() else null
+	if not scene_root:
+		scene_root = get_parent()
+	if not scene_root:
+		return
+	
+	var fence := Node3D.new()
+	fence.name = "MandacaruThornFenceVisual"
+	scene_root.add_child(fence)
+	fence.global_position = center_pos
+	
+	var cactus_mat := StandardMaterial3D.new()
+	cactus_mat.albedo_color = Color("#15803d")
+	cactus_mat.emission_enabled = true
+	cactus_mat.emission = Color("#22c55e")
+	cactus_mat.emission_energy_multiplier = 0.8
+	
+	for i in 6:
+		var angle := (TAU / 6.0) * float(i)
+		var column := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.12
+		cyl.bottom_radius = 0.14
+		cyl.height = 0.95
+		column.mesh = cyl
+		column.material_override = cactus_mat
+		column.position = Vector3(cos(angle) * 0.9, -0.6, sin(angle) * 0.9)
+		fence.add_child(column)
+		
+		var tw_col := fence.create_tween()
+		tw_col.tween_property(column, "position:y", 0.45, 0.22 + float(i) * 0.03).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw_col.tween_interval(maxf(duration - 0.5, 0.1))
+		tw_col.tween_property(column, "position:y", -0.7, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	
+	var lifetime := fence.create_tween()
+	lifetime.tween_interval(duration + 0.3)
+	lifetime.tween_callback(fence.queue_free)
+
+func _create_pau_brasil_bloom_element(center_pos: Vector3, radius: float, duration: float) -> void:
+	var scene_root: Node = get_tree().current_scene if get_tree() else null
+	if not scene_root:
+		scene_root = get_parent()
+	if not scene_root:
+		return
+	
+	var bloom := Node3D.new()
+	bloom.name = "PauBrasilBloomVisual"
+	scene_root.add_child(bloom)
+	bloom.global_position = center_pos + Vector3.UP * 0.05
+	
+	var gold_mat := StandardMaterial3D.new()
+	gold_mat.albedo_color = Color("#f59e0b")
+	gold_mat.emission_enabled = true
+	gold_mat.emission = Color("#fbbf24")
+	gold_mat.emission_energy_multiplier = 1.8
+	gold_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	
+	var center_disk := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.4
+	cyl.bottom_radius = 0.4
+	cyl.height = 0.06
+	center_disk.mesh = cyl
+	center_disk.material_override = gold_mat
+	bloom.add_child(center_disk)
+	
+	for i in 8:
+		var angle := (TAU / 8.0) * float(i)
+		var petal := MeshInstance3D.new()
+		var p_mesh := BoxMesh.new()
+		p_mesh.size = Vector3(0.35, 0.04, radius * 0.5)
+		petal.mesh = p_mesh
+		petal.material_override = gold_mat
+		petal.position = Vector3(cos(angle) * (radius * 0.3), 0.02, sin(angle) * (radius * 0.3))
+		petal.rotation.y = angle
+		bloom.add_child(petal)
+		
+	var light := OmniLight3D.new()
+	light.light_color = Color("#fbbf24")
+	light.light_energy = 1.8
+	light.omni_range = maxf(radius * 1.5, 4.5)
+	light.position = Vector3.UP * 0.5
+	bloom.add_child(light)
+	
+	bloom.scale = Vector3(0.01, 0.01, 0.01)
+	var tw := bloom.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(bloom, "scale", Vector3.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(bloom, "rotation:y", PI * 0.75, duration)
+	
+	var tw_seq := bloom.create_tween()
+	tw_seq.tween_interval(maxf(duration - 0.4, 0.1))
+	tw_seq.tween_property(bloom, "scale", Vector3(0.01, 0.01, 0.01), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw_seq.tween_callback(bloom.queue_free)
+
+func _create_minhocao_crater_element(center_pos: Vector3, radius: float, duration: float) -> void:
+	var scene_root: Node = get_tree().current_scene if get_tree() else null
+	if not scene_root:
+		scene_root = get_parent()
+	if not scene_root:
+		return
+	
+	var crater := Node3D.new()
+	crater.name = "MinhocaoCraterVisual"
+	scene_root.add_child(crater)
+	crater.global_position = center_pos + Vector3.UP * 0.04
+	
+	var earth_mat := StandardMaterial3D.new()
+	earth_mat.albedo_color = Color("#451a03")
+	earth_mat.emission_enabled = true
+	earth_mat.emission = Color("#d97706")
+	earth_mat.emission_energy_multiplier = 1.1
+	
+	for i in 8:
+		var angle := (TAU / 8.0) * float(i) + randf() * 0.2
+		var slab := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = Vector3(0.5, 0.15, 0.7)
+		slab.mesh = b
+		slab.material_override = earth_mat
+		slab.position = Vector3(cos(angle) * (radius * 0.5), 0.05, sin(angle) * (radius * 0.5))
+		slab.rotation = Vector3(0.2, angle, 0.15)
+		crater.add_child(slab)
+		
+	var light := OmniLight3D.new()
+	light.light_color = Color("#d97706")
+	light.light_energy = 1.6
+	light.omni_range = maxf(radius * 1.4, 4.0)
+	crater.add_child(light)
+	
+	crater.scale = Vector3(0.1, 0.1, 0.1)
+	var tw := crater.create_tween()
+	tw.tween_property(crater, "scale", Vector3.ONE, 0.2).set_trans(Tween.TRANS_BOUNCE)
+	tw.tween_interval(maxf(duration - 0.4, 0.1))
+	tw.tween_property(crater, "scale", Vector3(0.01, 0.01, 0.01), 0.3).set_trans(Tween.TRANS_QUAD)
+	tw.tween_callback(crater.queue_free)
+
+func _create_mboi_guacu_coil_element(target: BaseUnit3D, duration: float) -> void:
+	if not is_instance_valid(target):
+		return
+	var coil := Node3D.new()
+	coil.name = "MboiGuacuCoilVisual"
+	target.add_child(coil)
+	coil.position = Vector3.ZERO
+	
+	var coil_mat := StandardMaterial3D.new()
+	coil_mat.albedo_color = Color("#0284c7")
+	coil_mat.emission_enabled = true
+	coil_mat.emission = Color("#38bdf8")
+	coil_mat.emission_energy_multiplier = 2.2
+	coil_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	
+	for i in 3:
+		var ring := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 0.32
+		torus.outer_radius = 0.44
+		ring.mesh = torus
+		ring.material_override = coil_mat
+		ring.position = Vector3(0.0, 0.35 + float(i) * 0.35, 0.0)
+		ring.rotation.x = 0.25 * (1.0 if i % 2 == 0 else -1.0)
+		coil.add_child(ring)
+		
+	var tw := coil.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(coil, "rotation:y", TAU * 4.0, duration)
+	
+	var tw_seq := coil.create_tween()
+	tw_seq.tween_interval(duration)
+	tw_seq.tween_callback(func() -> void:
+		if is_instance_valid(coil):
+			coil.queue_free()
+	)
+
+func _create_water_sanctuary_element(center_pos: Vector3, duration: float) -> void:
+	var scene_root: Node = get_tree().current_scene if get_tree() else null
+	if not scene_root:
+		scene_root = get_parent()
+	if not scene_root:
+		return
+	
+	var pad := Node3D.new()
+	pad.name = "WaterLilySanctuaryVisual"
+	scene_root.add_child(pad)
+	pad.global_position = center_pos + Vector3.UP * 0.03
+	
+	var leaf_mat := StandardMaterial3D.new()
+	leaf_mat.albedo_color = Color("#15803d")
+	leaf_mat.emission_enabled = true
+	leaf_mat.emission = Color("#22c55e")
+	leaf_mat.emission_energy_multiplier = 0.6
+	
+	var water_mat := StandardMaterial3D.new()
+	water_mat.albedo_color = Color(0.1, 0.6, 0.9, 0.7)
+	water_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	water_mat.emission_enabled = true
+	water_mat.emission = Color("#06b6d4")
+	water_mat.emission_energy_multiplier = 1.2
+	water_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	
+	var leaf_mesh := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.85
+	cyl.bottom_radius = 0.85
+	cyl.height = 0.04
+	leaf_mesh.mesh = cyl
+	leaf_mesh.material_override = leaf_mat
+	pad.add_child(leaf_mesh)
+	
+	var water_ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.95
+	torus.outer_radius = 1.15
+	water_ring.mesh = torus
+	water_ring.material_override = water_mat
+	pad.add_child(water_ring)
+	
+	pad.scale = Vector3(0.01, 0.01, 0.01)
+	var tw := pad.create_tween()
+	tw.tween_property(pad, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(maxf(duration - 0.4, 0.1))
+	tw.tween_property(pad, "scale", Vector3(0.01, 0.01, 0.01), 0.25).set_trans(Tween.TRANS_QUAD)
+	tw.tween_callback(pad.queue_free)

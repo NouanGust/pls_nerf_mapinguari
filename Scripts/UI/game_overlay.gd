@@ -19,10 +19,23 @@ var is_open: bool = false
 var _in_game: bool = false
 var _mode: String = ""
 var _page: int = 0
+var _match_time: float = 0.0
 var _root: Control
 var _panel: PanelContainer
 var _content: VBoxContainer
 var _error: Label
+
+func set_match_time(seconds: float) -> void:
+	_match_time = maxf(seconds, 0.0)
+
+static func format_duration(total_seconds: float) -> String:
+	var s := int(floor(maxf(total_seconds, 0.0)))
+	var hours := s / 3600
+	var minutes := (s % 3600) / 60
+	var secs := s % 60
+	if hours > 0:
+		return "%02d:%02d:%02d" % [hours, minutes, secs]
+	return "%02d:%02d" % [minutes, secs]
 
 static func frame(color: Color = Color("#947c53")) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -124,6 +137,15 @@ func _render() -> void:
 	match _mode:
 		"pause":
 			_content.add_child(label("PAUSADO", 36, Color("#e4c58a")))
+			var timer_box := PanelContainer.new()
+			var timer_style := frame(Color("#38bdf8"))
+			timer_style.bg_color = Color("#0e2026")
+			for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+				timer_style.set_content_margin(side, 12.0)
+			timer_box.add_theme_stylebox_override("panel", timer_style)
+			var timer_label := label("⏱ TEMPO DE PARTIDA: %s" % format_duration(_match_time), 22, Color("#7dd3fc"))
+			timer_box.add_child(timer_label)
+			_content.add_child(timer_box)
 			_content.add_child(button("Continuar", _resume))
 			_content.add_child(button("Opções", open.bind("options", true)))
 			_content.add_child(button("Como jogar", open.bind("tutorial", true)))
@@ -133,12 +155,19 @@ func _render() -> void:
 			_content.add_child(label("Ao retornar de uma luta interrompida, você recomeça a preparação do mesmo round com suas compras preservadas.", 18))
 		"options":
 			_content.add_child(label("OPÇÕES", 36, Color("#e4c58a")))
-			_slider("Volume geral", "volume", GameSettings.volume, 0.0, 1.0, 0.01)
-			_slider("Música", "music_volume", GameSettings.music_volume, 0.0, 1.0, 0.01)
-			_slider("Efeitos sonoros", "sfx_volume", GameSettings.sfx_volume, 0.0, 1.0, 0.01)
-			_check("Tela cheia", "fullscreen", GameSettings.fullscreen, OS.has_feature("web"))
-			_check("Orbitar automaticamente", "auto_orbit", GameSettings.auto_orbit)
-			_slider("Sensibilidade da câmera", "mouse_sensitivity", GameSettings.mouse_sensitivity, 0.05, 1.0, 0.05)
+			var gs: Node = get_node_or_null("/root/GameSettings")
+			var vol: float = float(gs.get("volume")) if gs else 0.8
+			var m_vol: float = float(gs.get("music_volume")) if gs else 0.8
+			var s_vol: float = float(gs.get("sfx_volume")) if gs else 0.8
+			var fs: bool = bool(gs.get("fullscreen")) if gs else false
+			var ao: bool = bool(gs.get("auto_orbit")) if gs else false
+			var sens: float = float(gs.get("mouse_sensitivity")) if gs else 0.25
+			_slider("Volume geral", "volume", vol, 0.0, 1.0, 0.01)
+			_slider("Música", "music_volume", m_vol, 0.0, 1.0, 0.01)
+			_slider("Efeitos sonoros", "sfx_volume", s_vol, 0.0, 1.0, 0.01)
+			_check("Tela cheia", "fullscreen", fs, OS.has_feature("web"))
+			_check("Orbitar automaticamente", "auto_orbit", ao)
+			_slider("Sensibilidade da câmera", "mouse_sensitivity", sens, 0.05, 1.0, 0.05)
 			_content.add_child(button("Voltar", _back))
 		"tutorial":
 			_content.add_child(label("COMO JOGAR", 34, Color("#e4c58a")))
@@ -193,8 +222,10 @@ func _check(title: String, key: String, value: bool, disabled: bool = false) -> 
 	_content.add_child(check)
 
 func _change_setting(key: String, value: Variant) -> void:
-	GameSettings.update_setting(key, value)
-	_error.text = "Não foi possível gravar as opções neste dispositivo." if GameSettings.last_error != OK else ""
+	var gs: Node = get_node_or_null("/root/GameSettings")
+	if gs and gs.has_method("update_setting"):
+		gs.update_setting(key, value)
+		_error.text = "Não foi possível gravar as opções neste dispositivo." if gs.get("last_error") != OK else ""
 
 func show_error(message: String) -> void:
 	if not is_open:

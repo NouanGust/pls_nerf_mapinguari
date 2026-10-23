@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://cktqg1784gxu5"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-[ext_resource type="Texture2D" uid="uid://cyenlo6fbnh26" path="res://Assets/Units/SplashArts/ipe_amarelo.jpg" id="1_vdawl"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/ipe_amarelo.jpg" id="1_vdawl"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -25,7 +25,7 @@ classes = Array[String](["Protetor da Mata", "Tank"])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Cerrado"])
 ability_name = "Casca Dourada"
-ability_description = "Renova um escudo próprio de 150 até ser consumido. Não ganha mana enquanto estiver protegido."
+ability_description = "Cristaliza uma densa camada de pétalas douradas que concede 150 de escudo protetor a si mesmo até ser consumido."
 ability_shield = 150.0
 is_tank = true
 passive_aura_range = 2

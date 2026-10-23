@@ -23,6 +23,6 @@ classes = Array[String](["Tank", "Protetor da Mata"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Caatinga", "Cerrado"])
 ability_name = "Carapaça Fechada"
-ability_description = "Fecha a carapaça e renova um escudo próprio de 110. Não ganha mana enquanto estiver protegido."
+ability_description = "Encolhe-se em sua carapaça blindada, renovando um escudo defensivo de 110 até ser destruído (não gera mana enquanto protegido)."
 ability_shield = 110.0
 is_tank = true

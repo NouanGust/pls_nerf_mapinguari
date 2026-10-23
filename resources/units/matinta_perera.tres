@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://btcehjrk5vkew"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://k1xtpy0y0qqa" path="res://Assets/Units/SplashArts/matinta_pereira.webp" id="1_jca3h"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_mrs1p"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/matinta_pereira.webp" id="1_jca3h"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_mrs1p"]
 
 [resource]
 script = ExtResource("1_mrs1p")
@@ -24,8 +24,8 @@ starting_mana = 40.0
 origins = Array[String](["Amazônico"])
 classes = Array[String](["Assombração", "Metamorfo"])
 ability_name = "Forma de Pássaro"
-ability_description = "Transforma-se, ficando imune e causando dano em área."
-ability_damage = 120.0
+ability_description = "Transforma-se em pássaro sombrio e mergulha imune sobre o alvo, causando 140 de dano mágico, atordoando-o com confusão por 2.5s e causando 70 de dano em área antes de retornar ao lugar."
+ability_damage = 140.0
 ability_duration = 3.0
 ability_range = 3.0
 is_assassin = true

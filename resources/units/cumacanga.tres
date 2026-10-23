@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://cpsutyjb42lvk"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_lfirk"]
-[ext_resource type="Texture2D" uid="uid://ukm8cffskwmu" path="res://Assets/Units/SplashArts/cumaganga.webp" id="1_rpcj1"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_lfirk"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/cumaganga.webp" id="1_rpcj1"]
 
 [resource]
 script = ExtResource("1_lfirk")
@@ -17,13 +17,14 @@ critical_chance = 0.1
 armor = 5.0
 magic_resist = 25.0
 movement_speed = 240.0
+can_fly = true
 max_mana = 70.0
 starting_mana = 20.0
 mana_per_attack = 12.0
 origins = Array[String](["Urbano"])
 classes = Array[String](["Assombração", "DPS"])
 ability_name = "Chamas do Terror"
-ability_description = "Lança fogo no inimigo mais distante, queimando o hex e os adjacentes. Inimigos atingidos sofrem queimadura por 2 segundos."
+ability_description = "Lança uma bola de fogo balística na maior aglomeração de inimigos, causando 45 de dano mágico em área e queimando todos os alvos por 2.0s."
 ability_damage = 45.0
 ability_duration = 2.5
 is_ranged = true

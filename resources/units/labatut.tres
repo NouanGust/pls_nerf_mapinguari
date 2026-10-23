@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://pdempaq1txbp"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://rspnihd5abc4" path="res://Assets/Units/SplashArts/labatut.jpg" id="1_a4wlh"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_vjcm3"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/labatut.jpg" id="1_a4wlh"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_vjcm3"]
 
 [resource]
 script = ExtResource("1_vjcm3")
@@ -22,7 +22,7 @@ mana_per_second = 5.0
 origins = Array[String](["Amazônico"])
 classes = Array[String](["Aquático", "Suporte"])
 ability_name = "Corrente Curativa"
-ability_description = "Cura aliados feridos."
+ability_description = "Canaliza energias medicinais da mata que restauram 100 de vida aos 2 aliados mais feridos na área."
 ability_heal = 100.0
 ability_targets = 2
 ability_range = 3.0

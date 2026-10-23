@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://d23vq1ah5fi6d"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-[ext_resource type="Texture2D" uid="uid://g0utx4plxauj" path="res://Assets/Units/SplashArts/caranguejo_uca.png" id="2_splash_art"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/caranguejo_uca.png" id="2_splash_art"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -23,7 +23,7 @@ classes = Array[String](["Aquático", "Tank"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Manguezal"])
 ability_name = "Pinça e Carapaça"
-ability_description = "Causa 90 de dano físico ao alvo atual e renova um escudo próprio de 130. Não ganha mana enquanto estiver protegido."
+ability_description = "Desfere um golpe esmagador com suas pinças causando 90 de dano físico ao alvo e fortalece sua carapaça com 130 de escudo."
 ability_damage = 90.0
 ability_shield = 70.0
 ability_damage_type = 0

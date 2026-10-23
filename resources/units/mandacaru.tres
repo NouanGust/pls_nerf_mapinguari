@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://x4pq3og7pkjl"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://crcbip4ofhcum" path="res://Assets/Units/SplashArts/mandacaru.jpg" id="1_jl4mx"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mandacaru.jpg" id="1_jl4mx"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -25,7 +25,7 @@ classes = Array[String](["Tank", "Protetor da Mata"])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Caatinga"])
 ability_name = "Cerca de Espinhos"
-ability_description = "Causa 65 de dano mágico ao alvo atual e renova um escudo próprio de 60. Não ganha mana enquanto estiver protegido."
+ability_description = "Ergue espinhos de cacto no solo, causando 65 de dano mágico ao alvo atual e renovando 60 de escudo protetor a si mesmo."
 ability_damage = 65.0
 ability_shield = 40.0
 ability_range = 2.0

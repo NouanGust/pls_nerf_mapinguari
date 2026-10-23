@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://bvn37klwvbyd7"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://bl5j07tqglv1g" path="res://Assets/Units/SplashArts/anhanga.jpg" id="1_23mv6"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_64q5c"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/anhanga.jpg" id="1_23mv6"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_64q5c"]
 
 [resource]
 script = ExtResource("1_64q5c")
@@ -24,7 +24,7 @@ mana_when_hit = 8.0
 origins = Array[String](["Amazônico"])
 classes = Array[String](["Protetor da Mata", "Tank"])
 ability_name = "Rugido da Floresta"
-ability_description = "Reduz ataque de inimigos próximos."
+ability_description = "Ecoa um rugido espectral aterrorizante que intimida todos os inimigos em um raio de 3.0m, reduzindo seu dano de ataque em 30% por 4.0s."
 ability_duration = 4.0
 ability_range = 3.0
 is_tank = true

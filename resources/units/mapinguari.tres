@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://cr246ndfnwq61"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_4nu4d"]
-[ext_resource type="Texture2D" uid="uid://cggm4jus3hna7" path="res://Assets/Units/SplashArts/mapinguari.webp" id="1_xuf38"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_4nu4d"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mapinguari.webp" id="1_xuf38"]
 
 [resource]
 script = ExtResource("1_4nu4d")
@@ -20,7 +20,7 @@ movement_speed = 150.0
 origins = Array[String](["Amazônico"])
 classes = Array[String](["Protetor da Mata", "Tank"])
 ability_name = "Couro de Ferro"
-ability_description = "Reflete dano."
+ability_description = "Endurece seu couro impenetrável por 4.0s, refletindo 40% de todo o dano recebido de volta aos seus atacantes."
 ability_duration = 4.0
 ability_damage_type = 0
 is_tank = true

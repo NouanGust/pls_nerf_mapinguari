@@ -51,6 +51,11 @@ var combat_report_entries: Dictionary = {}
 var active_synergies: Dictionary = {}
 var battle_time_remaining: float = 0.0
 var cutscene_in_progress: bool = false
+var match_elapsed_seconds: float = 0.0
+
+func _process(delta: float) -> void:
+	if not get_tree().paused and _run_ready:
+		match_elapsed_seconds += delta
 
 
 @export var gold_on_win: int = 2
@@ -126,6 +131,9 @@ func _ready() -> void:
 		spawn_enemy_team()
 	_update_round_atmosphere(0.0)
 	_run_ready = true
+	var gs: Node = get_node_or_null("/root/GameSettings")
+	if gs and gs.has_method("set_last_played_region"):
+		gs.set_last_played_region(region_id)
 	update_ui()
 	_save_campaign()
 	if _entry_in_progress:
@@ -1682,6 +1690,7 @@ func _open_pause() -> void:
 		camera.cancel_manual_orbit()
 	AudioManager.play_pause_music()
 	get_tree().paused = true
+	_overlay.set_match_time(match_elapsed_seconds)
 	_overlay.open("pause", true)
 
 func _resume_game() -> void:
@@ -1796,6 +1805,7 @@ func _capture_campaign() -> Dictionary:
 		"phase": "combat" if combat_active else ("resolved" if round_resolution_pending else "prep"),
 		"bench": saved_bench, "field": saved_field, "shop": saved_shop,
 		"locked": shop_system.is_shop_locked if shop_system else false,
+		"match_time": match_elapsed_seconds,
 	}
 
 func _save_campaign() -> bool:
@@ -1820,6 +1830,7 @@ func _restore_campaign(run: Dictionary) -> bool:
 	enemy_level = int(Regions.get_enemy_stage(current_round)["level"])
 	win_streak = int(run["win_streak"])
 	loss_streak = int(run["loss_streak"])
+	match_elapsed_seconds = float(run.get("match_time", 0.0))
 	for zone in ["field", "bench"]:
 		for entry in run[zone]:
 			var unit := UnitSpawner.spawn_unit(str(entry["id"]), int(entry["stars"]), 0)

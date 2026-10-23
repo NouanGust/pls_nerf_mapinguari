@@ -35,6 +35,11 @@ func _ready() -> void:
 	AudioManager.play_menu_music()
 	for id in REGION_ORDER:
 		_champions[id] = Regions.get_champion(id)
+	var gs: Node = get_node_or_null("/root/GameSettings")
+	var initial_region: String = str(gs.get("last_played_region")) if gs else "mata_atlantica"
+	var initial_idx: int = REGION_ORDER.find(initial_region)
+	if initial_idx != -1:
+		_selected_index = initial_idx
 	_build_interface()
 	get_viewport().size_changed.connect(_fit_layout)
 	_select_region(0)
@@ -66,7 +71,8 @@ func _build_interface() -> void:
 	home_scroll.add_child(home_content)
 	home_content.add_child(Overlay.label("FOLCHESS", 48, Color("#e4c58a")))
 	home_content.add_child(Overlay.label("As lendas esperam por você.", 20))
-	home_content.add_child(Overlay.button("Jogar", _show_regions))
+	home_content.add_child(Overlay.button("Continuar Partida", _start_selected_region))
+	home_content.add_child(Overlay.button("Escolher Região", _show_regions))
 	home_content.add_child(Overlay.button("Como jogar", _open_overlay.bind("tutorial")))
 	home_content.add_child(Overlay.button("Opções", _open_overlay.bind("options")))
 	if not OS.has_feature("web"):
@@ -359,6 +365,9 @@ func _start_selected_region() -> void:
 	_enter_region.call_deferred(REGION_ORDER[_selected_index])
 
 func _enter_region(id: String) -> void:
+	var gs = get_node_or_null("/root/GameSettings")
+	if gs and gs.has_method("set_last_played_region"):
+		gs.set_last_played_region(id)
 	AudioManager.stop_music()
 	var transition := BattleTransition.new()
 	get_tree().root.add_child(transition)

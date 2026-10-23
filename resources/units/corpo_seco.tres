@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dts0j7w0qjnpw"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_mkq7j"]
-[ext_resource type="Texture2D" uid="uid://civsx418tiuyi" path="res://Assets/Units/SplashArts/corpo_seco.webp" id="1_pdwky"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_mkq7j"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/corpo_seco.webp" id="1_pdwky"]
 
 [resource]
 script = ExtResource("1_mkq7j")
@@ -23,7 +23,7 @@ mana_per_attack = 8.0
 origins = Array[String](["Urbano"])
 classes = Array[String](["Assombração", "DPS"])
 ability_name = "Drenagem Vital"
-ability_description = "Suga vida de inimigos próximos, curando-se."
+ability_description = "Canaliza raízes espinhosas que drenam até 3 inimigos próximos, infligindo 120 de dano verdadeiro e curando a si mesmo em 80 de vida por alvo atingido por 4.0s."
 ability_damage = 120.0
 ability_heal = 80.0
 ability_duration = 4.0

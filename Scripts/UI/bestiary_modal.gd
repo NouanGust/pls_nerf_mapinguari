@@ -303,11 +303,34 @@ func open_for_unit(stats: UnitStats, star_level: int = 1) -> void:
 		"minhocao":
 			ab_details.append("• [color=#d97706]Terremoto Sísmico:[/color] 2.0s de atordoamento em área hexagonal")
 		"matinta_perera":
-			ab_details.append("• [color=#c084fc]Forma Espectral:[/color] 3.0s de invulnerabilidade total")
+			ab_details.append("• [color=#c084fc]Forma Espectral:[/color] Avança velozmente, inflige forte dano e confusão por 2.5s com 3.0s de invulnerabilidade e retorna")
+		"sabia_laranjeira":
+			ab_details.append("• [color=#fb923c]Bicada Veloz:[/color] Voa até o inimigo, desfere bicada e recebe +35% de velocidade por 4.0s")
+		"araucaria":
+			ab_details.append("• [color=#22c55e]Copa Protetora:[/color] Barreira de raízes protege Araucária e aliados próximos com escudo")
+		"caapora":
+			var sh1 := int(20.0 * 1.0)
+			var sh2 := int(20.0 * 1.8)
+			var sh3 := int(20.0 * 2.6)
+			ab_details.append("• [color=#10b981]Flecha Perfurante:[/color] Atravessa até 5 inimigos com quebra de armadura (%s)" % _format_trio(sh1, sh2, sh3, current_star_level))
+		"comadre_fulozinha":
+			ab_details.append("• [color=#f472b6]Espíritos da Floresta:[/color] Invoca 2 espíritos que golpeiam inimigos e curam aliados por 10.0s")
+		"corpo_seco":
+			ab_details.append("• [color=#a855f7]Dreno Vital:[/color] Dano verdadeiro e cura contínua ao longo de 4.0s em área")
+		"mboi_guacu":
+			ab_details.append("• [color=#0284c7]Constrição Mortal:[/color] Imobiliza o alvo por 4.0s causando dano físico contínuo e ganha escudo")
+		"onca_pintada":
+			ab_details.append("• [color=#f59e0b]Bote de Emboscada:[/color] Salto mortal nas costas do menor HP com sangramento e atordoamento")
+		"pau_brasil":
+			ab_details.append("• [color=#eab308]Florada Dourada:[/color] Causa dano mágico em área, enfraquece inimigos e concede escudo a aliados")
+		"pisadeira":
+			ab_details.append("• [color=#9333ea]Paralisia do Terror:[/color] Paralisa inimigos em área por %s e drena 25 de mana" % _format_trio("2.5s", "3.0s", "3.5s", current_star_level))
+		"sumauma":
+			ab_details.append("• [color=#16a34a]Raízes Guardiãs:[/color] Enraíza inimigos em raio de 4.0m e ampara aliados adjacentes com cura e escudo")
 
 	if stats.ability_targets > 1:
 		ab_details.append("• [color=#cbd5e1]Alvos Simultâneos:[/color] %d" % stats.ability_targets)
-	if stats.ability_duration > 0.0 and not stats.unit_id in ["alamoa", "anhanga", "cabeca_de_cuia", "mapinguari", "quibungo", "minhocao", "matinta_perera"]:
+	if stats.ability_duration > 0.0 and not stats.unit_id in ["alamoa", "anhanga", "cabeca_de_cuia", "mapinguari", "quibungo", "minhocao", "matinta_perera", "sabia_laranjeira", "araucaria", "caapora", "comadre_fulozinha", "corpo_seco", "mboi_guacu", "onca_pintada", "pau_brasil", "pisadeira", "sumauma"]:
 		ab_details.append("• [color=#cbd5e1]Duração do Efeito:[/color] %.1fs" % stats.ability_duration)
 
 	_ability_lbl.text = "[color=#c084fc]HABILIDADE: %s[/color] [color=#94a3b8](%s)[/color]\n" % [stats.ability_name, ab_type]

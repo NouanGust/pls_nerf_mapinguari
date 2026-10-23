@@ -19,6 +19,17 @@ func _input(_event: InputEvent) -> void:
 	# Continua bloqueando a interface depois do fade, até terminar a câmera.
 	get_viewport().set_input_as_handled()
 
+func force_black() -> void:
+	if not is_instance_valid(_curtain):
+		_curtain = ColorRect.new()
+		_curtain.name = "Curtain"
+		_curtain.color = Color(0.0, 0.0, 0.0, 1.0)
+		_curtain.mouse_filter = Control.MOUSE_FILTER_STOP
+		_curtain.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(_curtain)
+	else:
+		_curtain.color = Color(0.0, 0.0, 0.0, 1.0)
+
 func fade_to_black() -> void:
 	await _fade_to(1.0, 0.5)
 

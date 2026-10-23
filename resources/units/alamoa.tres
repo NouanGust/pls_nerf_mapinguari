@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://c070vhq8a4hpf"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://dwuqc7yo4r1dk" path="res://Assets/Units/SplashArts/alamoa.webp" id="1_iig5i"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_pkwj0"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/alamoa.webp" id="1_iig5i"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_pkwj0"]
 
 [resource]
 script = ExtResource("1_pkwj0")
@@ -19,6 +19,7 @@ attack_speed = 1.2
 attack_range = 3
 armor = 25.0
 magic_resist = 45.0
+can_fly = true
 max_mana = 90.0
 starting_mana = 50.0
 mana_per_attack = 8.0
@@ -26,7 +27,7 @@ mana_per_second = 6.0
 origins = Array[String](["Litorâneo"])
 classes = Array[String](["Aquático", "Encantado"])
 ability_name = "Canto Hipnótico"
-ability_description = "Encanta inimigos, fazendo-os atacar aliados por 3 segundos."
+ability_description = "Entoa uma melodia hipnótica sedutora que atordoa e imobiliza os 2 inimigos mais próximos por 3.0 segundos."
 ability_targets = 2
 ability_duration = 3.0
 ability_range = 4.0

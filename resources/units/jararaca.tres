@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://c35p8up8cjcre"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
-[ext_resource type="Texture2D" uid="uid://ccx4k0haiwg67" path="res://Assets/Units/SplashArts/jararaca.jpg" id="1_vpqfr"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/jararaca.jpg" id="1_vpqfr"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -22,7 +22,7 @@ classes = Array[String](["Caçador", "DPS"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Mata Atlântica"])
 ability_name = "Bote Certeiro"
-ability_description = "Causa 170 de dano físico ao alvo atual; prioriza inimigos com menos vida."
+ability_description = "Teletransporta-se em emboscada pelas sombras para trás do inimigo mais ferido, desferindo um bote letal de 170 de dano físico."
 ability_damage = 170.0
 ability_damage_type = 0
 is_assassin = true

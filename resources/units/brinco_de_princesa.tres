@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://cg54x7k46i8mp"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://dj3c48kh3fd0c" path="res://Assets/Units/SplashArts/brinco_princesa.webp" id="1_k8wk2"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/brinco_princesa.webp" id="1_k8wk2"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -27,7 +27,7 @@ classes = Array[String](["Suporte", "Encantado"])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Mata Atlântica"])
 ability_name = "Florada Encantada"
-ability_description = "Recupera 60 de vida de até dois aliados feridos próximos."
+ability_description = "Dispara dardos florais que recuperam 65 de vida dos 2 aliados feridos mais próximos e causam 55 de dano mágico ao inimigo alvo."
 ability_heal = 60.0
 ability_targets = 2
 ability_range = 4.0

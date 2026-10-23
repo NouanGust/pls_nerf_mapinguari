@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://ddu8u21eevxx1"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://cuu38hpcr63ab" path="res://Assets/Units/SplashArts/sabia_laranjeira.jpg" id="1_253ox"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/sabia_laranjeira.jpg" id="1_253ox"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -15,13 +15,15 @@ attack_speed = 0.95
 armor = 10.0
 magic_resist = 15.0
 movement_speed = 190.0
+can_fly = true
 max_mana = 70.0
 origins = Array[String](["Mata Atlântica"])
 classes = Array[String](["Caçador"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Mata Atlântica"])
-ability_name = "Bicada Precisa"
-ability_description = "Causa 95 de dano físico ao alvo atual."
+ability_name = "Bicada Veloz"
+ability_description = "Voa em mergulho rasante até o alvo desferindo uma bicada certeira de 95 de dano físico e recebe +35% de velocidade de ataque e movimento por 4.0s."
 ability_damage = 95.0
+ability_duration = 4.0
 ability_damage_type = 0
 prefers_backline = true

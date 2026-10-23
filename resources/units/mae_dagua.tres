@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://cdahfwjwrhrh0"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_i5pg7"]
-[ext_resource type="Texture2D" uid="uid://bjhb103hqttvn" path="res://Assets/Units/SplashArts/mae_agua.jpg" id="1_xs67q"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_i5pg7"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mae_agua.jpg" id="1_xs67q"]
 
 [resource]
 script = ExtResource("1_i5pg7")
@@ -25,7 +25,7 @@ mana_per_second = 10.0
 origins = Array[String](["Litorâneo"])
 classes = Array[String](["Encantado", "Suporte"])
 ability_name = "Bênção das Águas"
-ability_description = "Cura massivamente aliados e purifica debuffs."
+ability_description = "Purifica o campo com águas místicas sagradas, restaurando 350 de vida aos 3 aliados mais feridos."
 ability_heal = 350.0
 ability_targets = 4
 ability_range = 10.0

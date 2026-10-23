@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://dx6jqxpuumy16"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_8uxd0"]
-[ext_resource type="Texture2D" uid="uid://dtuamjegn4il7" path="res://Assets/Units/SplashArts/papa_figo.jpg" id="1_dtdlx"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_8uxd0"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/papa_figo.jpg" id="1_dtdlx"]
 
 [resource]
 script = ExtResource("1_8uxd0")
@@ -21,7 +21,7 @@ mana_per_attack = 13.0
 origins = Array[String](["Urbano"])
 classes = Array[String](["Assombração", "Suporte"])
 ability_name = "Toque Gélido"
-ability_description = "Causa 115 de dano mágico ao alvo, reduz seu ataque em 25% por 5 segundos e cura um aliado ferido próximo em 80."
+ability_description = "Desfere uma rajada congelante causando 115 de dano mágico, reduzindo o ataque do alvo em 25% por 5.0s e curando o aliado mais ferido em 80 de vida."
 ability_damage = 115.0
 ability_heal = 80.0
 ability_duration = 5.0

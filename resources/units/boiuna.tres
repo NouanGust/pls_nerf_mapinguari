@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://obliud6cjvp8"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://do4tpjjgc63ls" path="res://Assets/Units/SplashArts/boiuna.jpg" id="1_akffg"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_pnefc"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/boiuna.jpg" id="1_akffg"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_pnefc"]
 
 [resource]
 script = ExtResource("1_pnefc")
@@ -25,7 +25,7 @@ classes = Array[String](["Místico", "Tank"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Amazônia"])
 ability_name = "Dilúvio Ancestral"
-ability_description = "Invoca tsunami que causa dano massivo e cura aliados."
+ability_description = "Invoca uma onda colossal mística que devasta até 3 inimigos causando 400 de dano mágico e restaura 300 de vida a até 3 aliados feridos."
 ability_damage = 400.0
 ability_heal = 300.0
 ability_targets = 5

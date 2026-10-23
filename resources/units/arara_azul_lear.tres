@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://vtmay1cdadc3"]
+[gd_resource type="Resource" script_class="UnitStats" format=3]
 
-[ext_resource type="Texture2D" uid="uid://dueh8rar00a6q" path="res://Assets/Units/SplashArts/divulgacoes.jpg" id="1_pf8h1"]
-[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/divulgacoes.jpg" id="1_pf8h1"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -18,6 +18,7 @@ attack_range = 4
 armor = 15.0
 magic_resist = 20.0
 movement_speed = 235.0
+can_fly = true
 max_mana = 85.0
 mana_per_attack = 12.0
 origins = Array[String](["Caatinga"])
@@ -25,7 +26,7 @@ classes = Array[String](["Caçador", "DPS"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Caatinga"])
 ability_name = "Voo de Lear"
-ability_description = "Causa 150 de dano mágico ao alvo atual; prioriza inimigos com maior ataque."
+ability_description = "Alça voo e dispara uma pena sônica cintilante no inimigo com maior poder de ataque, causando 150 de dano mágico."
 ability_damage = 150.0
 ability_range = 6.0
 is_ranged = true

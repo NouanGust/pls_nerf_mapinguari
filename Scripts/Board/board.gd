@@ -216,11 +216,16 @@ func place_unit(unit: Node3D, grid_pos: Vector2i, animate: bool = true) -> bool:
 		return false
 	var target_pos := get_cell_world_position(grid_pos)
 	if animate and unit is BaseUnit3D:
+		var tier: int = unit.stats.tier if unit.stats else 1
 		var tween := create_tween()
 		tween.set_ease(Tween.EASE_OUT)
 		tween.set_trans(Tween.TRANS_BOUNCE)
-		unit.global_position = target_pos + Vector3(0, 0.5, 0)
-		tween.tween_property(unit, "global_position", target_pos, 0.35)
+		var drop_height := 0.45 + 0.12 * tier
+		unit.global_position = target_pos + Vector3(0, drop_height, 0)
+		tween.tween_property(unit, "global_position", target_pos, 0.28 + 0.03 * tier)
+		create_placement_feedback(target_pos, tier)
+		if tier >= 5 and unit.has_method("_trigger_camera_shake"):
+			unit._trigger_camera_shake(0.3, 0.25)
 	else:
 		unit.global_position = target_pos
 	if unit is BaseUnit3D:
@@ -232,6 +237,106 @@ func place_unit(unit: Node3D, grid_pos: Vector2i, animate: bool = true) -> bool:
 		unit.died.connect(_on_unit_died)
 	unit_placed.emit(unit, grid_pos)
 	return true
+
+
+func create_placement_feedback(pos: Vector3, tier: int) -> void:
+	var tier_colors := {
+		1: Color(0.85, 0.88, 0.92),  # Comum: Prata / Branco
+		2: Color(0.25, 0.92, 0.45),  # Incomum: Verde Esmeralda
+		3: Color(0.28, 0.68, 1.0),   # Raro: Azul Safira
+		4: Color(0.78, 0.35, 1.0),   # Épico: Roxo Ametista
+		5: Color(1.0, 0.75, 0.18),   # Lendário: Dourado Radiante
+	}
+	var col: Color = tier_colors.get(tier, Color.WHITE)
+	
+	# 1. Anel / Shockwave no chão se expandindo
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.35
+	torus.outer_radius = 0.50
+	torus.ring_segments = 24
+	ring.mesh = torus
+	ring.position = pos + Vector3(0, 0.04, 0)
+	ring.scale = Vector3(0.3, 0.05, 0.3)
+	
+	var ring_mat := StandardMaterial3D.new()
+	ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ring_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	ring_mat.albedo_color = Color(col.r, col.g, col.b, 0.85)
+	ring_mat.emission_enabled = true
+	ring_mat.emission = col
+	ring_mat.emission_energy_multiplier = 1.8 + tier * 0.4
+	ring.material_override = ring_mat
+	add_child(ring)
+	
+	var max_scale := 1.8 + tier * 0.45
+	var duration := 0.35 + tier * 0.05
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(ring, "scale", Vector3(max_scale, 0.05, max_scale), duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(ring_mat, "albedo_color:a", 0.0, duration).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(ring.queue_free)
+	
+	# 2. Partículas de impacto
+	var particles := GPUParticles3D.new()
+	particles.position = pos + Vector3(0, 0.1, 0)
+	particles.one_shot = true
+	particles.explosiveness = 0.92
+	particles.amount = 10 + tier * 12
+	particles.lifetime = 0.5 + tier * 0.1
+	
+	var p_proc := ParticleProcessMaterial.new()
+	p_proc.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_RING
+	p_proc.emission_ring_radius = 0.45
+	p_proc.emission_ring_inner_radius = 0.15
+	p_proc.direction = Vector3(0, 1, 0)
+	p_proc.spread = 70.0
+	p_proc.initial_velocity_min = 1.2 + tier * 0.5
+	p_proc.initial_velocity_max = 2.4 + tier * 1.0
+	p_proc.gravity = Vector3(0, -5.0, 0)
+	p_proc.scale_min = 0.04 + tier * 0.015
+	p_proc.scale_max = 0.08 + tier * 0.025
+	p_proc.color = col
+	particles.process_material = p_proc
+	
+	var p_mesh := SphereMesh.new()
+	p_mesh.radius = 0.05
+	p_mesh.height = 0.1
+	var p_mat := StandardMaterial3D.new()
+	p_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	p_mat.albedo_color = col
+	p_mat.emission_enabled = true
+	p_mat.emission = col
+	p_mat.emission_energy_multiplier = 2.0
+	p_mesh.material = p_mat
+	particles.draw_pass_1 = p_mesh
+	
+	add_child(particles)
+	particles.emitting = true
+	get_tree().create_timer(particles.lifetime + 0.2, false).timeout.connect(particles.queue_free)
+	
+	# 3. Feixe vertical radiante para Épico (Tier 4) e Lendário (Tier 5)
+	if tier >= 4:
+		var beam := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.25 if tier == 4 else 0.45
+		cyl.bottom_radius = 0.45 if tier == 4 else 0.75
+		cyl.height = 3.0 if tier == 4 else 4.5
+		beam.mesh = cyl
+		beam.position = pos + Vector3(0, cyl.height * 0.5, 0)
+		var beam_mat := StandardMaterial3D.new()
+		beam_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		beam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		beam_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		beam_mat.albedo_color = Color(col.r, col.g, col.b, 0.45 if tier == 4 else 0.7)
+		beam.material_override = beam_mat
+		add_child(beam)
+		var btw := create_tween()
+		btw.set_parallel(true)
+		btw.tween_property(beam, "scale", Vector3(1.4, 1.0, 1.4), 0.35).set_trans(Tween.TRANS_QUAD)
+		btw.tween_property(beam_mat, "albedo_color:a", 0.0, 0.35).set_trans(Tween.TRANS_QUAD)
+		btw.chain().tween_callback(beam.queue_free)
 
 
 func move_unit(from_pos: Vector2i, to_pos: Vector2i, animate: bool = true) -> bool:

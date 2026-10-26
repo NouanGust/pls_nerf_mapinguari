@@ -59,3 +59,36 @@ O elenco passa de **37 para 45**. Os custos 1 e 2 passam de **11 para 19 opçõe
 - Os geradores antigos em `Scripts/tools` preservam recursos existentes para evitar sobrescrever os novos custos e atributos. A fonte de verdade do balanceamento é `resources/units/*.tres`.
 
 As composições e os patamares estão em [LEVANTAMENTO_SINERGIAS.md](LEVANTAMENTO_SINERGIAS.md). Os números são um ponto inicial de balanceamento, ainda sujeito a partidas de teste.
+
+## Rodada de 26/10/2026 — Funções de Combate e Lendárias por Região
+
+### 1. Funções de Combate (Roles)
+Cada unidade foi atribuída formalmente a uma das 6 funções de combate:
+- **Tank**: Dano baixo por ataque, mas alta defesa e escalonamento em vida e defesas. Habilidades amplificam seus poderes defensivos ou aplicam controle de grupo (CC). Ex: *Capivara, Mandacaru, Tatu-bola, Caranguejo-uçá, Ipê-amarelo, Anhangá, Minhocão, Sumaúma, Araucária, Tutu-Marambá*.
+- **Conjurador**: Dano baixo por ataque, pouca defesa e vida, mas causam alto dano através de habilidades mágicas/arcanas. Ex: *Pequi, Cabeça-de-Cuia, Mãe-de-Ouro, Teiniaguá, Comadre Fulozinha, Alamoa, Boiúna*.
+- **Atacante**: Dano crescente e alto ritmo de ataque, pouca vida e defesa. Ganham amplificação de dano ou velocidade de ataque a cada golpe consecutivo. Ex: *Sabiá-laranjeira, Arara-azul-de-lear, Caapora, Corpo-Seco, Lobo-guará*.
+- **Assassino**: Dano explosivo com habilidade de execução em alvo único, pouca defesa e vida. Possuem preferência por unidades mais fracas (menor vida). Ex: *Cumacanga, Jararaca, Matinta Perera, Onça-pintada, Pisadeira, Romãozinho, Pé-de-Garrafa*.
+- **Suporte**: Dano baixo por ataque, pouca defesa e vida. Habilidades buffam aliados (cura, escudo, mana) ou enfraquecem inimigos, e criam aura nos hexágonos ao redor concedendo bônus aos companheiros. Ex: *Brinco-de-princesa, Bromélia, Guaraná, Aguapé, Palmito-juçara, Vitória-régia, Papa-Figo, Labatut, Ararinha-azul, Mãe-D'Água, Mutum-de-alagoas*.
+- **Porradeiro**: Dano alto por ataque, boa vida e defesa no combate corpo a corpo. Suas habilidades buscam se auto-buffar com dano, velocidade ou regeneração. Ex: *Tamanduá-bandeira, Quibungo, Pau-brasil, Mapinguari, Mboi-Guaçu*.
+
+### 2. Distribuição de Lendárias (Custo 5) por Região
+Cada região do jogo conta agora com pelo menos 1 unidade custo 5 (lendária), sendo que as regiões maiores possuem 2 lendárias:
+- **Amazônico** (2): Boiúna (Conjurador) e Mapinguari (Porradeiro)
+- **Caatinga** (1): Ararinha-azul (Suporte)
+- **Cerrado** (1): Lobo-guará (Atacante/Suporte)
+- **Litorâneo** (2): Mãe-D'Água (Suporte) e Alamoa (Conjurador)
+- **Mata Atlântica** (2): Mutum-de-alagoas (Suporte/Tank) e Araucária (Tank)
+- **Pantaneiro** (2): Romãozinho (Assassino) e Mboi-Guaçu (Porradeiro)
+- **Urbano** (2): Tutu-Marambá (Tank) e Pisadeira (Assassino)
+- **Sertanejo** (1): Pé-de-Garrafa (Assassino)
+
+### 3. Esfera Visual de Escudo por Origem
+Unidades afetadas por escudo recebem uma esfera translúcida sem colisão ao seu redor, cuja cor varia conforme a origem:
+- **Classe / Sinergia**: Dourado / Âmbar translúcido
+- **Próprio**: Ciano / Azul piscina translúcido
+- **Jogador / Aliado**: Verde Esmeralda translúcido
+- **Inimigo**: Vermelho Carmesim translúcido
+
+### 4. Feedback de Colocação por Raridade
+Ao posicionar unidades no tabuleiro, efeitos visuais (choque em anel, partículas escaladas e feixe vertical para T4/T5) e sonoros (modulação de pitch e chime comemorativo para lendárias) fornecem feedback condizente com a raridade do campeão.
+

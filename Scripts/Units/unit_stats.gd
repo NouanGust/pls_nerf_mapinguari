@@ -29,8 +29,17 @@ enum DamageType {
 @export var unit_id: String = ""
 @export_multiline var description: String = ""
 @export var lore: String = ""
+const ROLE_TANK: String = "Tank"
+const ROLE_CONJURADOR: String = "Conjurador"
+const ROLE_ATACANTE: String = "Atacante"
+const ROLE_ASSASSINO: String = "Assassino"
+const ROLE_SUPORTE: String = "Suporte"
+const ROLE_PORRADEIRO: String = "Porradeiro"
+
 @export var tier: int = 1
 @export var cost: int = 1
+## Função de combate: Tank, Conjurador, Atacante, Assassino, Suporte, Porradeiro
+@export var combat_role: String = ""
 
 ## ============================================
 ## VISUAIS
@@ -169,3 +178,54 @@ func get_attack_range_hexes() -> int:
 
 func has_affinity(affinity_name: String) -> bool:
 	return affinities.has(affinity_name)
+
+func get_combat_role() -> String:
+	if not combat_role.is_empty():
+		return combat_role
+	if is_tank or has_class("Tank"):
+		return ROLE_TANK
+	if is_assassin:
+		return ROLE_ASSASSINO
+	if has_class("Suporte"):
+		return ROLE_SUPORTE
+	if has_class("DPS") or has_class("Caçador"):
+		return ROLE_ATACANTE
+	if has_class("Místico"):
+		return ROLE_CONJURADOR
+	return ROLE_PORRADEIRO
+
+func get_combat_role_description() -> String:
+	match get_combat_role():
+		ROLE_TANK:
+			return "Dano baixo por ataque, alta defesa e vida. Amplifica defesa ou aplica controle de grupo."
+		ROLE_CONJURADOR:
+			return "Pouco dano por ataque, pouca defesa e vida. Causa alto dano por habilidades."
+		ROLE_ATACANTE:
+			return "Causa muito dano quanto mais ataca, pouca vida e defesa. Ganha amplificação de dano ou velocidade."
+		ROLE_ASSASSINO:
+			return "Dano explosivo, pouca defesa e vida. Habilidade traz explosão de dano e foca alvos mais fracos."
+		ROLE_SUPORTE:
+			return "Pouco dano de ataque, pouca defesa. Buffa aliados, enfraquece inimigos e cria aura nos hexágonos ao redor."
+		ROLE_PORRADEIRO:
+			return "Bastante dano de ataque, boa vida e defesa. Suas habilidades concedem auto-buffs."
+		_:
+			return ""
+
+func is_tank_role() -> bool:
+	return get_combat_role() == ROLE_TANK
+
+func is_conjurador_role() -> bool:
+	return get_combat_role() == ROLE_CONJURADOR
+
+func is_atacante_role() -> bool:
+	return get_combat_role() == ROLE_ATACANTE
+
+func is_assassino_role() -> bool:
+	return get_combat_role() == ROLE_ASSASSINO
+
+func is_suporte_role() -> bool:
+	return get_combat_role() == ROLE_SUPORTE
+
+func is_porradeiro_role() -> bool:
+	return get_combat_role() == ROLE_PORRADEIRO
+

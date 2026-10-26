@@ -28,32 +28,32 @@ const REGIONS: Dictionary = {
 	"cerrado": {
 		"name": "Cerrado", "color": Color("#d6ad57"),
 		"description": "Raízes resistentes e guardiões da savana. Flora, proteção e caça.",
-		"roster": ["pequi", "ipe_amarelo", "tamandua_bandeira", "lobo_guara", "ipe_amarelo", "pequi", "tamandua_bandeira", "lobo_guara", "ipe_amarelo"],
+		"roster": ["pequi", "ipe_amarelo", "tamandua_bandeira", "pequi", "ipe_amarelo", "tamandua_bandeira", "ipe_amarelo", "tamandua_bandeira", "lobo_guara"],
 	},
 	"pantanal": {
 		"name": "Pantanal", "color": Color("#70b8be"),
 		"description": "Fauna das águas e lendas das cheias. Resistência, cura e magia.",
-		"roster": ["capivara", "aguape", "tamandua_bandeira", "lobo_guara", "minhocao", "teiniagua", "mae_de_ouro", "mboi_guacu", "romaozinho"],
+		"roster": ["capivara", "aguape", "minhocao", "teiniagua", "mae_de_ouro", "tamandua_bandeira", "pau_brasil", "mboi_guacu", "romaozinho"],
 	},
 	"amazonia": {
 		"name": "Amazônia", "color": Color("#7cbb89"),
 		"description": "A floresta ganha força com seus protetores e suas grandes lendas.",
-		"roster": ["guarana", "vitoria_regia", "anhanga", "labatut", "mapinguari", "caapora", "comadre_fulozinha", "sumauma", "boiuna"],
+		"roster": ["guarana", "vitoria_regia", "anhanga", "labatut", "caapora", "comadre_fulozinha", "sumauma", "mapinguari", "boiuna"],
 	},
 	"caatinga": {
 		"name": "Caatinga", "color": Color("#d39168"),
 		"description": "Defesas do sertão e aves raras. Uma formação persistente e protetora.",
-		"roster": ["tatu_bola", "mandacaru", "arara_azul_lear", "tatu_bola", "mandacaru", "arara_azul_lear", "tatu_bola", "mandacaru", "ararinha_azul"],
+		"roster": ["mandacaru", "tatu_bola", "arara_azul_lear", "mandacaru", "tatu_bola", "arara_azul_lear", "mandacaru", "arara_azul_lear", "ararinha_azul"],
 	},
 	"mata_atlantica": {
 		"name": "Mata Atlântica", "color": Color("#8cae70"),
 		"description": "Flores, aves e árvores ancestrais. Suporte para uma linha de frente sólida.",
-		"roster": ["sabia_laranjeira", "bromelia", "jararaca", "brinco_de_princesa", "palmito_jucara", "araucaria", "pau_brasil", "araucaria", "mutum_de_alagoas"],
+		"roster": ["sabia_laranjeira", "brinco_de_princesa", "palmito_jucara", "jararaca", "pau_brasil", "sabia_laranjeira", "pau_brasil", "araucaria", "mutum_de_alagoas"],
 	},
 	"litoral": {
 		"name": "Litoral", "color": Color("#85b5dd"),
 		"description": "Mangues e encantos do mar. Criaturas aquáticas, flora e encantados.",
-		"roster": ["bromelia", "caranguejo_uca", "palmito_jucara", "cabeca_de_cuia", "alamoa", "mboi_guacu", "pau_brasil", "mutum_de_alagoas", "mae_dagua"],
+		"roster": ["bromelia", "caranguejo_uca", "palmito_jucara", "cabeca_de_cuia", "caranguejo_uca", "cabeca_de_cuia", "pau_brasil", "alamoa", "mae_dagua"],
 	},
 }
 

@@ -163,6 +163,27 @@ func play_fail() -> void:
 func play_move_unit() -> void:
 	play_sfx(move_unit_sfx, true)
 
+func play_place_unit(tier: int) -> void:
+	if move_unit_sfx == null:
+		return
+	if _sfx_pool.is_empty():
+		_init_sfx_pool()
+	var player: AudioStreamPlayer = null
+	for p in _sfx_pool:
+		if is_instance_valid(p) and not p.playing:
+			player = p
+			break
+	if player == null:
+		player = _sfx_pool[_sfx_pool_index]
+		_sfx_pool_index = (_sfx_pool_index + 1) % _sfx_pool.size()
+	
+	player.stream = move_unit_sfx
+	player.volume_db = -1.0 + (tier - 1) * 0.7
+	player.pitch_scale = 0.95 + clampf(tier - 1, 0, 4) * 0.12
+	player.play()
+	if tier >= 5 and sinergy_activated_sfx:
+		play_sfx(sinergy_activated_sfx, false, -4.0)
+
 func play_evol_hint_shop() -> void:
 	if _evol_hint_player == null:
 		_init_evol_hint_player()

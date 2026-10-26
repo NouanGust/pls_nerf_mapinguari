@@ -215,8 +215,8 @@ func open_for_unit(stats: UnitStats, star_level: int = 1) -> void:
 		stats.unit_name, stats.tier, stats.cost
 	]
 	_profile_lbl.text += "[color=#cbd5e1][i]\"%s\"[/i][/color]\n\n" % lore_desc
-	_profile_lbl.text += "[color=#74e6f5]Origens:[/color] [b]%s[/b]   ·   [color=#d8b4fe]Classes:[/color] [b]%s[/b]" % [
-		origins_str, classes_str
+	_profile_lbl.text += "[color=#74e6f5]Origens:[/color] [b]%s[/b]   ·   [color=#d8b4fe]Classes:[/color] [b]%s[/b]   ·   [color=#fbbf24]Função:[/color] [b]%s[/b]\n[color=#94a3b8][i]%s[/i][/color]" % [
+		origins_str, classes_str, stats.get_combat_role(), stats.get_combat_role_description()
 	]
 
 	# 2. Atributos Base & Escalonamento (1★ / 2★ / 3★)

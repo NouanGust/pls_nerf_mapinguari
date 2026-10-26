@@ -23,14 +23,21 @@ var stars: int:
 
 # Estado de Combate
 enum State {IDLE, MOVING, ATTACKING, CASTING, DEAD, ROOTED}
+enum ShieldSource { CLASS, SELF, PLAYER, ENEMY }
+
 var current_state: State = State.IDLE
 var current_target: BaseUnit3D = null
 var invested_gold: int = 0
 var synergy_bonuses: Dictionary = {}
+var current_shield_source: ShieldSource = ShieldSource.SELF
+var shield_sphere: MeshInstance3D = null
+var _shield_sphere_tween: Tween = null
+var consecutive_attacks: int = 0
 var current_shield: float = 0.0:
 	set(value):
 		current_shield = maxf(value, 0.0)
 		update_stats_display()
+		_update_shield_sphere_visual()
 const MAX_CERRADO_STACKS: int = 10
 var enemies_defeated: int = 0
 var is_synergy_highlighted: bool = false
@@ -381,6 +388,7 @@ func setup_model() -> void:
 	rotation.y = PI if team == 1 else 0.0
 	setup_team_indicator()
 	setup_aura_indicator()
+	setup_shield_sphere()
 
 func setup_aura_indicator() -> void:
 	if is_instance_valid(_aura_indicator):
@@ -544,6 +552,92 @@ func setup_team_indicator() -> void:
 		
 		indicator.material_override = mat
 		add_child(indicator)
+
+const SHIELD_COLORS := {
+	ShieldSource.CLASS: Color(1.0, 0.82, 0.22),    # Dourado / Âmbar (Sinergia/Classe)
+	ShieldSource.SELF: Color(0.2, 0.82, 1.0),      # Ciano / Azul piscina (Próprio)
+	ShieldSource.PLAYER: Color(0.25, 0.95, 0.55),  # Verde Esmeralda (Aliado/Jogador)
+	ShieldSource.ENEMY: Color(0.95, 0.25, 0.35),   # Vermelho Carmesim (Inimigo)
+}
+
+func setup_shield_sphere() -> void:
+	if is_instance_valid(shield_sphere):
+		shield_sphere.queue_free()
+		shield_sphere = null
+	
+	shield_sphere = MeshInstance3D.new()
+	shield_sphere.name = "ShieldSphereVisual"
+	
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.85
+	sphere.height = 1.7
+	sphere.radial_segments = 24
+	sphere.rings = 16
+	shield_sphere.mesh = sphere
+	shield_sphere.position = Vector3(0.0, 0.8, 0.0)
+	
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.roughness = 0.1
+	mat.metallic = 0.05
+	mat.rim_enabled = true
+	mat.rim = 0.95
+	mat.rim_tint = 0.8
+	mat.emission_enabled = true
+	mat.emission_energy_multiplier = 0.65
+	
+	var base_col: Color = SHIELD_COLORS.get(current_shield_source, SHIELD_COLORS[ShieldSource.SELF])
+	mat.albedo_color = Color(base_col.r, base_col.g, base_col.b, 0.28)
+	mat.emission = base_col
+	shield_sphere.material_override = mat
+	
+	shield_sphere.visible = false
+	shield_sphere.scale = Vector3.ZERO
+	add_child(shield_sphere)
+
+func set_shield_with_source(amount: float, source: ShieldSource = ShieldSource.SELF) -> void:
+	current_shield_source = source
+	current_shield = maxf(amount, 0.0)
+
+func _update_shield_sphere_visual() -> void:
+	if not is_instance_valid(shield_sphere):
+		setup_shield_sphere()
+	if not is_instance_valid(shield_sphere):
+		return
+	
+	var has_shield := has_active_shield() and current_state != State.DEAD and visible
+	
+	if has_shield:
+		var effective_source := current_shield_source
+		if team == 1 and effective_source != ShieldSource.CLASS:
+			effective_source = ShieldSource.ENEMY
+		
+		var col: Color = SHIELD_COLORS.get(effective_source, SHIELD_COLORS[ShieldSource.SELF])
+		var mat: StandardMaterial3D = shield_sphere.material_override as StandardMaterial3D
+		if mat:
+			mat.albedo_color = Color(col.r, col.g, col.b, 0.28)
+			mat.emission = col
+		
+		if not shield_sphere.visible or shield_sphere.scale.length_squared() < 0.1:
+			shield_sphere.visible = true
+			if _shield_sphere_tween and _shield_sphere_tween.is_running():
+				_shield_sphere_tween.kill()
+			_shield_sphere_tween = create_tween()
+			_shield_sphere_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			_shield_sphere_tween.tween_property(shield_sphere, "scale", Vector3.ONE, 0.25)
+	else:
+		if shield_sphere.visible:
+			if _shield_sphere_tween and _shield_sphere_tween.is_running():
+				_shield_sphere_tween.kill()
+			_shield_sphere_tween = create_tween()
+			_shield_sphere_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			_shield_sphere_tween.tween_property(shield_sphere, "scale", Vector3.ZERO, 0.18)
+			_shield_sphere_tween.tween_callback(func():
+				if is_instance_valid(shield_sphere) and not has_active_shield():
+					shield_sphere.visible = false
+			)
+
 
 class HealthBarTicks extends Control:
 	var max_hp: float = 500.0
@@ -921,6 +1015,8 @@ func get_attack_damage() -> float:
 			base_damage *= buff.attack_multiplier
 	
 	var damage_multiplier := 1.0 + float(synergy_bonuses.get("damage_pct", 0.0)) + get_power_aura_bonus()
+	if stats and stats.is_atacante_role() and consecutive_attacks > 0:
+		damage_multiplier += 0.05 * consecutive_attacks
 	if is_instance_valid(current_target):
 		if current_target.marked_team == team and BattleClock.now_msec() < current_target.mark_expires_at_msec:
 			damage_multiplier += float(synergy_bonuses.get("marked_target_damage_pct", 0.0))
@@ -1045,7 +1141,11 @@ func start_combat() -> void:
 	combat_ground_height = global_position.y
 	var shield_multiplier := 1.0 + float(synergy_bonuses.get("shield_power_pct", 0.0))
 	shield_multiplier *= 1.0 + float(synergy_bonuses.get("shield_received_pct", 0.0))
-	current_shield = get_max_health() * float(synergy_bonuses.get("start_shield_pct", 0.0)) * shield_multiplier
+	var start_sh := get_max_health() * float(synergy_bonuses.get("start_shield_pct", 0.0)) * shield_multiplier
+	if start_sh > 0.0:
+		set_shield_with_source(start_sh, ShieldSource.CLASS)
+	else:
+		current_shield = 0.0
 	first_attack_used = false
 	first_hit_checked = false
 	enemies_defeated = 0
@@ -1084,8 +1184,21 @@ func find_target() -> void:
 		velocity = Vector3.ZERO
 		return
 	
-	# Todas as unidades devem priorizar e atacar o alvo mais próximo
-	current_target = get_closest_enemy(enemies)
+	# Assassinos têm preferência por unidades mais fracas (menor vida)
+	if (stats.is_assassin or stats.target_priority == UnitStats.TargetPriority.LOWEST_HP or stats.is_assassino_role()) and not enemies.is_empty():
+		var lowest_enemy: BaseUnit3D = null
+		var min_hp := INF
+		var closest_dist := INF
+		for enemy in enemies:
+			var hp: float = enemy.current_health
+			var d: float = global_position.distance_to(enemy.global_position)
+			if hp < min_hp or (is_equal_approx(hp, min_hp) and d < closest_dist):
+				min_hp = hp
+				closest_dist = d
+				lowest_enemy = enemy
+		current_target = lowest_enemy if lowest_enemy else get_closest_enemy(enemies)
+	else:
+		current_target = get_closest_enemy(enemies)
 	
 	# VERIFICAR SE TARGET FOI DEFINIDO
 	if current_target:
@@ -1363,6 +1476,8 @@ func perform_attack() -> void:
 		CombatFeedback.create_damage_number(current_target.global_position, damage, CombatFeedback.DamageType.CRITICAL)
 	
 	current_target.take_damage(damage, self, UnitStats.DamageType.PHYSICAL)
+	if stats and stats.is_atacante_role():
+		consecutive_attacks = mini(consecutive_attacks + 1, 10)
 	var am: Node = get_node_or_null("/root/AudioManager")
 	if am and am.has_method("play_melee_hit"):
 		am.play_melee_hit()
@@ -1732,7 +1847,7 @@ func _apply_ability_shield() -> void:
 	var shield := stats.ability_shield * stats.get_star_multiplier(star_level)
 	shield *= 1.0 + float(synergy_bonuses.get("shield_power_pct", 0.0))
 	shield *= 1.0 + float(synergy_bonuses.get("shield_received_pct", 0.0))
-	current_shield = maxf(current_shield, shield)
+	set_shield_with_source(maxf(current_shield, shield), ShieldSource.SELF)
 	
 	if stats.unit_id == "tatu_bola":
 		if model:
@@ -1828,9 +1943,11 @@ func _cast_alamoa_charm() -> void:
 	)
 	
 	var duration := (stats.ability_duration if stats.ability_duration > 0.0 else 3.0) * (1.0 + float(star_level - 1) * 0.25)
+	var damage := (stats.ability_damage if stats.ability_damage > 0.0 else 500.0) * stats.get_star_multiplier(star_level)
 	var targets_count := mini(maxi(stats.ability_targets, 2), enemies.size())
 	for i in targets_count:
 		var enemy: BaseUnit3D = enemies[i]
+		enemy.take_damage(damage, self, UnitStats.DamageType.MAGICAL)
 		enemy.apply_stun(duration, "HIPNOTIZADO")
 		CombatFeedback.create_hit_particles(enemy.global_position, Color("#ec4899"))
 
@@ -1960,15 +2077,29 @@ func _cast_mae_de_ouro() -> void:
 func _cast_mapinguari() -> void:
 	if model:
 		var tw := create_tween()
-		tw.tween_property(model, "scale", model_base_scale * Vector3(1.3, 0.7, 1.3), 0.14).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "scale", model_base_scale * Vector3(1.35, 0.7, 1.35), 0.14).set_trans(Tween.TRANS_QUAD)
 		tw.tween_property(model, "scale", model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
-	CombatFeedback.create_status_indicator(self, "COURO DE FERRO", 1.2)
-	CombatFeedback.create_hit_particles(global_position, Color("#94a3b8"))
-	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.6, Color("#e2e8f0"))
+	CombatFeedback.create_status_indicator(self, "RUGIDO DA FÚRIA", 1.5)
+	CombatFeedback.create_hit_particles(global_position, Color("#f97316"))
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.6, Color("#ef4444"))
+	_trigger_camera_shake(0.35, 0.3)
 	
-	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 4.0
+	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 5.0
 	reflect_until_msec = BattleClock.now_msec() + int(duration * 1000.0)
 	reflect_pct = 0.40 * (1.0 + float(star_level - 1) * 0.20)
+	
+	# Auto-buff lendário de Porradeiro (+45% ataque, +35% velocidade de ataque)
+	apply_speed_buff(duration, 1.35, "+FÚRIA")
+	active_buffs.append({
+		"attack_multiplier": 1.45,
+		"expires_at_msec": BattleClock.now_msec() + int(duration * 1000.0)
+	})
+	
+	# Dano físico no alvo atual
+	var damage := (stats.ability_damage if stats.ability_damage > 0.0 else 350.0) * stats.get_star_multiplier(star_level)
+	if is_instance_valid(current_target) and current_target.current_state != State.DEAD and not current_target.is_on_bench():
+		current_target.take_damage(damage, self, UnitStats.DamageType.PHYSICAL)
+		CombatFeedback.create_hit_particles(current_target.global_position, Color("#ea580c"))
 
 func _cast_matinta_perera() -> void:
 	var duration := stats.ability_duration if stats.ability_duration > 0.0 else 3.0
@@ -2227,7 +2358,7 @@ func _cast_araucaria_canopy() -> void:
 	
 	var shield_amount := (stats.ability_shield if stats.ability_shield > 0.0 else 260.0) * stats.get_star_multiplier(star_level)
 	shield_amount *= 1.0 + float(synergy_bonuses.get("shield_power_pct", 0.0))
-	current_shield = maxf(current_shield, shield_amount)
+	set_shield_with_source(maxf(current_shield, shield_amount), ShieldSource.SELF)
 	
 	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.0
 	_create_araucaria_canopy_element(global_position, radius, 4.0)
@@ -2239,7 +2370,7 @@ func _cast_araucaria_canopy() -> void:
 		var dist: float = Vector2(global_position.x, global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
 		if dist <= radius:
 			var ally_shield := shield_amount * 0.85
-			ally.current_shield = maxf(ally.current_shield, ally_shield)
+			ally.set_shield_with_source(maxf(ally.current_shield, ally_shield), ShieldSource.PLAYER if team == 0 else ShieldSource.ENEMY)
 			CombatFeedback.create_hit_particles(ally.global_position, Color("#15803d"))
 			CombatFeedback.create_status_indicator(ally, "COPA PROTETORA", 1.2)
 
@@ -2607,29 +2738,45 @@ func _cast_pau_brasil_bloom() -> void:
 			CombatFeedback.create_hit_particles(ally.global_position, Color("#fbbf24"))
 
 func _cast_pisadeira_terror() -> void:
+	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	var enemies: Array = get_tree().get_nodes_in_group(enemy_group).filter(func(unit):
+		return is_instance_valid(unit) and unit is BaseUnit3D and unit.current_state != State.DEAD and unit.visible and not unit.is_on_bench()
+	)
+	if enemies.is_empty():
+		return
+
+	enemies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+		return a.current_health < b.current_health
+	)
+	var target: BaseUnit3D = enemies[0]
+	current_target = target
+
 	_trigger_camera_shake(0.4, 0.5)
 	if model:
 		var tw := create_tween()
-		tw.tween_property(model, "position:y", 0.7, 0.14).set_trans(Tween.TRANS_QUAD)
-		tw.tween_property(model, "position:y", 0.0, 0.16).set_trans(Tween.TRANS_BOUNCE)
-	CombatFeedback.create_status_indicator(self, "PARALISIA DO TERROR", 1.2)
+		tw.tween_property(model, "position:y", 0.9, 0.12).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(model, "position:y", 0.0, 0.18).set_trans(Tween.TRANS_BOUNCE)
+	CombatFeedback.create_status_indicator(self, "PISADA FATAL", 1.2)
 	CombatFeedback.create_hit_particles(global_position, Color("#7e22ce"))
 	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.7, Color("#0f172a"))
 	
 	var radius := stats.ability_range if stats.ability_range > 0.0 else 3.5
 	var base_dur := stats.ability_duration if stats.ability_duration > 0.0 else 2.5
 	var duration := base_dur * (1.0 + float(star_level - 1) * 0.20)
-	var damage := (stats.ability_damage if stats.ability_damage > 0.0 else 130.0) * stats.get_star_multiplier(star_level)
+	var damage := (stats.ability_damage if stats.ability_damage > 0.0 else 520.0) * stats.get_star_multiplier(star_level)
 	
-	var enemy_group := "enemy_units" if team == 0 else "player_units"
+	target.apply_stun(duration, "ESMAGADO")
+	target.take_damage(damage, self, stats.ability_damage_type)
+	CombatFeedback.create_hit_particles(target.global_position, Color("#7e22ce"))
+
 	for enemy_node: Node in get_tree().get_nodes_in_group(enemy_group):
 		var enemy := enemy_node as BaseUnit3D
-		if not is_instance_valid(enemy) or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
+		if not is_instance_valid(enemy) or enemy == target or enemy.current_state == State.DEAD or not enemy.visible or enemy.is_on_bench():
 			continue
 		var dist: float = Vector2(global_position.x, global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
 		if dist <= radius:
-			enemy.apply_stun(duration, "PARALISADO")
-			enemy.take_damage(damage, self, stats.ability_damage_type)
+			enemy.apply_stun(duration * 0.6, "PARALISADO")
+			enemy.take_damage(damage * 0.35, self, stats.ability_damage_type)
 			enemy.current_mana = maxf(enemy.current_mana - 25.0, 0.0)
 			enemy.update_mana_bar()
 			CombatFeedback.create_hit_particles(enemy.global_position, Color("#7e22ce"))
@@ -3084,6 +3231,7 @@ func die() -> void:
 	current_state = State.DEAD
 	current_health = 0
 	current_shield = 0.0
+	consecutive_attacks = 0
 	attack_timer.stop()
 	velocity = Vector3.ZERO
 	collision_layer = 0

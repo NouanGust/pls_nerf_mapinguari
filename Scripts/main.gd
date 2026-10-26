@@ -416,7 +416,7 @@ func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: Stri
 	var success: bool = board.place_unit(unit, grid_pos, true)
 	
 	if success:
-		AudioManager.play_move_unit()
+		AudioManager.play_place_unit(unit.stats.tier if unit.stats else 1)
 		unit.play_pending_star_upgrade_effect()
 		if source == "bench":
 			bench_units.erase(unit)
@@ -1505,11 +1505,12 @@ func show_unit_inspector(unit: BaseUnit3D) -> void:
 			def_text += "\n[color=#38bdf8]Escudo Ativo:[/color] [b]%d[/b]" % int(unit.current_shield)
 		def_lbl.text = def_text
 	
-	# 6. Escalonamento detalhado movido para o Bestiário
-	var star_lbl = _get_or_create_inspector_label(panel, "Star_scaling_label", "Origins_label")
-	if star_lbl:
-		star_lbl.visible = false
-		star_lbl.text = ""
+	# 6. Função de combate
+	var role_lbl = _get_or_create_inspector_label(panel, "Role_label", "Origins_label")
+	if role_lbl:
+		role_lbl.text = "[color=#38bdf8]FUNÇÃO[/color]  [b]%s[/b]\n[color=#94a3b8][i]%s[/i][/color]" % [
+			stats.get_combat_role(), stats.get_combat_role_description()
+		]
 	
 	# 7. Origens (com links de sinergia)
 	var origins_lbl = panel.find_child("Origins_label", true, false) as RichTextLabel

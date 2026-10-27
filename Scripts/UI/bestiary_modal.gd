@@ -219,7 +219,7 @@ func open_for_unit(stats: UnitStats, star_level: int = 1) -> void:
 		origins_str, classes_str, stats.get_combat_role(), stats.get_combat_role_description()
 	]
 
-	# 2. Atributos Base & Escalonamento (1★ / 2★ / 3★)
+	# 2. Atributos Base & Escalonamento (Nível 1 / Nível 2 / Nível 3)
 	var hp_1 := int(stats.max_health * 1.0)
 	var hp_2 := int(stats.max_health * 1.8)
 	var hp_3 := int(stats.max_health * 2.6)
@@ -240,7 +240,7 @@ func open_for_unit(stats: UnitStats, star_level: int = 1) -> void:
 	var range_str := "À Distância (%d hex)" % stats.get_attack_range_hexes() if stats.is_ranged else "Corpo a Corpo (1 hex)"
 	var dmg_type_str := "Físico" if stats.ability_damage_type == 0 else "Mágico"
 
-	_stats_lbl.text = "[color=#facc15]ATRIBUTOS & ESCALONAMENTO POR ESTRELA (1★ / 2★ / 3★)[/color]\n"
+	_stats_lbl.text = "[color=#facc15]ATRIBUTOS & ESCALONAMENTO POR ESTRELA (Nível 1 / Nível 2 / Nível 3)[/color]\n"
 	_stats_lbl.text += "• [color=#4ade80]Vida Base:[/color] %s\n" % hp_str
 	_stats_lbl.text += "• [color=#fb923c]Ataque Base:[/color] %s  ·  [color=#cbd5e1]DPS Base:[/color] %s\n" % [atk_str, dps_str]
 	_stats_lbl.text += "• [color=#cbd5e1]Velocidade de Ataque:[/color] %.2f/s  ·  [color=#cbd5e1]Alcance:[/color] %s  ·  [color=#cbd5e1]Dano Básico:[/color] %s\n" % [
@@ -334,9 +334,9 @@ func open_for_unit(stats: UnitStats, star_level: int = 1) -> void:
 		ab_details.append("• [color=#cbd5e1]Duração do Efeito:[/color] %.1fs" % stats.ability_duration)
 
 	_ability_lbl.text = "[color=#c084fc]HABILIDADE: %s[/color] [color=#94a3b8](%s)[/color]\n" % [stats.ability_name, ab_type]
-	_ability_lbl.text += "[color=#ecf0f1]%s[/color]\n\n" % stats.ability_description
+	_ability_lbl.text += "[color=#ecf0f1]%s[/color]\n\n" % stats.get_mechanics_description(current_star_level)
 	if not ab_details.is_empty():
-		_ability_lbl.text += "[color=#cbd5e1]Detalhamento de Valores (1★ / 2★ / 3★):[/color]\n" + "\n".join(ab_details)
+		_ability_lbl.text += "[color=#cbd5e1]Detalhamento de Valores (Nível 1 / Nível 2 / Nível 3):[/color]\n" + "\n".join(ab_details)
 
 	# 4. Sinergias e Efeitos de Patamar
 	var syn_blocks: Array[String] = []

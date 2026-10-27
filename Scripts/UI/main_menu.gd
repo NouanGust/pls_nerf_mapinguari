@@ -90,13 +90,13 @@ func _build_interface() -> void:
 	_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_selection.add_child(_stage)
 	_previous = Overlay.button("", _select_region.bind(-1))
-	_previous.tooltip_text = "Região anterior (←)"
+	_previous.tooltip_text = "Região anterior (<)"
 	_previous.icon = UIAtlasCatalog.get_button_texture("chevron_left")
 	_previous.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_previous.expand_icon = true
 	_selection.add_child(_previous)
 	_next = Overlay.button("", _select_region.bind(1))
-	_next.tooltip_text = "Próxima região (→)"
+	_next.tooltip_text = "Próxima região (>)"
 	_next.icon = UIAtlasCatalog.get_button_texture("chevron_right")
 	_next.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_next.expand_icon = true
@@ -361,7 +361,7 @@ func _start_selected_region() -> void:
 		return
 	_starting = true
 	_enter_button.disabled = true
-	_enter_button.text = "Carregando…"
+	_enter_button.text = "Carregando..."
 	_enter_region.call_deferred(REGION_ORDER[_selected_index])
 
 func _enter_region(id: String) -> void:

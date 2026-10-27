@@ -129,7 +129,7 @@ func set_units(units: Array, combat_active: bool = false) -> void:
 				star_icon.modulate = Color("#cd7f32")
 			slot_stars[i].add_child(star_icon)
 		
-		slot.tooltip_text = "%s · %d★ · Tier %d (%d ouro)\nArraste para o campo ou pressione S com o mouse sobre para vender" % [
+		slot.tooltip_text = "%s · %d Estrelas · Tier %d (%d ouro)\nArraste para o campo ou pressione S com o mouse sobre para vender" % [
 			stats.unit_name, stars, stats.tier, unit.invested_gold
 		]
 		if combat_active:

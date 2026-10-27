@@ -163,7 +163,7 @@ func set_base_color(color: Color) -> void:
 		
 		zone_indicator.material_override = base_material
 		current_material = base_material
-		print("  ↳ Cor do indicador aplicada: %s" % color)
+		print("  -> Cor do indicador aplicada: %s" % color)
 	else:
 		print("ZoneIndicator não encontrado!")
 

@@ -30,4 +30,4 @@ ability_duration = 2.5
 is_ranged = true
 
 is_assassin = true
-target_priority = 1
+target_priority = 0

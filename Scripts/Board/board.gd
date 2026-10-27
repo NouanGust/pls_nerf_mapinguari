@@ -359,6 +359,9 @@ func remove_unit(grid_pos: Vector2i) -> Node3D:
 func get_unit_at(grid_pos: Vector2i) -> Node3D:
 	return units_on_board.get(grid_pos, null)
 
+func get_unit(grid_pos: Vector2i) -> Node3D:
+	return get_unit_at(grid_pos)
+
 
 func get_all_units() -> Array:
 	var valid_units: Array = []

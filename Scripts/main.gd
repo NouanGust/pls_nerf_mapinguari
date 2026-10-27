@@ -5,6 +5,11 @@ const Regions = preload("res://Scripts/Systems/region_rosters.gd")
 const CampaignStore = preload("res://Scripts/Systems/campaign_store.gd")
 const GameOverlay = preload("res://Scripts/UI/game_overlay.gd")
 const BattleTransition = preload("res://Scripts/UI/battle_transition.gd")
+const DebugConsole = preload("res://Scripts/UI/debug_console.gd")
+
+@export var debug_console_enabled: bool = true
+var debug_console: DebugConsole
+var _combat_generation: int = 0
 
 var entry_transition: BattleTransition
 var _entry_in_progress: bool = false
@@ -52,21 +57,39 @@ var active_synergies: Dictionary = {}
 var battle_time_remaining: float = 0.0
 var cutscene_in_progress: bool = false
 var match_elapsed_seconds: float = 0.0
+var _ability_floating_card: PanelContainer = null
+var _inspected_unit: BaseUnit3D = null
 
 func _process(delta: float) -> void:
 	if not get_tree().paused and _run_ready:
 		match_elapsed_seconds += delta
+	if is_instance_valid(_inspected_unit) and ui:
+		var panel := ui.get_node_or_null("Control/RightBar") as Control
+		if panel and panel.visible:
+			_update_inspector_live_data(panel, _inspected_unit)
 
 
 @export var gold_on_win: int = 2
 @export var gold_on_loss: int = 1
-@export var gold_on_draw: int = 1
+@export var gold_on_draw: int = 0
 @export var round_transition_seconds: float = 2.5
 @export var battle_duration_seconds: float = 60.0
 @export_range(1.0, 10.0, 0.25) var stationary_stalemate_seconds: float = 3.0
 @export var win_streak_bonus_step: int = 1
-@export var max_win_streak_bonus: int = 5
-@export var max_loss_streak_bonus: int = 5
+@export var max_win_streak_bonus: int = 3
+@export var max_loss_streak_bonus: int = 3
+
+func calculate_streak_bonus(streak: int) -> int:
+	if streak >= 5:
+		return 3
+	elif streak >= 3:
+		return 2
+	elif streak >= 1:
+		return 1
+	return 0
+
+func calculate_interest(gold: int) -> int:
+	return clampi(int(gold / 10), 0, 5)
 
 var win_streak: int = 0
 var loss_streak: int = 0
@@ -94,7 +117,7 @@ func _ready() -> void:
 	# Configurar board
 	if board:
 		board.apply_region_environment(region_id)
-		print("\nBoard hexagonal pronto: %d × %d\n" % [board.rows, board.columns])
+		print("\nBoard hexagonal pronto: %d x %d\n" % [board.rows, board.columns])
 	AudioManager.play_region_music(region_id)
 	
 	# Aguardar navigation
@@ -113,6 +136,10 @@ func _ready() -> void:
 	if _entry_in_progress:
 		drag_handler.set_process_input(false)
 	_setup_pause_menu()
+	if debug_console_enabled:
+		debug_console = DebugConsole.new()
+		debug_console.game = self
+		add_child(debug_console)
 	var slot := CampaignStore.read_slot(region_id)
 	if slot.has("error"):
 		_load_failed = true
@@ -375,7 +402,7 @@ func spawn_unit_for_drag(unit_stats: UnitStats) -> BaseUnit3D:
 	
 	return null
 
-func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: String, _source_index: int) -> void:
+func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: String, source_index: int, old_pos: Vector2i = Vector2i(-1, -1)) -> void:
 	if combat_active or round_resolution_pending:
 		if source == "bench":
 			_realign_bench_units()
@@ -390,6 +417,38 @@ func _on_unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: Stri
 		dragging_unit = null
 		update_ui()
 		return
+
+	# Troca de unidades (Swap): soltar sobre outra unidade aliada no tabuleiro ou do banco para o tabuleiro
+	var occupant := board.get_unit_at(grid_pos) as BaseUnit3D
+	if occupant != null and occupant != unit and occupant.team == 0 and source in ["board", "bench"]:
+		var origin_pos := old_pos if old_pos != Vector2i(-1, -1) else unit.board_position
+		if source == "board" and origin_pos != Vector2i(-1, -1):
+			board.remove_unit(grid_pos)
+			board.place_unit(unit, grid_pos, true)
+			board.place_unit(occupant, origin_pos, true)
+			AudioManager.play_place_unit(unit.stats.tier if unit.stats else 1)
+			unit.play_pending_star_upgrade_effect()
+			dragging_unit = null
+			_resolve_unit_merges()
+			update_ui()
+			return
+		elif source == "bench":
+			board.remove_unit(grid_pos)
+			board.place_unit(unit, grid_pos, true)
+			unit.visible = true
+			bench_units.erase(unit)
+			if source_index >= 0 and source_index <= bench_units.size():
+				bench_units.insert(source_index, occupant)
+			else:
+				bench_units.append(occupant)
+			occupant.board_position = Vector2i(-1, -1)
+			_realign_bench_units(true)
+			AudioManager.play_place_unit(unit.stats.tier if unit.stats else 1)
+			unit.play_pending_star_upgrade_effect()
+			dragging_unit = null
+			_resolve_unit_merges()
+			update_ui()
+			return
 
 	if unit.team == 0 and get_player_units_on_board_count() >= get_board_unit_limit():
 		AudioManager.play_fail()
@@ -909,6 +968,7 @@ func start_combat() -> void:
 	_refresh_synergies()
 	
 	combat_active = true
+	_combat_generation += 1
 	battle_time_remaining = maxf(battle_duration_seconds, 1.0)
 	if drag_handler:
 		drag_handler.board_interaction_enabled = false
@@ -961,11 +1021,12 @@ func _on_combat_metric_recorded(unit: BaseUnit3D, metric: StringName, amount: fl
 	combat_report_entries[instance_id] = entry
 
 func check_combat_end() -> void:
+	var generation := _combat_generation
 	var deadline_msec := BattleClock.now_msec() + int(maxf(battle_duration_seconds, 1.0) * 1000.0)
 	var stalemate_since_msec: int = -1
 	while combat_active:
 		await get_tree().create_timer(0.25, false).timeout
-		if not combat_active:
+		if not combat_active or generation != _combat_generation:
 			return
 		battle_time_remaining = maxf(float(deadline_msec - BattleClock.now_msec()) / 1000.0, 0.0)
 		_update_round_label()
@@ -1016,10 +1077,11 @@ func _is_stationary_stalemate(player_units: Array, enemy_units: Array) -> bool:
 				return false
 	return true
 
-func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "") -> void:
+func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "", skip_report: bool = false) -> void:
 	if not combat_active:
 		return
 	combat_active = false
+	_combat_generation += 1
 	round_resolution_pending = true
 	battle_time_remaining = 0.0
 	var finished_round := current_round
@@ -1035,38 +1097,48 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 		unit.current_target = null
 		unit.current_state = BaseUnit3D.State.IDLE
 		unit.velocity = Vector3.ZERO
+		unit.in_combat = false
+		unit._was_stunned = false
+		unit.stunned_until_msec = 0
 	if drag_handler:
 		drag_handler.cancel_drag()
 		dragging_unit = null
 		drag_handler.interaction_enabled = false
 	
 	var earned_gold: int = 0
+	var round_gold: int = 0
+	var streak_bonus: int = 0
+	var interest: int = 0
 	var outcome_name: String = ""
 	if is_draw:
 		win_streak = 0
 		loss_streak = 0
-		earned_gold = gold_on_draw
-		player_gold += earned_gold
+		round_gold = gold_on_draw # 0
+		streak_bonus = 0
+		interest = 0 # Empate quebra a economia: 0 de juros e 0 de ouro
+		earned_gold = 0
 		player_health -= 5
 		round_outcomes[current_round] = false
 		outcome_name = "Empate"
 	elif player_won:
-		win_streak = mini(win_streak + 1, 5)
+		win_streak += 1
 		loss_streak = 0
 		AudioManager.play_win_streak(win_streak)
-		
-		var streak_bonus: int = clampi(win_streak, 1, max_win_streak_bonus)
-		earned_gold = gold_on_win + streak_bonus
+		streak_bonus = calculate_streak_bonus(win_streak)
+		round_gold = gold_on_win
+		interest = calculate_interest(player_gold)
+		earned_gold = round_gold + streak_bonus + interest
 		player_gold += earned_gold
 		round_outcomes[current_round] = true
 		outcome_name = "Vitória"
 	else:
-		loss_streak = mini(loss_streak + 1, 5)
+		loss_streak += 1
 		win_streak = 0
 		AudioManager.play_loss_streak(loss_streak)
-		
-		var streak_bonus: int = clampi(loss_streak, 1, max_loss_streak_bonus)
-		earned_gold = gold_on_loss + streak_bonus
+		streak_bonus = calculate_streak_bonus(loss_streak)
+		round_gold = gold_on_loss
+		interest = calculate_interest(player_gold)
+		earned_gold = round_gold + streak_bonus + interest
 		player_gold += earned_gold
 		player_health -= 10
 		round_outcomes[current_round] = false
@@ -1079,14 +1151,20 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 	
 	# Exibir notificação / banner de rendimento na interface
 	if ui and ui.has_method("show_round_resolution_banner"):
-		ui.show_round_resolution_banner(outcome_name, earned_gold, is_draw, player_won)
+		ui.show_round_resolution_banner(outcome_name, earned_gold, is_draw, player_won, round_gold, streak_bonus, interest)
 	
 	# Pequeno tempo entre o fim de um round e o próximo para o jogador ver as moedas ganhas
-	if round_transition_seconds > 0.0:
+	if round_transition_seconds > 0.0 and not skip_report:
 		await get_tree().create_timer(round_transition_seconds, false).timeout
 	var is_game_over := player_health <= 0
 	_campaign_state = "won" if region_completed else ("lost" if is_game_over else "active")
 	_save_campaign()
+	if skip_report:
+		if is_game_over or region_completed:
+			_leave_game(false)
+		else:
+			prepare_next_round()
+		return
 	# Uma camada própria mantém inclusive cartas com z_index acima do HUD
 	# atrás do relatório. O menu de pausa continua acima, na camada 100.
 	var report_layer := CanvasLayer.new()
@@ -1122,11 +1200,13 @@ func prepare_next_round() -> void:
 	var player_units: Array = get_tree().get_nodes_in_group("player_units")
 	for unit in player_units:
 		if unit is BaseUnit3D and unit not in bench_units:
+			board.remove_unit(unit.board_position)
+	for unit in player_units:
+		if unit is BaseUnit3D and unit not in bench_units:
 			var home_pos = board.get_cell_world_position(unit.board_position)
 		
 			if unit.current_state == BaseUnit3D.State.DEAD:
 				unit.revive_at_position(home_pos)
-				board.place_unit(unit, unit.board_position, false)
 			else:
 				unit.current_health = unit.get_max_health()
 				unit.current_mana = unit.stats.starting_mana
@@ -1138,6 +1218,9 @@ func prepare_next_round() -> void:
 					unit.attack_timer.stop()
 				unit.update_health_bar()
 				unit.update_mana_bar()
+			board.place_unit(unit, unit.board_position, false)
+			unit.in_combat = false
+			unit.velocity = Vector3.ZERO
 				
 	# Os sobreviventes já voltaram às casas e os mortos já foram restaurados.
 	# Resolve também evoluções em cadeia antes de sortear a próxima loja.
@@ -1175,7 +1258,7 @@ func update_ui() -> void:
 		var stage := Regions.get_enemy_stage(shown_round)
 		var stars_text: Array[String] = []
 		for stars in stage["stars"]:
-			stars_text.append("%d★" % int(stars))
+			stars_text.append("%d Estrelas" % int(stars))
 		region_label.tooltip_text = "Estrelas por vaga: %s\nFormação: %s\nO inimigo evolui por marcos de round, sem XP." % [
 			" · ".join(stars_text), Regions.FORMATION_NAMES[Regions.get_formation_index(region_id, shown_round)]]
 	var xp_button := ui.get_node_or_null("Control/BottomBar/ControlsContainer/BuyXPButton") as Button
@@ -1257,6 +1340,8 @@ func clear_board() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if debug_console and debug_console.is_open:
+		return
 	if _entry_in_progress:
 		get_viewport().set_input_as_handled()
 		return
@@ -1411,18 +1496,665 @@ func _get_or_create_inspector_label(panel: Node, label_name: String, insert_befo
 			vbox.add_child(lbl)
 	return lbl
 
+func _get_or_create_ability_floating_card(control_parent: Control) -> PanelContainer:
+	if is_instance_valid(_ability_floating_card):
+		return _ability_floating_card
+	
+	var card := PanelContainer.new()
+	card.name = "AbilityFloatingCard"
+	card.top_level = true
+	card.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	card.z_index = 35
+	card.visible = false
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
+	
+	var card_style := StyleBoxFlat.new()
+	card_style.bg_color = Color("#0f172a")
+	card_style.border_color = Color("#8b5cf6")
+	card_style.border_width_left = 2
+	card_style.border_width_top = 2
+	card_style.border_width_right = 2
+	card_style.border_width_bottom = 2
+	card_style.corner_radius_top_left = 8
+	card_style.corner_radius_top_right = 8
+	card_style.corner_radius_bottom_left = 8
+	card_style.corner_radius_bottom_right = 8
+	card_style.content_margin_left = 12
+	card_style.content_margin_top = 10
+	card_style.content_margin_right = 12
+	card_style.content_margin_bottom = 10
+	card_style.shadow_color = Color(0, 0, 0, 0.75)
+	card_style.shadow_size = 12
+	card.add_theme_stylebox_override("panel", card_style)
+	
+	var vbox := VBoxContainer.new()
+	vbox.name = "CardVBox"
+	vbox.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	vbox.add_theme_constant_override("separation", 6)
+	card.add_child(vbox)
+	
+	control_parent.add_child(card)
+	_ability_floating_card = card
+	return card
+
+func _hide_ability_floating_card() -> void:
+	if is_instance_valid(_ability_floating_card):
+		_ability_floating_card.visible = false
+
+func _show_ability_floating_card(unit: BaseUnit3D, panel: Control) -> void:
+	if not is_instance_valid(unit) or not unit.stats or not is_instance_valid(panel):
+		return
+	var card := _get_or_create_ability_floating_card(panel.get_parent() as Control)
+	var vbox := card.get_node("CardVBox") as VBoxContainer
+	for child in vbox.get_children():
+		child.queue_free()
+	
+	var stats := unit.stats
+	var star := clampi(unit.star_level, 1, 4)
+	
+	# 1. Header (Ícone + Nome da Habilidade + Custo de Mana + Tipo de Dano)
+	var header_hbox := HBoxContainer.new()
+	header_hbox.add_theme_constant_override("separation", 10)
+	
+	var icon_rect := TextureRect.new()
+	icon_rect.texture = stats.icon
+	icon_rect.custom_minimum_size = Vector2(34, 34)
+	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	header_hbox.add_child(icon_rect)
+	
+	var title_vbox := VBoxContainer.new()
+	title_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_vbox.add_theme_constant_override("separation", 2)
+	
+	var name_lbl := Label.new()
+	name_lbl.text = stats.ability_name
+	name_lbl.add_theme_font_size_override("font_size", 13)
+	name_lbl.add_theme_color_override("font_color", Color("#f8fafc"))
+	title_vbox.add_child(name_lbl)
+	
+	var badges_hbox := HBoxContainer.new()
+	badges_hbox.add_theme_constant_override("separation", 6)
+	
+	var dmg_type_str := "Mágico"
+	var dmg_color := Color("#c084fc")
+	match stats.ability_damage_type:
+		UnitStats.DamageType.PHYSICAL:
+			dmg_type_str = "Físico"
+			dmg_color = Color("#fb923c")
+		UnitStats.DamageType.MAGICAL:
+			dmg_type_str = "Mágico"
+			dmg_color = Color("#c084fc")
+		UnitStats.DamageType.TRUE:
+			dmg_type_str = "Verdadeiro"
+			dmg_color = Color("#facc15")
+			
+	var type_badge := Label.new()
+	type_badge.text = "[ %s ]" % dmg_type_str
+	type_badge.add_theme_font_size_override("font_size", 10)
+	type_badge.add_theme_color_override("font_color", dmg_color)
+	badges_hbox.add_child(type_badge)
+	
+	if stats.max_mana > 0:
+		var mana_badge := Label.new()
+		mana_badge.text = "%d Mana" % int(stats.max_mana)
+		mana_badge.add_theme_font_size_override("font_size", 10)
+		mana_badge.add_theme_color_override("font_color", Color("#67e8f9"))
+		badges_hbox.add_child(mana_badge)
+		
+	title_vbox.add_child(badges_hbox)
+	header_hbox.add_child(title_vbox)
+	vbox.add_child(header_hbox)
+	
+	# 2. Descrição Mecânica Clara da Habilidade
+	var desc_lbl := RichTextLabel.new()
+	desc_lbl.bbcode_enabled = true
+	desc_lbl.fit_content = true
+	desc_lbl.scroll_active = false
+	desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	desc_lbl.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	desc_lbl.text = "[color=#cbd5e1]%s[/color]" % stats.get_mechanics_description(star)
+	desc_lbl.custom_minimum_size = Vector2(256, 0)
+	vbox.add_child(desc_lbl)
+	
+	# 3. Tabela de Escalonamento por Estrela (Scaling)
+	var scaling_box := PanelContainer.new()
+	scaling_box.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var sc_style := StyleBoxFlat.new()
+	sc_style.bg_color = Color("#1e1b4b66")
+	sc_style.border_color = Color("#6366f1")
+	sc_style.border_width_left = 1
+	sc_style.border_width_top = 1
+	sc_style.border_width_right = 1
+	sc_style.border_width_bottom = 1
+	sc_style.corner_radius_top_left = 6
+	sc_style.corner_radius_top_right = 6
+	sc_style.corner_radius_bottom_left = 6
+	sc_style.corner_radius_bottom_right = 6
+	sc_style.content_margin_left = 8
+	sc_style.content_margin_top = 6
+	sc_style.content_margin_right = 8
+	sc_style.content_margin_bottom = 6
+	scaling_box.add_theme_stylebox_override("panel", sc_style)
+	
+	var sc_vbox := VBoxContainer.new()
+	sc_vbox.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	sc_vbox.add_theme_constant_override("separation", 3)
+	
+	var sc_title := Label.new()
+	sc_title.text = "Escalonamento por Estrela (Verificado):"
+	sc_title.add_theme_font_size_override("font_size", 10)
+	sc_title.add_theme_color_override("font_color", Color("#a5b4fc"))
+	sc_vbox.add_child(sc_title)
+	
+	var sc_lines: Array[String] = []
+	var m1: float = stats.get_star_multiplier(1)
+	var m2: float = stats.get_star_multiplier(2)
+	var m3: float = stats.get_star_multiplier(3)
+	
+	if stats.ability_damage > 0.0:
+		var d1 := int(stats.ability_damage * m1)
+		var d2 := int(stats.ability_damage * m2)
+		var d3 := int(stats.ability_damage * m3)
+		var trio := _format_star_trio(d1, d2, d3, star)
+		sc_lines.append("[color=#94a3b8]Dano Base:[/color] [ %s ]" % trio)
+		
+	if stats.ability_shield > 0.0:
+		var s1 := int(stats.ability_shield * m1)
+		var s2 := int(stats.ability_shield * m2)
+		var s3 := int(stats.ability_shield * m3)
+		var trio := _format_star_trio(s1, s2, s3, star)
+		sc_lines.append("[color=#94a3b8]Escudo:[/color] [ %s ]" % trio)
+		
+	if stats.ability_heal > 0.0:
+		var h1 := int(stats.ability_heal * m1)
+		var h2 := int(stats.ability_heal * m2)
+		var h3 := int(stats.ability_heal * m3)
+		var trio := _format_star_trio(h1, h2, h3, star)
+		sc_lines.append("[color=#94a3b8]Cura:[/color] [ %s ]" % trio)
+		
+	sc_lines.append("[color=#64748b]Multiplicadores: Nivel 1 (x1.0) · Nivel 2 (x1.8) · Nivel 3 (x2.6)[/color]")
+	sc_lines.append("[color=#22c55e][ Escalonamento Ativo ][/color]")
+	
+	var sc_rtl := RichTextLabel.new()
+	sc_rtl.bbcode_enabled = true
+	sc_rtl.fit_content = true
+	sc_rtl.scroll_active = false
+	sc_rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sc_rtl.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	sc_rtl.text = "\n".join(sc_lines)
+	sc_vbox.add_child(sc_rtl)
+	
+	scaling_box.add_child(sc_vbox)
+	vbox.add_child(scaling_box)
+	
+	card.custom_minimum_size = Vector2(280, 0)
+	card.reset_size()
+	
+	var panel_rect: Rect2 = panel.get_global_rect()
+	var tactical_row: Control = panel.find_child("TFT_TacticalRow", true, false) as Control
+	var anchor_y: float = tactical_row.global_position.y if tactical_row else panel_rect.position.y + 120.0
+	var card_x: float = panel_rect.position.x - card.size.x - 12.0
+	var viewport_h: float = get_viewport().get_visible_rect().size.y
+	var max_y: float = maxf(viewport_h - card.size.y - 12.0, 10.0)
+	var card_y: float = clampf(anchor_y - 10.0, 10.0, max_y)
+	card.global_position = Vector2(card_x, card_y)
+	card.show()
+	card.modulate.a = 0.0
+	var tw := card.create_tween()
+	tw.tween_property(card, "modulate:a", 1.0, 0.15)
+
+func _update_tft_inspector(
+	panel: Control,
+	unit: BaseUnit3D,
+	cur_hp: int,
+	max_hp: int,
+	cur_mana: int,
+	max_mana: int,
+	attack_dmg: int,
+	attack_spd: float,
+	dps: int,
+	total_armor: float,
+	phys_reduct: int,
+	total_mr: float,
+	mag_reduct: int
+) -> void:
+	var vbox := panel.find_child("VBoxContainer", true, false) as VBoxContainer
+	if not vbox:
+		return
+	var stats := unit.stats
+	var star := clampi(unit.star_level, 1, 4)
+
+	# 1. BARRAS DE VIDA E MANA (Estilo TFT)
+	var bars_container = vbox.find_child("TFT_BarsContainer", false, false) as VBoxContainer
+	if not bars_container:
+		bars_container = VBoxContainer.new()
+		bars_container.name = "TFT_BarsContainer"
+		bars_container.add_theme_constant_override("separation", 4)
+		vbox.add_child(bars_container)
+		var p_frame = vbox.find_child("PortraitFrame", false, false)
+		if p_frame:
+			vbox.move_child(bars_container, p_frame.get_index() + 1)
+
+	# Barra de Vida
+	var hp_bar = bars_container.find_child("InspectorHpBar", false, false) as ProgressBar
+	var hp_label: Label = null
+	if not hp_bar:
+		hp_bar = ProgressBar.new()
+		hp_bar.name = "InspectorHpBar"
+		hp_bar.custom_minimum_size = Vector2(0, 18)
+		hp_bar.show_percentage = false
+		var hp_bg := StyleBoxFlat.new()
+		hp_bg.bg_color = Color("#052e16")
+		hp_bg.corner_radius_top_left = 3
+		hp_bg.corner_radius_top_right = 3
+		hp_bg.corner_radius_bottom_left = 3
+		hp_bg.corner_radius_bottom_right = 3
+		hp_bar.add_theme_stylebox_override("background", hp_bg)
+		var hp_fill := StyleBoxFlat.new()
+		hp_fill.bg_color = Color("#22c55e")
+		hp_fill.corner_radius_top_left = 3
+		hp_fill.corner_radius_top_right = 3
+		hp_fill.corner_radius_bottom_left = 3
+		hp_fill.corner_radius_bottom_right = 3
+		hp_bar.add_theme_stylebox_override("fill", hp_fill)
+
+		hp_label = Label.new()
+		hp_label.name = "HpTextLabel"
+		hp_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+		hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		hp_label.add_theme_font_size_override("font_size", 11)
+		hp_label.add_theme_color_override("font_color", Color.WHITE)
+		hp_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+		hp_label.add_theme_constant_override("shadow_offset_x", 1)
+		hp_label.add_theme_constant_override("shadow_offset_y", 1)
+		hp_bar.add_child(hp_label)
+		bars_container.add_child(hp_bar)
+	else:
+		hp_label = hp_bar.find_child("HpTextLabel", false, false) as Label
+
+	# Barra de Escudo (Aparece sob a vida se houver escudo ativo)
+	var shield_bar = bars_container.find_child("InspectorShieldBar", false, false) as ProgressBar
+	var shield_label: Label = null
+	if not shield_bar:
+		shield_bar = ProgressBar.new()
+		shield_bar.name = "InspectorShieldBar"
+		shield_bar.custom_minimum_size = Vector2(0, 14)
+		shield_bar.show_percentage = false
+		var sh_bg := StyleBoxFlat.new()
+		sh_bg.bg_color = Color("#082f49")
+		sh_bg.corner_radius_top_left = 3
+		sh_bg.corner_radius_top_right = 3
+		sh_bg.corner_radius_bottom_left = 3
+		sh_bg.corner_radius_bottom_right = 3
+		shield_bar.add_theme_stylebox_override("background", sh_bg)
+		var sh_fill := StyleBoxFlat.new()
+		sh_fill.bg_color = Color("#06b6d4")
+		sh_fill.corner_radius_top_left = 3
+		sh_fill.corner_radius_top_right = 3
+		sh_fill.corner_radius_bottom_left = 3
+		sh_fill.corner_radius_bottom_right = 3
+		shield_bar.add_theme_stylebox_override("fill", sh_fill)
+
+		shield_label = Label.new()
+		shield_label.name = "ShieldTextLabel"
+		shield_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+		shield_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		shield_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		shield_label.add_theme_font_size_override("font_size", 10)
+		shield_label.add_theme_color_override("font_color", Color("#cffafe"))
+		shield_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+		shield_label.add_theme_constant_override("shadow_offset_x", 1)
+		shield_label.add_theme_constant_override("shadow_offset_y", 1)
+		shield_bar.add_child(shield_label)
+		bars_container.add_child(shield_bar)
+		bars_container.move_child(shield_bar, hp_bar.get_index() + 1)
+	else:
+		shield_label = shield_bar.find_child("ShieldTextLabel", false, false) as Label
+
+	var cur_shield := maxi(int(unit.current_shield), 0)
+	hp_bar.max_value = maxf(max_hp, 1.0)
+	hp_bar.value = cur_hp
+	if hp_label:
+		var bonus_hp_text := ""
+		if float(unit.synergy_bonuses.get("max_health_pct", 0.0)) > 0.0:
+			bonus_hp_text = " (+%d%%)" % int(float(unit.synergy_bonuses.get("max_health_pct", 0.0)) * 100.0)
+		if cur_shield > 0:
+			hp_label.text = "%d (+%d) / %d%s" % [cur_hp, cur_shield, max_hp, bonus_hp_text]
+		else:
+			hp_label.text = "%d / %d%s" % [cur_hp, max_hp, bonus_hp_text]
+
+	if cur_shield > 0:
+		shield_bar.visible = true
+		shield_bar.max_value = maxf(max_hp, 1.0)
+		shield_bar.value = cur_shield
+		if shield_label:
+			shield_label.text = "Escudo: %d" % cur_shield
+	else:
+		shield_bar.visible = false
+
+	# Barra de Mana
+	var mana_bar = bars_container.find_child("InspectorManaBar", false, false) as ProgressBar
+	var mana_label: Label = null
+	if not mana_bar:
+		mana_bar = ProgressBar.new()
+		mana_bar.name = "InspectorManaBar"
+		mana_bar.custom_minimum_size = Vector2(0, 14)
+		mana_bar.show_percentage = false
+		var mp_bg := StyleBoxFlat.new()
+		mp_bg.bg_color = Color("#082f49")
+		mp_bg.corner_radius_top_left = 3
+		mp_bg.corner_radius_top_right = 3
+		mp_bg.corner_radius_bottom_left = 3
+		mp_bg.corner_radius_bottom_right = 3
+		mana_bar.add_theme_stylebox_override("background", mp_bg)
+		var mp_fill := StyleBoxFlat.new()
+		mp_fill.bg_color = Color("#0284c7")
+		mp_fill.corner_radius_top_left = 3
+		mp_fill.corner_radius_top_right = 3
+		mp_fill.corner_radius_bottom_left = 3
+		mp_fill.corner_radius_bottom_right = 3
+		mana_bar.add_theme_stylebox_override("fill", mp_fill)
+
+		mana_label = Label.new()
+		mana_label.name = "ManaTextLabel"
+		mana_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+		mana_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		mana_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		mana_label.add_theme_font_size_override("font_size", 10)
+		mana_label.add_theme_color_override("font_color", Color.WHITE)
+		mana_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+		mana_label.add_theme_constant_override("shadow_offset_x", 1)
+		mana_label.add_theme_constant_override("shadow_offset_y", 1)
+		mana_bar.add_child(mana_label)
+		bars_container.add_child(mana_bar)
+	else:
+		mana_label = mana_bar.find_child("ManaTextLabel", false, false) as Label
+
+	mana_bar.max_value = maxf(stats.max_mana, 1.0)
+	mana_bar.value = cur_mana
+	if mana_label:
+		mana_label.text = "%d / %d" % [cur_mana, int(stats.max_mana)]
+
+	# 2. LINHA TÁTICA (Habilidade + Badges de Função e Alcance)
+	var tactical_row = vbox.find_child("TFT_TacticalRow", false, false) as HBoxContainer
+	if not tactical_row:
+		tactical_row = HBoxContainer.new()
+		tactical_row.name = "TFT_TacticalRow"
+		tactical_row.add_theme_constant_override("separation", 8)
+		vbox.add_child(tactical_row)
+		vbox.move_child(tactical_row, bars_container.get_index() + 1)
+
+	# Botão de Habilidade
+	var ability_btn = tactical_row.find_child("AbilityButton", false, false) as Button
+	if not ability_btn:
+		ability_btn = Button.new()
+		ability_btn.name = "AbilityButton"
+		ability_btn.custom_minimum_size = Vector2(44, 44)
+		ability_btn.expand_icon = true
+		ability_btn.icon = stats.icon
+		var btn_style := StyleBoxFlat.new()
+		btn_style.bg_color = Color("#1e1b4b")
+		btn_style.border_color = Color("#a855f7")
+		btn_style.border_width_left = 2
+		btn_style.border_width_top = 2
+		btn_style.border_width_right = 2
+		btn_style.border_width_bottom = 2
+		btn_style.corner_radius_top_left = 6
+		btn_style.corner_radius_top_right = 6
+		btn_style.corner_radius_bottom_left = 6
+		btn_style.corner_radius_bottom_right = 6
+		ability_btn.add_theme_stylebox_override("normal", btn_style)
+		ability_btn.add_theme_stylebox_override("hover", btn_style)
+		ability_btn.add_theme_stylebox_override("pressed", btn_style)
+		tactical_row.add_child(ability_btn)
+	else:
+		ability_btn.icon = stats.icon
+
+	if ability_btn.mouse_entered.is_connected(_show_ability_floating_card):
+		ability_btn.mouse_entered.disconnect(_show_ability_floating_card)
+	ability_btn.mouse_entered.connect(_show_ability_floating_card.bind(unit, panel))
+	if not ability_btn.mouse_exited.is_connected(_hide_ability_floating_card):
+		ability_btn.mouse_exited.connect(_hide_ability_floating_card)
+	# Desativar tooltip padrão nativo para evitar sobreposição feia com o card flutuante
+	ability_btn.tooltip_text = ""
+
+	# Coluna com Badges táticos
+	var badges_vbox = tactical_row.find_child("BadgesVBox", false, false) as VBoxContainer
+	if not badges_vbox:
+		badges_vbox = VBoxContainer.new()
+		badges_vbox.name = "BadgesVBox"
+		badges_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		badges_vbox.add_theme_constant_override("separation", 3)
+		tactical_row.add_child(badges_vbox)
+
+	var role_badge = badges_vbox.find_child("RoleBadge", false, false) as Label
+	if not role_badge:
+		role_badge = Label.new()
+		role_badge.name = "RoleBadge"
+		role_badge.add_theme_font_size_override("font_size", 11)
+		role_badge.add_theme_color_override("font_color", Color("#38bdf8"))
+		role_badge.mouse_filter = Control.MOUSE_FILTER_PASS
+		var p_style := StyleBoxFlat.new()
+		p_style.bg_color = Color("#0f172a99")
+		p_style.corner_radius_top_left = 4
+		p_style.corner_radius_top_right = 4
+		p_style.corner_radius_bottom_left = 4
+		p_style.corner_radius_bottom_right = 4
+		p_style.content_margin_left = 6
+		p_style.content_margin_top = 2
+		p_style.content_margin_right = 6
+		p_style.content_margin_bottom = 2
+		role_badge.add_theme_stylebox_override("panel", p_style)
+		badges_vbox.add_child(role_badge)
+	role_badge.text = "[ %s ]" % stats.get_combat_role().to_upper()
+	role_badge.tooltip_text = "Função de Combate:\n%s" % stats.get_combat_role_description()
+
+	var range_badge = badges_vbox.find_child("RangeBadge", false, false) as Label
+	if not range_badge:
+		range_badge = Label.new()
+		range_badge.name = "RangeBadge"
+		range_badge.add_theme_font_size_override("font_size", 11)
+		range_badge.add_theme_color_override("font_color", Color("#cbd5e1"))
+		range_badge.mouse_filter = Control.MOUSE_FILTER_PASS
+		var r_style := StyleBoxFlat.new()
+		r_style.bg_color = Color("#0f172a99")
+		r_style.corner_radius_top_left = 4
+		r_style.corner_radius_top_right = 4
+		r_style.corner_radius_bottom_left = 4
+		r_style.corner_radius_bottom_right = 4
+		r_style.content_margin_left = 6
+		r_style.content_margin_top = 2
+		r_style.content_margin_right = 6
+		r_style.content_margin_bottom = 2
+		range_badge.add_theme_stylebox_override("panel", r_style)
+		badges_vbox.add_child(range_badge)
+	var pos_str := "Recuada" if stats.is_ranged else "Linha de Frente"
+	range_badge.text = "%s · %d Hex" % [pos_str, stats.get_attack_range_hexes()]
+	range_badge.tooltip_text = "Posicionamento Tático:\nIdeal na %s. Alcance efetivo de %d hexágonos." % [pos_str, stats.get_attack_range_hexes()]
+
+	# 3. GRID DE ATRIBUTOS 2x4 (Estilo TFT)
+	var stats_grid = vbox.find_child("TFT_StatsGrid", false, false) as GridContainer
+	if not stats_grid:
+		stats_grid = GridContainer.new()
+		stats_grid.name = "TFT_StatsGrid"
+		stats_grid.columns = 4
+		stats_grid.add_theme_constant_override("h_separation", 4)
+		stats_grid.add_theme_constant_override("v_separation", 4)
+		vbox.add_child(stats_grid)
+		vbox.move_child(stats_grid, tactical_row.get_index() + 1)
+
+	var stat_items := [
+		{"key": "ad", "icon": "sword", "val": str(attack_dmg), "color": "#fb923c", "tip": "Dano de Ataque: %d\nDano físico atual por ataque (inclui itens, sinergias e bônus)." % attack_dmg},
+		{"key": "ap", "icon": "magic_wand", "val": str(int(stats.ability_damage * stats.get_star_multiplier(star))), "color": "#c084fc", "tip": "Poder de Habilidade: %d\nDano base escalonado por estrelas (x%.1f)." % [int(stats.ability_damage * stats.get_star_multiplier(star)), stats.get_star_multiplier(star)]},
+		{"key": "arm", "icon": "armor_plate", "val": str(int(total_armor)), "color": "#60a5fa", "tip": "Armadura: %d\nReduz dano físico recebido em %d%%." % [int(total_armor), phys_reduct]},
+		{"key": "mr", "icon": "ring_amulet", "val": str(int(total_mr)), "color": "#2dd4bf", "tip": "Resistência Mágica: %d\nReduz dano mágico recebido em %d%%." % [int(total_mr), mag_reduct]},
+		{"key": "as", "icon": "lightning", "val": "%.2f" % attack_spd, "color": "#facc15", "tip": "Velocidade de Ataque: %.2f ataques por segundo." % attack_spd},
+		{"key": "crit", "icon": "sparkle", "val": "25%", "color": "#f43f5e", "tip": "Acerto Crítico: 25%%\nChance de ataques normais e magias causarem dano crítico amplificado."},
+		{"key": "rng", "icon": "arrows_double", "val": "%d Hex" % stats.get_attack_range_hexes(), "color": "#94a3b8", "tip": "Alcance de Ataque: %d hexágonos." % stats.get_attack_range_hexes()},
+		{"key": "dps", "icon": "skull", "val": str(dps), "color": "#e2e8f0", "tip": "DPS em Tempo Real: ~%d\nDano por segundo contínuo estimado (Ataque x Velocidade)." % dps}
+	]
+
+	for item in stat_items:
+		var slot_name = "Slot_" + item["key"]
+		var slot = stats_grid.find_child(slot_name, false, false) as PanelContainer
+		var val_lbl: Label = null
+		if not slot:
+			slot = PanelContainer.new()
+			slot.name = slot_name
+			slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			slot.mouse_filter = Control.MOUSE_FILTER_PASS
+			var s_box := StyleBoxFlat.new()
+			s_box.bg_color = Color("#1e293b66")
+			s_box.border_color = Color("#33415566")
+			s_box.border_width_left = 1
+			s_box.border_width_top = 1
+			s_box.border_width_right = 1
+			s_box.border_width_bottom = 1
+			s_box.corner_radius_top_left = 4
+			s_box.corner_radius_top_right = 4
+			s_box.corner_radius_bottom_left = 4
+			s_box.corner_radius_bottom_right = 4
+			s_box.content_margin_left = 4
+			s_box.content_margin_top = 3
+			s_box.content_margin_right = 4
+			s_box.content_margin_bottom = 3
+			slot.add_theme_stylebox_override("panel", s_box)
+
+			var hbox := HBoxContainer.new()
+			hbox.add_theme_constant_override("separation", 3)
+			hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+			var icon_r := UIAtlasCatalog.create_icon_rect(item["icon"], Vector2(14, 14))
+			icon_r.modulate = Color(item["color"])
+			hbox.add_child(icon_r)
+
+			val_lbl = Label.new()
+			val_lbl.name = "ValLabel"
+			val_lbl.add_theme_font_size_override("font_size", 10)
+			val_lbl.add_theme_color_override("font_color", Color("#f8fafc"))
+			hbox.add_child(val_lbl)
+
+			slot.add_child(hbox)
+			stats_grid.add_child(slot)
+		else:
+			val_lbl = slot.find_child("ValLabel", true, false) as Label
+
+		slot.tooltip_text = item["tip"]
+		if val_lbl:
+			val_lbl.text = item["val"]
+
+func _update_inspector_live_data(panel: Control, unit: BaseUnit3D) -> void:
+	if not is_instance_valid(unit) or not unit.stats or not is_instance_valid(panel):
+		return
+	var stats := unit.stats
+	var star := clampi(unit.star_level, 1, 4)
+
+	var cur_hp := maxi(int(unit.current_health), 0)
+	var max_hp := maxi(int(unit.get_max_health()), 1)
+	var cur_shield := maxi(int(unit.current_shield), 0)
+	var cur_mana := maxi(int(unit.current_mana), 0)
+	var max_mana := maxi(int(stats.max_mana), 1)
+
+	var attack_dmg := maxi(int(unit.get_attack_damage()), 0)
+	var attack_spd := unit.get_effective_attack_speed()
+	var dps := maxi(int(attack_dmg * attack_spd), 0)
+
+	var total_armor := unit.get_effective_armor()
+	var total_mr := unit.get_effective_magic_resist()
+	var phys_reduct: int = int(round((total_armor / (100.0 + total_armor)) * 100.0))
+	var mag_reduct: int = int(round((total_mr / (100.0 + total_mr)) * 100.0))
+
+	var ap_mult: float = 1.0 + float(unit.synergy_bonuses.get("ability_power_pct", 0.0))
+	var ap_val: int = int(stats.ability_damage * stats.get_star_multiplier(star) * ap_mult)
+	var crit_pct: int = int(round((0.25 + (mini(unit.enemies_defeated, BaseUnit3D.MAX_CERRADO_STACKS) * 0.06 if "Cerrado" in stats.origins else 0.0)) * 100.0))
+
+	# Barra de Vida
+	var hp_bar = panel.find_child("InspectorHpBar", true, false) as ProgressBar
+	if hp_bar:
+		hp_bar.max_value = max_hp
+		hp_bar.value = cur_hp
+		var hp_label = hp_bar.find_child("HpTextLabel", false, false) as Label
+		if hp_label:
+			var bonus_hp_text := ""
+			if float(unit.synergy_bonuses.get("max_health_pct", 0.0)) > 0.0:
+				bonus_hp_text = " (+%d%%)" % int(float(unit.synergy_bonuses.get("max_health_pct", 0.0)) * 100.0)
+			if cur_shield > 0:
+				hp_label.text = "%d (+%d) / %d%s" % [cur_hp, cur_shield, max_hp, bonus_hp_text]
+			else:
+				hp_label.text = "%d / %d%s" % [cur_hp, max_hp, bonus_hp_text]
+
+	# Barra de Escudo
+	var shield_bar = panel.find_child("InspectorShieldBar", true, false) as ProgressBar
+	if shield_bar:
+		if cur_shield > 0:
+			shield_bar.visible = true
+			shield_bar.max_value = max_hp
+			shield_bar.value = cur_shield
+			var shield_label = shield_bar.find_child("ShieldTextLabel", false, false) as Label
+			if shield_label:
+				shield_label.text = "Escudo: %d" % cur_shield
+		else:
+			shield_bar.visible = false
+
+	# Barra de Mana
+	var mana_bar = panel.find_child("InspectorManaBar", true, false) as ProgressBar
+	if mana_bar:
+		mana_bar.max_value = max_mana
+		mana_bar.value = cur_mana
+		var mana_label = mana_bar.find_child("ManaTextLabel", false, false) as Label
+		if mana_label:
+			mana_label.text = "%d / %d" % [cur_mana, int(stats.max_mana)]
+
+	# Grid de Atributos em Tempo Real
+	var stats_grid = panel.find_child("TFT_StatsGrid", true, false) as GridContainer
+	if stats_grid:
+		var live_stats := {
+			"ad": {"val": str(attack_dmg), "tip": "Dano de Ataque: %d\nDano físico atual por ataque (inclui itens, sinergias e bônus)." % attack_dmg},
+			"ap": {"val": str(ap_val), "tip": "Poder de Habilidade: %d\nDano base escalonado por estrelas (x%.1f) e amplificadores." % [ap_val, stats.get_star_multiplier(star)]},
+			"arm": {"val": str(int(total_armor)), "tip": "Armadura: %d\nReduz dano físico recebido em %d%%." % [int(total_armor), phys_reduct]},
+			"mr": {"val": str(int(total_mr)), "tip": "Resistência Mágica: %d\nReduz dano mágico recebido em %d%%." % [int(total_mr), mag_reduct]},
+			"as": {"val": "%.2f" % attack_spd, "tip": "Velocidade de Ataque: %.2f ataques por segundo." % attack_spd},
+			"crit": {"val": "%d%%" % crit_pct, "tip": "Acerto Crítico: %d%%\nChance de ataques normais e magias causarem dano crítico amplificado." % crit_pct},
+			"rng": {"val": "%d Hex" % stats.get_attack_range_hexes(), "tip": "Alcance de Ataque: %d hexágonos." % stats.get_attack_range_hexes()},
+			"dps": {"val": str(dps), "tip": "DPS em Tempo Real: ~%d\nDano por segundo contínuo estimado (Ataque x Velocidade)." % dps}
+		}
+		for key in live_stats.keys():
+			var slot = stats_grid.find_child("Slot_" + key, false, false) as Control
+			if slot:
+				var v_lbl = slot.find_child("ValLabel", true, false) as Label
+				if v_lbl:
+					v_lbl.text = live_stats[key]["val"]
+				slot.tooltip_text = live_stats[key]["tip"]
+
+	# Stacks de Cerrado em tempo real
+	var origins_lbl = panel.find_child("Origins_label", true, false) as RichTextLabel
+	if origins_lbl and "Cerrado" in stats.origins:
+		var origin_parts: Array[String] = []
+		for orig in stats.origins:
+			var extra := ""
+			if orig == "Cerrado":
+				extra = " [color=#e67e22](%d/10 st)[/color]" % [mini(unit.enemies_defeated, BaseUnit3D.MAX_CERRADO_STACKS)]
+			origin_parts.append("[url=%s][u][color=#f5da80]%s[/color][/u]%s[/url]" % [orig, orig, extra])
+		origins_lbl.text = "[color=#f1c40f]ORIGENS[/color]  %s" % (" · ".join(origin_parts))
+
 func show_unit_inspector(unit: BaseUnit3D) -> void:
 	if not is_instance_valid(unit) or not unit.stats or not ui:
 		return
-	var panel := ui.get_node_or_null("Control/RightBar")
+	var panel := ui.get_node_or_null("Control/RightBar") as Control
 	if not panel:
 		return
+	_inspected_unit = unit
 	var stats := unit.stats
 	
-	var name_lbl = panel.find_child("Name_label", true, false)
+	var name_lbl = panel.find_child("Name_label", true, false) as RichTextLabel
 	if name_lbl:
-		name_lbl.text = "[b]%s[/b] [color=#95a5a6](Tier %d · %dg)[/color]" % [
-			stats.unit_name, stats.tier, stats.cost
+		var tier_hex := "#" + stats.get_tier_color().to_html(false)
+		name_lbl.text = "[b]%s[/b] [color=%s](Tier %d · %dg)[/color]" % [
+			stats.unit_name, tier_hex, stats.tier, stats.cost
 		]
 		var star_box = panel.find_child("InspectorStarBox", true, false) as HBoxContainer
 		if not star_box:
@@ -1445,73 +2177,55 @@ func show_unit_inspector(unit: BaseUnit3D) -> void:
 				star_icon.modulate = Color("#cd7f32")
 			star_box.add_child(star_icon)
 	
+	var p_frame = panel.find_child("PortraitFrame", true, false)
+	if p_frame:
+		p_frame.modulate = stats.get_tier_color()
 	var img = panel.find_child("Image_container", true, false) as TextureRect
 	if img:
 		img.texture = stats.icon
 	
-	# 1. Vida (Atual / Máxima + Bônus)
+	# Calcular valores numéricos
+	var cur_hp := int(unit.current_health)
+	var max_hp := int(unit.get_max_health())
+	var cur_mana := int(unit.current_mana)
+	var max_mana := int(stats.max_mana)
+	var attack_dmg := int(unit.get_attack_damage())
+	var attack_spd := unit.get_effective_attack_speed()
+	var dps := int(attack_dmg * attack_spd)
+	
+	var total_armor := unit.get_effective_armor()
+	var phys_reduct: int = int(round((total_armor / (100.0 + total_armor)) * 100.0))
+	var total_mr := unit.get_effective_magic_resist()
+	var mag_reduct: int = int(round((total_mr / (100.0 + total_mr)) * 100.0))
+
+	# Atualizar e ocultar labels legadas para dar lugar aos componentes visuais elegantes
 	var hp_lbl = panel.find_child("Hp_label", true, false)
 	if hp_lbl:
-		var cur_hp := int(unit.current_health)
-		var max_hp := int(unit.get_max_health())
-		var hp_extra := ""
-		if float(unit.synergy_bonuses.get("max_health_pct", 0.0)) > 0.0:
-			hp_extra = " [color=#2ecc71](+%d%% sinergia)[/color]" % int(float(unit.synergy_bonuses.get("max_health_pct", 0.0)) * 100.0)
-		hp_lbl.text = "[color=#2ecc71]VIDA[/color]  [b]%d[/b] / %d%s" % [cur_hp, max_hp, hp_extra]
-	
-	# 2. Mana (Atual / Máxima + Inicial)
+		hp_lbl.text = "[color=#2ecc71]VIDA[/color]  [b]%d[/b] / %d" % [cur_hp, max_hp]
+		hp_lbl.visible = false
 	var mana_lbl = panel.find_child("Mana_label", true, false)
 	if mana_lbl:
-		var cur_mana := int(unit.current_mana)
-		var max_mana := int(stats.max_mana)
-		var init_mana := int(stats.starting_mana)
-		mana_lbl.text = "[color=#38bdf8]MANA[/color]  [b]%d[/b] / %d  [color=#94a3b8](Inicia %d)[/color]" % [cur_mana, max_mana, init_mana]
-	
-	# 3. Poder de Ataque & DPS
+		mana_lbl.text = "[color=#38bdf8]MANA[/color]  [b]%d[/b] / %d" % [cur_mana, max_mana]
+		mana_lbl.visible = false
 	var type_lbl = panel.find_child("Type_label", true, false)
 	if type_lbl:
-		var attack_dmg := int(unit.get_attack_damage())
-		var attack_spd := unit.get_effective_attack_speed()
-		var dps := int(attack_dmg * attack_spd)
-		var dmg_kind := "Físico" if stats.ability_damage_type == 0 else "Mágico"
-		type_lbl.text = "[color=#fb923c]PODER DE ATAQUE[/color]  [b]%d[/b] (%s)\n[color=#cbd5e1]Vel. Atq:[/color] %.2f/s  ·  [color=#cbd5e1]DPS:[/color] [b]%d[/b]" % [
-			attack_dmg, dmg_kind, attack_spd, dps
-		]
-	
-	# 4. Alcance
+		type_lbl.visible = false
 	var range_lbl = panel.find_child("Range_label", true, false)
 	if range_lbl:
-		range_lbl.text = "[color=#cbd5e1]ALCANCE[/color]  %s (%d hex)" % ["À Distância" if stats.is_ranged else "Corpo a Corpo", stats.get_attack_range_hexes()]
-	
-	# 5. Defesa (Armadura e Resistência Mágica com % de mitigação de dano)
-	var def_lbl = _get_or_create_inspector_label(panel, "Defense_label", "Origins_label")
+		range_lbl.visible = false
+	var def_lbl = panel.find_child("Defense_label", true, false)
 	if def_lbl:
-		var base_armor: float = stats.armor
-		var bonus_armor: float = float(unit.synergy_bonuses.get("armor_flat", 0.0))
-		var total_armor: float = maxf(base_armor + bonus_armor, 0.0)
-		if BattleClock.now_msec() < unit.armor_shred_until_msec:
-			total_armor = maxf(total_armor - unit.armor_shred_amount, 0.0)
-		var phys_reduct: int = int(round((total_armor / (100.0 + total_armor)) * 100.0))
-		
-		var base_mr: float = stats.magic_resist
-		var bonus_mr: float = float(unit.synergy_bonuses.get("magic_resist_flat", 0.0))
-		var total_mr: float = maxf(base_mr + bonus_mr, 0.0)
-		var mag_reduct: int = int(round((total_mr / (100.0 + total_mr)) * 100.0))
-		
-		var def_text := "[color=#60a5fa]DEFESA[/color]\n[color=#cbd5e1]Armadura:[/color] [b]%d[/b] [color=#94a3b8](-%d%% dano fís.)[/color]\n[color=#cbd5e1]Res. Mágica:[/color] [b]%d[/b] [color=#94a3b8](-%d%% dano mág.)[/color]" % [
-			int(total_armor), phys_reduct, int(total_mr), mag_reduct
-		]
-		if unit.current_shield > 0.0:
-			def_text += "\n[color=#38bdf8]Escudo Ativo:[/color] [b]%d[/b]" % int(unit.current_shield)
-		def_lbl.text = def_text
-	
-	# 6. Função de combate
-	var role_lbl = _get_or_create_inspector_label(panel, "Role_label", "Origins_label")
+		def_lbl.visible = false
+	var role_lbl = panel.find_child("Role_label", true, false)
 	if role_lbl:
-		role_lbl.text = "[color=#38bdf8]FUNÇÃO[/color]  [b]%s[/b]\n[color=#94a3b8][i]%s[/i][/color]" % [
-			stats.get_combat_role(), stats.get_combat_role_description()
-		]
-	
+		role_lbl.visible = false
+	var sc_lbl = panel.find_child("Star_scaling_label", true, false)
+	if sc_lbl:
+		sc_lbl.visible = false
+	var aff_lbl = panel.find_child("Affinities_label", true, false)
+	if aff_lbl:
+		aff_lbl.visible = false
+
 	# 7. Origens (com links de sinergia)
 	var origins_lbl = panel.find_child("Origins_label", true, false) as RichTextLabel
 	if origins_lbl:
@@ -1530,22 +2244,10 @@ func show_unit_inspector(unit: BaseUnit3D) -> void:
 		for cls in stats.classes:
 			class_parts.append("[url=%s][u][color=#d8b4fe]%s[/color][/u][/url]" % [cls, cls])
 		classes_lbl.text = "[color=#9b59b6]CLASSES[/color]  %s" % (" · ".join(class_parts) if not class_parts.is_empty() else "—")
-	
-	# 9. Habilidade: Descrição simples e concisa (detalhes no Bestiário)
-	var aff_lbl = panel.find_child("Affinities_label", true, false) as RichTextLabel
-	if aff_lbl:
-		var ab_type_str := "Mágico"
-		match stats.ability_damage_type:
-			UnitStats.DamageType.PHYSICAL: ab_type_str = "Físico"
-			UnitStats.DamageType.MAGICAL: ab_type_str = "Mágico"
-			UnitStats.DamageType.TRUE: ab_type_str = "Verdadeiro"
-		
-		var ab_lines: Array[String] = []
-		ab_lines.append("[color=#c084fc]HABILIDADE[/color] · [b][color=#f5da80]%s[/color][/b] [color=#94a3b8](%s)[/color]" % [stats.ability_name, ab_type_str])
-		if not stats.ability_description.is_empty():
-			ab_lines.append("[color=#ecf0f1]%s[/color]" % stats.ability_description)
-		
-		aff_lbl.text = "\n".join(ab_lines)
+
+	# 9. Atualizar layout e componentes TFT
+	_update_tft_inspector(panel, unit, cur_hp, max_hp, cur_mana, max_mana, attack_dmg, attack_spd, dps, total_armor, phys_reduct, total_mr, mag_reduct)
+	_update_inspector_live_data(panel, unit)
 	
 	if ui and ui.has_method("set_inspected_unit_data"):
 		ui.set_inspected_unit_data(stats, unit.star_level)
@@ -1598,7 +2300,9 @@ func clear_synergy_unit_highlights() -> void:
 	_highlighted_synergy_units.clear()
 
 func hide_unit_inspector() -> void:
+	_inspected_unit = null
 	clear_synergy_unit_highlights()
+	_hide_ability_floating_card()
 	if ui and ui.has_method("hide_inspector"):
 		ui.hide_inspector()
 	elif ui:

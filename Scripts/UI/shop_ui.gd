@@ -78,10 +78,10 @@ func _setup_tier_odds() -> void:
 		pill.add_theme_constant_override("separation", 2)
 		pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		
-		var dot := Label.new()
-		dot.text = "●"
-		dot.add_theme_font_size_override("font_size", 9)
-		dot.add_theme_color_override("font_color", UIStyle.TIER_COLORS.get(tier, Color.WHITE))
+		var dot := ColorRect.new()
+		dot.custom_minimum_size = Vector2(8, 8)
+		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		dot.color = UIStyle.TIER_COLORS.get(tier, Color.WHITE)
 		pill.add_child(dot)
 		
 		var label := Label.new()

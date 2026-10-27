@@ -45,52 +45,53 @@ func _run() -> void:
 	print("  ✓ Painel de inspeção possui fundo sólido e borda (bg_color: %s)" % str(flat.bg_color))
 
 	# [TESTE 3] Lógica de streaks e recompensas de gold
-	print("\n[TESTE 3] Verificando streaks de vitória (base +2, streak 1..5):")
+	# [TESTE 3] Lógica de streaks (1..2: +1g, 3..4: +2g, 5+: +3g) e juros (1g a cada 10g)
+	print("\n[TESTE 3] Verificando nova tabela de streaks (1..3g) e juros (+1g/10g):")
 	main.win_streak = 0
 	main.loss_streak = 0
-	main.player_gold = 3
+	main.player_gold = 0
 	
-	# Simular 5 vitórias consecutivas
-	var expected_gold: int = 3
-	for w in range(1, 6):
-		var prev_streak: int = main.win_streak
-		main.win_streak = mini(main.win_streak + 1, 5)
-		main.loss_streak = 0
-		var bonus: int = clampi(main.win_streak, 1, 5)
-		var round_gain: int = main.gold_on_win + bonus
-		main.player_gold += round_gain
-		expected_gold += round_gain
-		assert(main.win_streak == w, "Win streak deve ser %d" % w)
-		assert(bonus == w, "Bonus da win streak deve ser %d" % w)
-		assert(main.player_gold == expected_gold, "Gold esperado %d, atual %d" % [expected_gold, main.player_gold])
-	
-	# 6ª vitória deve manter streak no cap de 5
-	main.win_streak = mini(main.win_streak + 1, 5)
-	var capped_bonus: int = clampi(main.win_streak, 1, 5)
-	assert(main.win_streak == 5, "Win streak deve estar limitada em 5")
-	assert(capped_bonus == 5, "Bonus máximo deve ser 5")
-	print("  ✓ Streaks de vitória testadas com sucesso: sequência até 5 e bônus de 1 a 5 gold")
+	# Teste de brackets de streak de vitória
+	assert(main.calculate_streak_bonus(0) == 0, "Streak 0 deve dar 0 de bônus")
+	assert(main.calculate_streak_bonus(1) == 1, "Streak 1 deve dar 1 de bônus")
+	assert(main.calculate_streak_bonus(2) == 1, "Streak 2 deve dar 1 de bônus")
+	assert(main.calculate_streak_bonus(3) == 2, "Streak 3 deve dar 2 de bônus")
+	assert(main.calculate_streak_bonus(4) == 2, "Streak 4 deve dar 2 de bônus")
+	assert(main.calculate_streak_bonus(5) == 3, "Streak 5 deve dar 3 de bônus")
+	assert(main.calculate_streak_bonus(8) == 3, "Streak 8+ deve dar 3 de bônus (cap)")
+	print("  ✓ Tabela de bônus de sequência (1-2: +1g, 3-4: +2g, 5+: +3g) verificada!")
 
-	print("\n[TESTE 4] Verificando streaks de derrota (base +1, streak 1..5):")
-	main.win_streak = 0
+	# Teste de cálculo de juros (+1 a cada 10 de gold, max 5)
+	assert(main.calculate_interest(0) == 0, "0 gold deve gerar 0 juros")
+	assert(main.calculate_interest(9) == 0, "9 gold deve gerar 0 juros")
+	assert(main.calculate_interest(10) == 1, "10 gold deve gerar 1 de juros")
+	assert(main.calculate_interest(19) == 1, "19 gold deve gerar 1 de juros")
+	assert(main.calculate_interest(20) == 2, "20 gold deve gerar 2 de juros")
+	assert(main.calculate_interest(35) == 3, "35 gold deve gerar 3 de juros")
+	assert(main.calculate_interest(50) == 5, "50 gold deve gerar 5 de juros (cap)")
+	assert(main.calculate_interest(80) == 5, "80 gold deve gerar 5 de juros (cap)")
+	print("  ✓ Cálculo de juros (+1g a cada 10g no banco, máx +5g) verificado!")
+
+	# Simular vitórias acumulando streak, ouro base e juros
+	main.player_gold = 10
+	var prev_g: int = main.player_gold
+	main.combat_active = true
+	main.end_combat(true, false, "", true)
+	# Vitória com 10g: base=2, streak=1 (+1), juros=1 (+1), total ganho=4
+	assert(main.player_gold == prev_g + 4, "Gold com juros e streak deve ser %d, atual %d" % [prev_g + 4, main.player_gold])
+	assert(main.win_streak == 1, "Win streak deve ser 1")
+	print("  ✓ Ganho de round com bônus base, sequência e juros verificado com sucesso!")
+
+	print("\n[TESTE 4] Verificando que empate quebra a economia (reseta streaks e dá 0 gold):")
+	main.win_streak = 4
 	main.loss_streak = 0
-	var gold_before_loss: int = main.player_gold
-	expected_gold = gold_before_loss
-	for l in range(1, 6):
-		main.loss_streak = mini(main.loss_streak + 1, 5)
-		main.win_streak = 0
-		var bonus: int = clampi(main.loss_streak, 1, 5)
-		var round_gain: int = main.gold_on_loss + bonus
-		main.player_gold += round_gain
-		expected_gold += round_gain
-		assert(main.loss_streak == l, "Loss streak deve ser %d" % l)
-		assert(bonus == l, "Bonus da loss streak deve ser %d" % l)
-		assert(main.player_gold == expected_gold, "Gold esperado %d, atual %d" % [expected_gold, main.player_gold])
-	
-	# 6ª derrota deve manter streak no cap de 5
-	main.loss_streak = mini(main.loss_streak + 1, 5)
-	assert(main.loss_streak == 5, "Loss streak deve estar limitada em 5")
-	print("  ✓ Streaks de derrota testadas com sucesso: sequência até 5 e bônus de 1 a 5 gold")
+	var gold_before_draw: int = main.player_gold
+	main.combat_active = true
+	main.end_combat(false, true, "Empate Forçado", true)
+	assert(main.win_streak == 0, "Empate deve resetar win_streak para 0")
+	assert(main.loss_streak == 0, "Empate deve manter loss_streak em 0")
+	assert(main.player_gold == gold_before_draw, "Empate não deve render gold nem juros. Esperado %d, atual %d" % [gold_before_draw, main.player_gold])
+	print("  ✓ Empate quebra a economia com sucesso (0 gold, 0 juros, streaks zeradas)!")
 
 	# [TESTE 5] Shader de unidade possuída na loja
 	for i in 10:

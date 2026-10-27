@@ -37,4 +37,4 @@ is_ranged = true
 stun_resist = 0.8
 
 is_assassin = true
-target_priority = 1
+target_priority = 0

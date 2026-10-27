@@ -27,7 +27,7 @@ func _run() -> void:
 	create_mae_de_ouro()
 	
 	print("\n========================================")
-	print("✅ Todas as unidades criadas!")
+	print("[OK] Todas as unidades criadas!")
 	print("========================================")
 
 func create_anhanga() -> void:

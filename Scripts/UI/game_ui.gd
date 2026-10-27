@@ -299,33 +299,36 @@ func update_streak(win_streak: int, loss_streak: int) -> void:
 		return
 	
 	if win_streak > 0:
-		var bonus := clampi(win_streak, 1, 5)
+		var bonus := _calc_streak_bonus(win_streak)
 		streak_label.text = "%dV (+%dg)" % [win_streak, bonus]
 		streak_label.add_theme_color_override("font_color", Color("#2ecc71"))
 		if streak_icon:
 			streak_icon.texture = UIAtlasCatalog.get_icon_texture("lightning")
 		streak_label.tooltip_text = (
 			"Sequência de Vitórias: %d consecutivas\n" +
-			"Bônus de ouro por round: +%dg (máximo: +5g)\n\n" +
+			"Bônus de ouro por round: +%dg (máximo: +3g)\n\n" +
 			"Regras de Economia:\n" +
-			"• Vitória: +2g base + 1..5g por sequência\n" +
-			"• Empate: +1g fixo (mantém sequência)\n" +
-			"• Derrota: +1g base + 1..5g por sequência\n" +
+			"• Vitória: +2g base + 1..3g por sequência\n" +
+			"  - 1 a 2 vitórias: +1g\n" +
+			"  - 3 a 4 vitórias: +2g\n" +
+			"  - 5+ vitórias: +3g\n" +
+			"• Derrota: +1g base + 1..3g por sequência\n" +
+			"• Empate: Quebra a economia (0g e reseta sequências)\n" +
 			"• Juros: +1g a cada 10g no banco (máx +5g)"
 		) % [win_streak, bonus]
 	elif loss_streak > 0:
-		var bonus := clampi(loss_streak, 1, 5)
+		var bonus := _calc_streak_bonus(loss_streak)
 		streak_label.text = "%dD (+%dg)" % [loss_streak, bonus]
 		streak_label.add_theme_color_override("font_color", Color("#e74c3c"))
 		if streak_icon:
 			streak_icon.texture = UIAtlasCatalog.get_icon_texture("skull")
 		streak_label.tooltip_text = (
 			"Sequência de Derrotas: %d consecutivas\n" +
-			"Bônus de compensação: +%dg (máximo: +5g)\n\n" +
+			"Bônus de compensação: +%dg (máximo: +3g)\n\n" +
 			"Regras de Economia:\n" +
-			"• Vitória: +2g base + 1..5g por sequência\n" +
-			"• Empate: +1g fixo (mantém sequência)\n" +
-			"• Derrota: +1g base + 1..5g por sequência\n" +
+			"• Vitória: +2g base + 1..3g por sequência\n" +
+			"• Derrota: +1g base + 1..3g por sequência\n" +
+			"• Empate: Quebra a economia (0g e reseta sequências)\n" +
 			"• Juros: +1g a cada 10g no banco (máx +5g)"
 		) % [loss_streak, bonus]
 	else:
@@ -337,13 +340,22 @@ func update_streak(win_streak: int, loss_streak: int) -> void:
 			"Sequência de Rounds: Nenhuma ativa\n" +
 			"Acumule vitórias ou derrotas seguidas para receber bônus de ouro!\n\n" +
 			"Regras de Economia:\n" +
-			"• Vitória: +2g base + 1..5g por sequência\n" +
-			"• Empate: +1g fixo (sem perda de sequência)\n" +
-			"• Derrota: +1g base + 1..5g por sequência\n" +
+			"• Vitória: +2g base + 1..3g por sequência\n" +
+			"  - 1 a 2 vitórias: +1g\n" +
+			"  - 3 a 4 vitórias: +2g\n" +
+			"  - 5+ vitórias: +3g\n" +
+			"• Derrota: +1g base + 1..3g por sequência\n" +
+			"• Empate: Quebra a economia (0g e reseta sequências)\n" +
 			"• Juros: +1g a cada 10g no banco (máx +5g)"
 		)
 
-func show_round_resolution_banner(outcome_title: String, earned_gold: int, is_draw: bool, player_won: bool) -> void:
+func _calc_streak_bonus(s: int) -> int:
+	if s >= 5: return 3
+	elif s >= 3: return 2
+	elif s >= 1: return 1
+	return 0
+
+func show_round_resolution_banner(outcome_title: String, earned_gold: int, is_draw: bool, player_won: bool, round_gold: int = 0, streak_gold: int = 0, interest_gold: int = 0) -> void:
 	if not resolution_banner:
 		resolution_banner = get_node_or_null("Control/RoundResolutionBanner")
 	if not resolution_banner:
@@ -359,19 +371,17 @@ func show_round_resolution_banner(outcome_title: String, earned_gold: int, is_dr
 		banner_icon.texture = UIAtlasCatalog.get_icon_texture("coin")
 	
 	if is_draw:
-		banner_title.text = "EMPATE! +%d OURO" % earned_gold
+		banner_title.text = "EMPATE! +0 OURO"
 		banner_title.add_theme_color_override("font_color", Color("#91c9d8"))
-		banner_detail.text = "Recompensa fixa por empate (+1g)"
+		banner_detail.text = "Empate quebrou a sequência · 0g juros"
 	elif player_won:
 		banner_title.text = "VITÓRIA! +%d OURO" % earned_gold
 		banner_title.add_theme_color_override("font_color", Color("#2ecc71"))
-		var streak_g := maxi(0, earned_gold - 2)
-		banner_detail.text = "+2g base · +%dg sequência" % streak_g if streak_g > 0 else "+2g recompensa base"
+		banner_detail.text = "+%dg round · +%dg sequência · +%dg juros" % [round_gold, streak_gold, interest_gold]
 	else:
 		banner_title.text = "DERROTA! +%d OURO" % earned_gold
 		banner_title.add_theme_color_override("font_color", Color("#e74c3c"))
-		var streak_g := maxi(0, earned_gold - 1)
-		banner_detail.text = "+1g base · +%dg compensação" % streak_g if streak_g > 0 else "+1g compensação base"
+		banner_detail.text = "+%dg round · +%dg sequência · +%dg juros" % [round_gold, streak_gold, interest_gold]
 	
 	resolution_banner.show()
 	resolution_banner.modulate.a = 0.0
@@ -715,7 +725,7 @@ func _update_synergy_tooltip_content(synergy: Dictionary) -> void:
 					milestones_parts.append("[b][color=#2ecc71](%d)[/color][/b]" % t_val)
 				else:
 					milestones_parts.append("[color=#5e7585]%d[/color]" % t_val)
-			status_text += "  ·  [color=#8fa3b0]Marcos:[/color] %s" % " → ".join(milestones_parts)
+			status_text += "  ·  [color=#8fa3b0]Marcos:[/color] %s" % " -> ".join(milestones_parts)
 		status_lbl.text = status_text
 
 	if desc_lbl:

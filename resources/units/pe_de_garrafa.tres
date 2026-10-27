@@ -35,4 +35,4 @@ is_assassin = true
 is_ranged = true
 prefers_backline = true
 
-target_priority = 1
+target_priority = 0

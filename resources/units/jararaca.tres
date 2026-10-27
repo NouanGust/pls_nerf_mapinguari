@@ -28,4 +28,4 @@ ability_damage = 180.0
 ability_damage_type = 0
 is_assassin = true
 
-target_priority = 1
+target_priority = 0

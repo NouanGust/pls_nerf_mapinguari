@@ -56,6 +56,9 @@ var _aura_indicator: Node3D
 var _aura_center := Vector2i(-1, -1)
 var _aura_radius: int = -1
 var stunned_until_msec: int = 0
+var _was_stunned: bool = false
+var in_combat: bool = false
+var _idle_target_timer: float = 0.0
 var immune_until_msec: int = 0
 var reflect_until_msec: int = 0
 var reflect_pct: float = 0.0
@@ -210,6 +213,31 @@ func move_direct_to_target(delta: float = 0.0166) -> void:
 		_detour_dir = Vector3.ZERO
 		check_attack_or_move()
 		return
+
+	# Se há outro inimigo mais próximo ou já no alcance de ataque, focar nele
+	if stats.target_priority == UnitStats.TargetPriority.CLOSEST:
+		var enemy_group: String = "enemy_units" if team == 0 else "player_units"
+		var enemies_list: Array = get_tree().get_nodes_in_group(enemy_group)
+		var valid_enemies := enemies_list.filter(func(e):
+			return is_instance_valid(e) and not e.is_queued_for_deletion() and e.current_state != State.DEAD and e.visible and not e.is_on_bench()
+		)
+		var closest_enemy := get_closest_enemy(valid_enemies)
+		if closest_enemy and closest_enemy != current_target:
+			var my_pos2d := Vector2(global_position.x, global_position.z)
+			var current_dist := my_pos2d.distance_to(Vector2(target_pos.x, target_pos.z))
+			var closest_dist := my_pos2d.distance_to(Vector2(closest_enemy.global_position.x, closest_enemy.global_position.z))
+			var range_meters := get_attack_range_meters()
+			if closest_dist <= range_meters or (current_dist > range_meters and closest_dist + 1.2 < current_dist):
+				current_target = closest_enemy
+				target_pos = current_target.global_position
+				planar_offset = Vector3(target_pos.x - global_position.x, 0.0, target_pos.z - global_position.z)
+				if planar_offset.length() <= range_meters:
+					velocity = Vector3.ZERO
+					current_state = State.IDLE
+					_detour_timer = 0.0
+					_detour_dir = Vector3.ZERO
+					check_attack_or_move()
+					return
 
 	current_state = State.MOVING
 	var direct_dir := planar_offset.normalized() if planar_offset.length_squared() > 0.0001 else Vector3.FORWARD
@@ -1075,6 +1103,28 @@ func get_effective_attack_speed() -> float:
 		speed *= speed_buff_multiplier
 	return maxf(speed, 0.1)
 
+func get_effective_armor() -> float:
+	var total := stats.armor if stats else 0.0
+	total += float(synergy_bonuses.get("armor_flat", 0.0))
+	total += float(synergy_bonuses.get("bonus_armor", 0.0))
+	for buff in active_buffs:
+		if buff.has("armor_flat"):
+			total += float(buff.armor_flat)
+		if buff.has("bonus_armor"):
+			total += float(buff.bonus_armor)
+	return maxf(total, 0.0)
+
+func get_effective_magic_resist() -> float:
+	var total := stats.magic_resist if stats else 0.0
+	total += float(synergy_bonuses.get("magic_resist_flat", 0.0))
+	total += float(synergy_bonuses.get("bonus_magic_resist", 0.0))
+	for buff in active_buffs:
+		if buff.has("magic_resist_flat"):
+			total += float(buff.magic_resist_flat)
+		if buff.has("bonus_magic_resist"):
+			total += float(buff.bonus_magic_resist)
+	return maxf(total, 0.0)
+
 func apply_speed_buff(duration: float, multiplier: float = 1.35, label: String = "+VELOCIDADE") -> void:
 	speed_buff_multiplier = multiplier
 	speed_buff_until_msec = maxi(speed_buff_until_msec, BattleClock.now_msec() + int(duration * 1000.0))
@@ -1113,13 +1163,38 @@ func apply_stun(duration: float, label: String = "ATORDOADO") -> void:
 	if final_duration <= 0.0:
 		return
 	stunned_until_msec = maxi(stunned_until_msec, BattleClock.now_msec() + int(final_duration * 1000.0))
+	_was_stunned = true
 	velocity = Vector3.ZERO
 	if attack_timer:
 		attack_timer.stop()
 	if navigation_agent:
 		navigation_agent.velocity = Vector3.ZERO
+	if unit_visual:
+		unit_visual.update_locomotion(false, 0.0, true)
+	if current_state in [State.ATTACKING, State.MOVING]:
+		current_state = State.IDLE
 	CombatFeedback.create_status_indicator(self, label, final_duration)
 	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.8, Color("#fde047"))
+
+func _recover_from_stun() -> void:
+	if current_state == State.DEAD or is_on_bench():
+		return
+	if stats and stats.is_stationary:
+		_wait_rooted()
+		_rooted_target_timer = 0.0
+		find_target()
+		return
+	
+	current_state = State.IDLE
+	velocity = Vector3.ZERO
+	if is_instance_valid(current_target) and not current_target.is_queued_for_deletion() and current_target.current_state != State.DEAD and not current_target.is_on_bench() and current_target.visible:
+		check_attack_or_move()
+	else:
+		current_target = null
+		find_target()
+	
+	if current_mana >= stats.max_mana and stats.ability_name and current_state != State.IDLE and not is_stunned():
+		cast_ability()
 
 func apply_armor_shred(duration: float, amount: float) -> void:
 	if current_state == State.DEAD or duration <= 0.0:
@@ -1134,6 +1209,10 @@ func on_enemy_defeated() -> void:
 func start_combat() -> void:
 	if is_on_bench():
 		return
+	in_combat = true
+	stunned_until_msec = 0
+	_was_stunned = false
+	_idle_target_timer = 0.0
 	use_navigation = false
 	_detour_dir = Vector3.ZERO
 	_detour_timer = 0.0
@@ -1184,8 +1263,8 @@ func find_target() -> void:
 		velocity = Vector3.ZERO
 		return
 	
-	# Assassinos têm preferência por unidades mais fracas (menor vida)
-	if (stats.is_assassin or stats.target_priority == UnitStats.TargetPriority.LOWEST_HP or stats.is_assassino_role()) and not enemies.is_empty():
+	# Prioridade de alvo: padrão é sempre a unidade mais próxima (CLOSEST)
+	if stats.target_priority == UnitStats.TargetPriority.LOWEST_HP and not enemies.is_empty():
 		var lowest_enemy: BaseUnit3D = null
 		var min_hp := INF
 		var closest_dist := INF
@@ -1207,9 +1286,8 @@ func find_target() -> void:
 			for enemy in enemies:
 				if enemy.current_health / maxf(enemy.get_max_health(), 1.0) < weakest.current_health / maxf(weakest.get_max_health(), 1.0):
 					weakest = enemy
-			current_target = weakest
-			current_target.marked_team = team
-			current_target.mark_expires_at_msec = BattleClock.now_msec() + 3000
+			weakest.marked_team = team
+			weakest.mark_expires_at_msec = BattleClock.now_msec() + 3000
 		print("%s mirando em %s" % [stats.unit_name, current_target.stats.unit_name])
 		check_attack_or_move()
 	else:
@@ -1333,8 +1411,15 @@ func move_towards_target() -> void:
 
 func _physics_process(delta: float) -> void:
 	if is_stunned():
+		_was_stunned = true
 		velocity = Vector3.ZERO
 		return
+
+	if _was_stunned:
+		_was_stunned = false
+		_recover_from_stun()
+		return
+
 	if stats and stats.is_stationary:
 		velocity = Vector3.ZERO
 		if current_state == State.ROOTED:
@@ -1354,6 +1439,14 @@ func _physics_process(delta: float) -> void:
 			find_target()
 		else:
 			move_direct_to_target(delta)
+	elif current_state == State.ATTACKING:
+		if attack_timer and attack_timer.is_stopped():
+			attack_timer.start()
+	elif current_state == State.IDLE and in_combat:
+		_idle_target_timer -= delta
+		if _idle_target_timer <= 0.0:
+			_idle_target_timer = 0.25
+			find_target()
 
 func _on_velocity_computed(_safe_velocity: Vector3) -> void:
 	pass
@@ -1389,6 +1482,8 @@ func start_attacking() -> void:
 		find_target()
 		return
 	if current_state == State.ATTACKING:
+		if attack_timer and attack_timer.is_stopped():
+			attack_timer.start()
 		return
 	
 	current_state = State.ATTACKING
@@ -2013,14 +2108,7 @@ func _cast_cabeca_de_cuia() -> void:
 			pull_dest.y = target.global_position.y
 			var ptw := target.create_tween()
 			ptw.tween_property(target, "global_position", pull_dest, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-			var board := _get_combat_board()
-			if board:
-				ptw.tween_callback(func():
-					if is_instance_valid(target) and target.current_state != State.DEAD:
-						var cell := board.get_grid_position(board.to_local(target.global_position))
-						if cell != Vector2i(-1, -1):
-							target.board_position = cell
-				)
+
 		CombatFeedback.create_hit_particles(target.global_position, Color("#0284c7"))
 		CombatFeedback.create_hit_particles(target.global_position + Vector3.UP * 0.5, Color("#0f172a"))
 
@@ -3228,6 +3316,9 @@ func _apply_ability_healing() -> void:
 func die() -> void:
 	if current_state == State.DEAD:
 		return
+	in_combat = false
+	_was_stunned = false
+	stunned_until_msec = 0
 	current_state = State.DEAD
 	current_health = 0
 	current_shield = 0.0
@@ -3267,6 +3358,8 @@ func revive_at_position(world_pos: Vector3) -> void:
 	use_navigation = false
 	_detour_dir = Vector3.ZERO
 	_detour_timer = 0.0
+	in_combat = true
+	_was_stunned = false
 	current_state = State.IDLE
 	current_health = get_max_health()
 	current_mana = stats.starting_mana

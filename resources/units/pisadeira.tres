@@ -31,4 +31,4 @@ ability_range = 3.5
 stun_resist = 0.7
 
 is_assassin = true
-target_priority = 1
+target_priority = 0

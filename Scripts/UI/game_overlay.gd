@@ -143,7 +143,7 @@ func _render() -> void:
 			for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
 				timer_style.set_content_margin(side, 12.0)
 			timer_box.add_theme_stylebox_override("panel", timer_style)
-			var timer_label := label("⏱ TEMPO DE PARTIDA: %s" % format_duration(_match_time), 22, Color("#7dd3fc"))
+			var timer_label := label("TEMPO DE PARTIDA: %s" % format_duration(_match_time), 22, Color("#7dd3fc"))
 			timer_box.add_child(timer_label)
 			_content.add_child(timer_box)
 			_content.add_child(button("Continuar", _resume))

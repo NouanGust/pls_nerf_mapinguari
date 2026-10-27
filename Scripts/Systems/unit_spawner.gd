@@ -90,7 +90,7 @@ static func spawn_unit_from_stats(unit_stats: UnitStats, star_level: int = 1, te
 	
 	# Configurar unidade
 	unit.team = team
-	unit.name = "%s_%d★_Team%d" % [unit_stats.unit_id, star_level, team]
+	unit.name = "%s_%dS_Team%d" % [unit_stats.unit_id, star_level, team]
 	unit.initialize(unit_stats, star_level)
 	
 	return unit

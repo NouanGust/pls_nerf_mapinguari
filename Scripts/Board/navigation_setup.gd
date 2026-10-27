@@ -12,14 +12,14 @@ func bake_navigation_delayed() -> void:
 	await get_tree().create_timer(1.0).timeout
 	
 	if not navigation_mesh:
-		push_error("❌ NavigationMesh não configurado!")
+		push_error("[ERRO] NavigationMesh não configurado!")
 		return
 	
-	print("\n🗺️ Iniciando bake do NavigationMesh...")
+	print("\n[NAV] Iniciando bake do NavigationMesh...")
 	
 	var has_geometry := check_for_geometry()
 	if not has_geometry:
-		push_warning("⚠️ Nenhuma geometria encontrada para navegação!")
+		push_warning("[AVISO] Nenhuma geometria encontrada para navegação!")
 		return
 	
 	bake_navigation_mesh()
@@ -29,7 +29,7 @@ func bake_navigation_delayed() -> void:
 	# VERIFICAR SE O NAVIGATION SERVER ESTÁ ATIVO
 	var nav_map := get_navigation_map()
 	if nav_map.is_valid():
-		print("✅ NavigationMesh baked com sucesso!")
+		print("[OK] NavigationMesh baked com sucesso!")
 		print("   Região: %s" % get_region_rid())
 		print("   Mapa: %s" % nav_map)
 		
@@ -37,7 +37,7 @@ func bake_navigation_delayed() -> void:
 		var is_active := NavigationServer3D.map_is_active(nav_map)
 		print("   Mapa ativo: %s" % is_active)
 	else:
-		push_error("❌ Navigation Map inválido!")
+		push_error("[ERRO] Navigation Map inválido!")
 
 func check_for_geometry() -> bool:
 	var root := get_tree().root
@@ -47,10 +47,10 @@ func check_for_geometry() -> bool:
 	
 	for body in static_bodies:
 		if body.collision_layer & 4:  # Layer 3
-			print("   ✓ Geometria navegável encontrada: %s" % body.name)
+			print("   [OK] Geometria navegável encontrada: %s" % body.name)
 			return true
 	
-	print("   ✗ Nenhuma geometria no Layer 3 encontrada")
+	print("   [AVISO] Nenhuma geometria no Layer 3 encontrada")
 	return false
 
 func find_static_bodies(node: Node) -> Array:

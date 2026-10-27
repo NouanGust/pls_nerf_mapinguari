@@ -3,7 +3,7 @@ extends Node
 
 # --- Signals ---
 
-signal unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: String, source_index: int)
+signal unit_placed_on_board(unit: BaseUnit3D, grid_pos: Vector2i, source: String, source_index: int, old_pos: Vector2i)
 signal unit_returned_to_shop(unit_stats: UnitStats)
 signal unit_placed_on_bench(unit: BaseUnit3D, source: String, source_index: int)
 signal unit_sold(unit: BaseUnit3D, source: String, source_index: int)
@@ -269,8 +269,18 @@ func update_hover_highlight(mouse_pos: Vector2) -> void:
 		_highlight_attack_range(grid_pos)
 	
 	if grid_pos != Vector2i(-1, -1):
-		if board.is_player_zone(grid_pos) and not board.is_cell_occupied(grid_pos):
-			board.highlight_cell(grid_pos, true, Color("#f2d477"))
+		var source: String = dragging_unit_data.get("source", "")
+		var is_occupied := board.is_cell_occupied(grid_pos)
+		var is_swap := (
+			source in ["board", "bench"]
+			and is_occupied
+			and board.get_unit_at(grid_pos) != null
+			and board.get_unit_at(grid_pos) is BaseUnit3D
+			and (board.get_unit_at(grid_pos) as BaseUnit3D).team == 0
+		)
+		if board.is_player_zone(grid_pos) and (not is_occupied or is_swap):
+			var hl_color := Color("#60a5fa") if is_swap else Color("#f2d477")
+			board.highlight_cell(grid_pos, true, hl_color)
 			if grid_pos not in highlight_cells:
 				highlight_cells.append(grid_pos)
 
@@ -320,10 +330,18 @@ func try_place_unit(mouse_pos: Vector2) -> void:
 		stop_drag()
 		return
 
+	var is_occupied := board.is_cell_occupied(grid_pos)
+	var is_swap_candidate := (
+		source in ["board", "bench"]
+		and is_occupied
+		and board.get_unit_at(grid_pos) != null
+		and board.get_unit_at(grid_pos) is BaseUnit3D
+		and (board.get_unit_at(grid_pos) as BaseUnit3D).team == 0
+	)
 	var drop_valid := (
 		grid_pos != Vector2i(-1,-1)
 		and board.is_player_zone(grid_pos)
-		and not board.is_cell_occupied(grid_pos)
+		and (not is_occupied or is_swap_candidate)
 	)
 	
 	if drop_valid:
@@ -360,7 +378,8 @@ func emit_place_unit_signal(grid_pos: Vector2i) -> void:
 			dragging_unit_data.unit_instance,
 			grid_pos,
 			dragging_unit_data.get("source", ""),
-			int(dragging_unit_data.get("bench_index", -1))
+			int(dragging_unit_data.get("bench_index", -1)),
+			dragging_unit_data.get("old_pos", Vector2i(-1, -1))
 		)
 	else:
 		print("  ERRO: unit_instance nao encontrado em dragging_unit_data")

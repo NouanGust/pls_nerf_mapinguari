@@ -4,6 +4,10 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_x2ek6"]
 
 [resource]
+origins = Array[String](["Assombro", "Vozes"])
+thematic_origins = Array[String](["Assombro", "Vozes"])
+classes = Array[String]([])
+combat_role = "Assassino"
 script = ExtResource("1_x2ek6")
 unit_name = "Romãozinho"
 unit_id = "romaozinho"
@@ -11,7 +15,6 @@ description = "Espírito zombeteiro e ardiloso; salta pelas sombras com velocida
 lore = "Pequeno mas poderoso, causa caos com sua magia imprevisível."
 tier = 5
 cost = 5
-combat_role = "Assassino"
 icon = ExtResource("1_atoww")
 max_health = 1200.0
 attack_damage = 125.0
@@ -25,8 +28,6 @@ max_mana = 80.0
 starting_mana = 40.0
 mana_per_attack = 8.0
 mana_per_second = 8.0
-origins = Array[String](["Pantaneiro"])
-classes = Array[String](["Encantado", "Metamorfo"])
 ability_name = "Travessura Caótica"
 ability_description = "Espírito zombeteiro e ardiloso; salta pelas sombras com velocidade estonteante para aniquilar as presas enfraquecidas."
 ability_damage = 460.0
@@ -37,4 +38,4 @@ is_ranged = true
 stun_resist = 0.8
 
 is_assassin = true
-target_priority = 0
+target_priority = 1

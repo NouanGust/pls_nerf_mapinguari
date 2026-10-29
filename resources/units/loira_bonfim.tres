@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+origins = Array[String](["Encanto", "Travessia"])
+thematic_origins = Array[String](["Encanto", "Travessia"])
+classes = Array[String]([])
+combat_role = "Assassino"
+script = ExtResource("1_stats")
+unit_name = "Loira do Bonfim"
+unit_id = "loira_bonfim"
+description = "Mulher etérea que pede carona pelas estradas noturnas rumo ao cemitério; seduz o alvo e desaparece em um golpe letal pelas costas."
+lore = "Pede carona nos táxis da madrugada e pede para descer junto aos portões de ferro do Bonfim."
+tier = 3
+cost = 3
+max_health = 470.0
+health_regen = 0.0
+attack_damage = 66.0
+attack_speed = 1.20
+attack_range = 1
+critical_chance = 0.00
+critical_damage = 2.0
+armor = 14.0
+magic_resist = 20.0
+movement_speed = 260.0
+is_stationary = false
+can_fly = false
+max_mana = 60.0
+starting_mana = 20.0
+mana_per_attack = 12.0
+mana_per_second = 0.0
+mana_when_hit = 10.0
+affinities = Array[String]([])
+biomes = Array[String](["Urbano"])
+ability_name = "Carona da Meia-Noite"
+ability_description = "Surge pelas costas da presa com menor vida desferindo dano explosivo e breve atordoamento."
+ability_damage = 340.0
+ability_heal = 0.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 1
+ability_duration = 0.8
+ability_cooldown = 0.0
+ability_range = 5.0
+ability_damage_type = 1
+target_priority = 1
+is_tank = false
+is_assassin = true
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.00

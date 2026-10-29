@@ -4,6 +4,10 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_m7tap"]
 
 [resource]
+origins = Array[String](["Correnteza", "Assombro"])
+thematic_origins = Array[String](["Correnteza", "Assombro"])
+classes = Array[String]([])
+combat_role = "Porradeiro"
 script = ExtResource("1_m7tap")
 unit_name = "Cabeça-de-Cuia"
 unit_id = "cabeca_de_cuia"
@@ -11,10 +15,9 @@ description = "Lenda das margens e rios; criatura descomunal que desfere golpes 
 lore = "Condenado a vagar pelos rios em busca de sete Marias para se redimir."
 tier = 3
 cost = 3
-combat_role = "Porradeiro"
 icon = ExtResource("1_hu2ai")
 max_health = 1050.0
-attack_damage = 88.0
+attack_damage = 72.0
 attack_range = 2
 armor = 35.0
 magic_resist = 40.0
@@ -22,9 +25,8 @@ movement_speed = 230.0
 can_fly = true
 starting_mana = 30.0
 mana_per_attack = 12.0
-origins = Array[String](["Litorâneo"])
-classes = Array[String](["Aquático", "Assombração"])
 ability_name = "Arrasto Amaldiçoado"
 ability_description = "Lenda das margens e rios; criatura descomunal que desfere golpes brutais fortalecendo seu próprio poder."
 ability_damage = 130.0
 ability_duration = 4.0
+is_tank = false

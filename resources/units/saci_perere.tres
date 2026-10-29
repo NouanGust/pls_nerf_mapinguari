@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+origins = Array[String](["Vozes", "Travessia"])
+thematic_origins = Array[String](["Vozes", "Travessia"])
+classes = Array[String]([])
+combat_role = "Suporte"
+script = ExtResource("1_stats")
+unit_name = "Saci-Pererê"
+unit_id = "saci_perere"
+description = "Espírito travesso de uma perna só que gira em redemoinhos de vento; atrapalha o avanço inimigo e impulsiona aliados próximos."
+lore = "Mula de fumo, carapuça vermelha e astúcia sem igual nas trilhas da floresta."
+tier = 2
+cost = 2
+max_health = 490.0
+health_regen = 0.0
+attack_damage = 28.0
+attack_speed = 1.05
+attack_range = 2
+critical_chance = 0.00
+critical_damage = 2.0
+armor = 16.0
+magic_resist = 24.0
+movement_speed = 240.0
+is_stationary = false
+can_fly = false
+max_mana = 75.0
+starting_mana = 25.0
+mana_per_attack = 8.0
+mana_per_second = 0.0
+mana_when_hit = 10.0
+affinities = Array[String]([])
+biomes = Array[String](["Mata Atlântica"])
+ability_name = "Redemoinho Travesso"
+ability_description = "Gira em redemoinho desacelerando inimigos e impulsionando a velocidade de aliados na aura."
+ability_damage = 90.0
+ability_heal = 0.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 1
+ability_duration = 3.5
+ability_cooldown = 0.0
+ability_range = 2.0
+ability_damage_type = 1
+target_priority = 0
+is_tank = false
+is_assassin = false
+is_ranged = false
+prefers_backline = true
+passive_aura_range = 1
+passive_aura_effect = "slow_enemy"
+passive_aura_power = 0.18

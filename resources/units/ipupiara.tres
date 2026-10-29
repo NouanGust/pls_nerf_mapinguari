@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+origins = Array[String](["Correnteza", "Ferocidade"])
+thematic_origins = Array[String](["Correnteza", "Ferocidade"])
+classes = Array[String]([])
+combat_role = "Porradeiro"
+script = ExtResource("1_stats")
+unit_name = "Ipupiara"
+unit_id = "ipupiara"
+description = "Monstro marinho das costas e estuários; braços escamosos e garras pesadas que desferem golpes esmagadores na vanguarda."
+lore = "Relatado desde os primeiros séculos da costa brasileira como terror dos navegantes e pescadores."
+tier = 4
+cost = 4
+max_health = 950.0
+health_regen = 0.0
+attack_damage = 82.0
+attack_speed = 0.95
+attack_range = 1
+critical_chance = 0.00
+critical_damage = 2.0
+armor = 34.0
+magic_resist = 32.0
+movement_speed = 200.0
+is_stationary = false
+can_fly = false
+max_mana = 80.0
+starting_mana = 20.0
+mana_per_attack = 10.0
+mana_per_second = 0.0
+mana_when_hit = 10.0
+affinities = Array[String](["Fauna"])
+biomes = Array[String](["Litoral"])
+ability_name = "Fúria das Marés"
+ability_description = "Ganha armadura temporária e amplifica seu ataque desferindo golpes pesados na vanguarda."
+ability_damage = 180.0
+ability_heal = 0.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 1
+ability_duration = 5.0
+ability_cooldown = 0.0
+ability_range = 1.5
+ability_damage_type = 0
+target_priority = 0
+is_tank = false
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.00

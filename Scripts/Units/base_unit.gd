@@ -58,6 +58,24 @@ var _aura_radius: int = -1
 var stunned_until_msec: int = 0
 var _was_stunned: bool = false
 var in_combat: bool = false
+# Sinergias Temáticas (9 Origens da Proposta)
+var seiva_growth_stacks: int = 0
+var _seiva_timer: float = 0.0
+var vigilia_triggered: bool = false
+var vigilia_cc_resist_until_msec: int = 0
+var _correnteza_timer: float = 0.0
+var _last_vozes_emit_msec: int = 0
+var _last_vozes_receive_msec: int = 0
+var ferocidade_stacks: int = 0
+var ferocidade_hits: int = 0
+var _last_target_id: int = 0
+var _last_travessia_msec: int = 0
+var has_travessia_burst: bool = false
+var assombro_shred_until_msec: int = 0
+var assombro_shred_pct: float = 0.0
+var _assombro_emitters: Dictionary = {}
+var encanto_charged: bool = false
+var fulgor_first_ability: bool = false
 var _idle_target_timer: float = 0.0
 var immune_until_msec: int = 0
 var reflect_until_msec: int = 0
@@ -1043,6 +1061,12 @@ func get_attack_damage() -> float:
 			base_damage *= buff.attack_multiplier
 	
 	var damage_multiplier := 1.0 + float(synergy_bonuses.get("damage_pct", 0.0)) + get_power_aura_bonus()
+	# Sinergia Ferocidade: Cada acúmulo de Ímpeto amplia o dano de ataque
+	if ferocidade_stacks > 0 and float(synergy_bonuses.get("ferocidade_atk_pct", 0.0)) > 0.0:
+		damage_multiplier += ferocidade_stacks * float(synergy_bonuses.get("ferocidade_atk_pct", 0.0))
+	# Sinergia Seiva: Crescimento amplifica dano das próprias ações
+	if seiva_growth_stacks > 0 and float(synergy_bonuses.get("seiva_growth_pct", 0.0)) > 0.0:
+		damage_multiplier += seiva_growth_stacks * float(synergy_bonuses.get("seiva_growth_pct", 0.0))
 	if stats and stats.is_atacante_role() and consecutive_attacks > 0:
 		damage_multiplier += 0.05 * consecutive_attacks
 	if is_instance_valid(current_target):
@@ -1112,6 +1136,8 @@ func get_effective_armor() -> float:
 			total += float(buff.armor_flat)
 		if buff.has("bonus_armor"):
 			total += float(buff.bonus_armor)
+	if BattleClock.now_msec() < assombro_shred_until_msec:
+		total *= (1.0 - assombro_shred_pct)
 	return maxf(total, 0.0)
 
 func get_effective_magic_resist() -> float:
@@ -1123,7 +1149,14 @@ func get_effective_magic_resist() -> float:
 			total += float(buff.magic_resist_flat)
 		if buff.has("bonus_magic_resist"):
 			total += float(buff.bonus_magic_resist)
+	if BattleClock.now_msec() < assombro_shred_until_msec:
+		total *= (1.0 - assombro_shred_pct)
 	return maxf(total, 0.0)
+
+func apply_assombro_mark(pct: float, duration: float) -> void:
+	assombro_shred_pct = maxf(assombro_shred_pct, pct)
+	assombro_shred_until_msec = maxi(assombro_shred_until_msec, BattleClock.now_msec() + int(duration * 1000.0))
+	CombatFeedback.create_status_indicator(self, "-DEFESA", 0.8)
 
 func apply_speed_buff(duration: float, multiplier: float = 1.35, label: String = "+VELOCIDADE") -> void:
 	speed_buff_multiplier = multiplier
@@ -1134,7 +1167,9 @@ func apply_speed_buff(duration: float, multiplier: float = 1.35, label: String =
 
 func apply_slow(duration: float) -> void:
 	var resistance := clampf(float(synergy_bonuses.get("control_resist_pct", 0.0)), 0.0, 0.9)
-	var adjusted_duration := duration * (1.0 - resistance)
+	if BattleClock.now_msec() < vigilia_cc_resist_until_msec:
+		resistance += float(synergy_bonuses.get("vigilia_cc_resist_pct", 0.0))
+	var adjusted_duration := duration * (1.0 - clampf(resistance, 0.0, 0.9))
 	slowed_until_msec = maxi(slowed_until_msec, BattleClock.now_msec() + int(adjusted_duration * 1000.0))
 	if attack_timer:
 		attack_timer.wait_time = 1.0 / get_effective_attack_speed()
@@ -1159,7 +1194,9 @@ func apply_stun(duration: float, label: String = "ATORDOADO") -> void:
 	if current_state == State.DEAD or duration <= 0.0 or is_on_bench():
 		return
 	var resist := clampf(float(synergy_bonuses.get("control_resist_pct", 0.0)) + (stats.stun_resist if stats else 0.0), 0.0, 0.9)
-	var final_duration := duration * (1.0 - resist)
+	if BattleClock.now_msec() < vigilia_cc_resist_until_msec:
+		resist += float(synergy_bonuses.get("vigilia_cc_resist_pct", 0.0))
+	var final_duration := duration * (1.0 - clampf(resist, 0.0, 0.9))
 	if final_duration <= 0.0:
 		return
 	stunned_until_msec = maxi(stunned_until_msec, BattleClock.now_msec() + int(final_duration * 1000.0))
@@ -1218,6 +1255,31 @@ func start_combat() -> void:
 	_detour_timer = 0.0
 	velocity = Vector3.ZERO
 	combat_ground_height = global_position.y
+	
+	# Reset de sinergias da nova proposta
+	seiva_growth_stacks = 0
+	_seiva_timer = 0.0
+	vigilia_triggered = false
+	vigilia_cc_resist_until_msec = 0
+	_correnteza_timer = 0.0
+	_last_vozes_emit_msec = 0
+	_last_vozes_receive_msec = 0
+	ferocidade_stacks = 0
+	ferocidade_hits = 0
+	_last_target_id = 0
+	_last_travessia_msec = 0
+	has_travessia_burst = false
+	assombro_shred_until_msec = 0
+	assombro_shred_pct = 0.0
+	_assombro_emitters.clear()
+	encanto_charged = false
+	fulgor_first_ability = false
+
+	if float(synergy_bonuses.get("fulgor_start_mana", 0.0)) > 0.0:
+		current_mana = minf(stats.max_mana, current_mana + float(synergy_bonuses.get("fulgor_start_mana", 0.0)))
+		fulgor_first_ability = true
+		update_mana_bar()
+
 	var shield_multiplier := 1.0 + float(synergy_bonuses.get("shield_power_pct", 0.0))
 	shield_multiplier *= 1.0 + float(synergy_bonuses.get("shield_received_pct", 0.0))
 	var start_sh := get_max_health() * float(synergy_bonuses.get("start_shield_pct", 0.0)) * shield_multiplier
@@ -1281,6 +1343,15 @@ func find_target() -> void:
 	
 	# VERIFICAR SE TARGET FOI DEFINIDO
 	if current_target:
+		# Sinergia Travessia: Ao adquirir alvo ou trocar de identidade, ganha velocidade e golpe de aproximação
+		var t_id := current_target.get_instance_id()
+		if t_id != _last_target_id:
+			_last_target_id = t_id
+			var now := BattleClock.now_msec()
+			if float(synergy_bonuses.get("travessia_speed_pct", 0.0)) > 0.0 and (now - _last_travessia_msec >= 4000):
+				_last_travessia_msec = now
+				apply_speed_buff(2.0, 1.0 + float(synergy_bonuses.get("travessia_speed_pct", 0.0)), "+TRAVESSIA")
+				has_travessia_burst = true
 		if float(synergy_bonuses.get("marked_target_damage_pct", 0.0)) > 0.0:
 			var weakest := enemies[0] as BaseUnit3D
 			for enemy in enemies:
@@ -1562,6 +1633,11 @@ func perform_attack() -> void:
 		damage *= 1.0 + float(synergy_bonuses.get("first_attack_bonus_pct", 0.0))
 		first_attack_used = true
 	
+	if has_travessia_burst:
+		has_travessia_burst = false
+		damage *= 1.0 + float(synergy_bonuses.get("travessia_burst_pct", 0.0))
+		CombatFeedback.create_status_indicator(self, "GOLPE DE APROXIMAÇÃO", 0.8)
+	
 	# Verificar crítico
 	var crit_chance := stats.critical_chance + float(synergy_bonuses.get("crit_chance", 0.0))
 	crit_chance += float(synergy_bonuses.get("crit_after_kill", 0.0)) * mini(enemies_defeated, MAX_CERRADO_STACKS)
@@ -1571,6 +1647,14 @@ func perform_attack() -> void:
 		CombatFeedback.create_damage_number(current_target.global_position, damage, CombatFeedback.DamageType.CRITICAL)
 	
 	current_target.take_damage(damage, self, UnitStats.DamageType.PHYSICAL)
+	# Sinergia Ferocidade: Cada ataque básico que acerta concede Ímpeto (máx 8); a cada 3 acertos cura vida
+	if float(synergy_bonuses.get("ferocidade_atk_pct", 0.0)) > 0.0:
+		ferocidade_stacks = mini(ferocidade_stacks + 1, 8)
+		ferocidade_hits += 1
+		if ferocidade_hits % 3 == 0:
+			var heal_val := get_max_health() * float(synergy_bonuses.get("ferocidade_heal_pct", 0.0))
+			heal(heal_val, self)
+			CombatFeedback.create_status_indicator(self, "+FEROCIDADE", 0.6)
 	if stats and stats.is_atacante_role():
 		consecutive_attacks = mini(consecutive_attacks + 1, 10)
 	var am: Node = get_node_or_null("/root/AudioManager")
@@ -1740,9 +1824,13 @@ func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.Dam
 		var armor := stats.armor + float(synergy_bonuses.get("armor_flat", 0.0))
 		if BattleClock.now_msec() < armor_shred_until_msec:
 			armor = maxf(armor - armor_shred_amount, 0.0)
+		if BattleClock.now_msec() < assombro_shred_until_msec:
+			armor *= (1.0 - assombro_shred_pct)
 		mitigation = armor / (100.0 + maxf(armor, 0.0))
 	elif damage_type == UnitStats.DamageType.MAGICAL:
 		var magic_resist := stats.magic_resist + float(synergy_bonuses.get("magic_resist_flat", 0.0))
+		if BattleClock.now_msec() < assombro_shred_until_msec:
+			magic_resist *= (1.0 - assombro_shred_pct)
 		mitigation = magic_resist / (100.0 + maxf(magic_resist, 0.0))
 	var extra_reduction := 0.0
 	if damage_type != UnitStats.DamageType.TRUE:
@@ -1760,6 +1848,16 @@ func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.Dam
 			CombatFeedback.create_hit_particles(attacker.global_position, Color("#94a3b8"))
 	if actual_damage <= 0.0:
 		return
+	
+	# Sinergia Vigília: Ao cair abaixo de 50% de vida, recebe escudo por 4s antes do dano
+	if not vigilia_triggered and float(synergy_bonuses.get("vigilia_shield_pct", 0.0)) > 0.0:
+		if (current_health - (actual_damage - minf(current_shield, actual_damage))) < (get_max_health() * 0.5):
+			vigilia_triggered = true
+			var v_sh := get_max_health() * float(synergy_bonuses.get("vigilia_shield_pct", 0.0))
+			current_shield += v_sh
+			vigilia_cc_resist_until_msec = BattleClock.now_msec() + 4000
+			CombatFeedback.create_status_indicator(self, "+VIGÍLIA", 1.0)
+
 	var was_shielded := has_active_shield()
 	var shield_absorbed := minf(current_shield, actual_damage)
 	current_shield -= shield_absorbed
@@ -1776,6 +1874,13 @@ func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.Dam
 		CombatFeedback.create_hit_particles(global_position, Color.RED)
 	
 	flash_damage()
+	# Sinergia Assombro: Ao acertar com dano, aplica marca por 4s reduzindo defesas do alvo
+	if is_instance_valid(attacker) and float(attacker.synergy_bonuses.get("assombro_shred_pct", 0.0)) > 0.0:
+		var now := BattleClock.now_msec()
+		var a_id := attacker.get_instance_id()
+		if now - int(_assombro_emitters.get(a_id, 0)) >= 6000:
+			_assombro_emitters[a_id] = now
+			apply_assombro_mark(float(attacker.synergy_bonuses.get("assombro_shred_pct", 0.0)), 4.0)
 	# O golpe que quebra o escudo também não gera mana.
 	if not was_shielded and current_health > 0.0:
 		add_mana(stats.mana_when_hit)
@@ -1849,6 +1954,12 @@ func cast_ability() -> void:
 	
 	print("%s usou %s!" % [stats.unit_name, stats.ability_name])
 	
+	# Guardar e consumir bônus temporários de Encanto e Fulgor no início do lançamento
+	var had_encanto := encanto_charged
+	var had_fulgor := fulgor_first_ability
+	encanto_charged = false
+	fulgor_first_ability = false
+
 	apply_ability_effect()
 	
 	await get_tree().create_timer(0.5, false).timeout
@@ -1857,6 +1968,59 @@ func cast_ability() -> void:
 	if current_state == State.CASTING:
 		current_state = State.IDLE
 		find_target()
+
+	# Sinergia Encanto: Prepara a próxima habilidade com dano, cura e escudo ampliados
+	if float(synergy_bonuses.get("encanto_power_pct", 0.0)) > 0.0:
+		encanto_charged = true
+		CombatFeedback.create_status_indicator(self, "+ENCANTO", 0.8)
+
+	# Sinergia Vozes: Ao concluir habilidade, envia Eco dando mana a até 2 aliados de Vozes dentro de 2 hexágonos
+	if float(synergy_bonuses.get("vozes_echo_mana", 0.0)) > 0.0:
+		var now := BattleClock.now_msec()
+		if now - _last_vozes_emit_msec >= 4000:
+			_last_vozes_emit_msec = now
+			_emit_vozes_echo(float(synergy_bonuses.get("vozes_echo_mana", 0.0)))
+
+func get_ability_power_multiplier() -> float:
+	var mult := 1.0
+	# Sinergia Seiva: Crescimento amplifica dano, cura e escudos das próprias ações
+	if seiva_growth_stacks > 0 and float(synergy_bonuses.get("seiva_growth_pct", 0.0)) > 0.0:
+		mult += seiva_growth_stacks * float(synergy_bonuses.get("seiva_growth_pct", 0.0))
+	# Sinergia Encanto: Prepara a própria próxima habilidade (+8%/14%/22%/32%)
+	if encanto_charged and float(synergy_bonuses.get("encanto_power_pct", 0.0)) > 0.0:
+		mult += float(synergy_bonuses.get("encanto_power_pct", 0.0))
+	# Sinergia Fulgor: Primeira habilidade fortalecida (+8%/12%/18%/25%)
+	if fulgor_first_ability and float(synergy_bonuses.get("fulgor_power_pct", 0.0)) > 0.0:
+		mult += float(synergy_bonuses.get("fulgor_power_pct", 0.0))
+	return mult
+
+func _emit_vozes_echo(mana_amount: float) -> void:
+	var board := _get_combat_board()
+	if not board:
+		return
+	var my_cell := board.get_grid_position(board.to_local(global_position))
+	var ally_group := "player_units" if team == 0 else "enemy_units"
+	var vozes_allies: Array[BaseUnit3D] = []
+	for ally: BaseUnit3D in get_tree().get_nodes_in_group(ally_group):
+		if ally == self or not is_instance_valid(ally) or ally.current_state in [State.IDLE, State.DEAD] or ally.is_on_bench():
+			continue
+		if not ally.stats or not ally.stats.origins.has("Vozes"):
+			continue
+		var a_cell := board.get_grid_position(board.to_local(ally.global_position))
+		if board.get_cell(a_cell) and board.get_hex_distance(my_cell, a_cell) <= 2:
+			vozes_allies.append(ally)
+	
+	vozes_allies.sort_custom(func(a, b):
+		return global_position.distance_to(a.global_position) < global_position.distance_to(b.global_position)
+	)
+	var count := mini(vozes_allies.size(), 2)
+	var now := BattleClock.now_msec()
+	for i in count:
+		var ally := vozes_allies[i]
+		if now - ally._last_vozes_receive_msec >= 2000:
+			ally._last_vozes_receive_msec = now
+			ally.add_mana(mana_amount)
+			CombatFeedback.create_status_indicator(ally, "+ECO", 0.6)
 
 func apply_ability_effect() -> void:
 	if name_label:
@@ -2932,7 +3096,7 @@ func _apply_ability_damage() -> void:
 	if not is_instance_valid(current_target) or current_target.current_state == State.DEAD or current_target.is_on_bench():
 		return
 	
-	var damage := stats.ability_damage * stats.get_star_multiplier(star_level)
+	var damage := stats.ability_damage * stats.get_star_multiplier(star_level) * get_ability_power_multiplier()
 	
 	if stats.unit_id == "pequi":
 		var pequi_color := Color("#a3e635")
@@ -3421,6 +3585,26 @@ func _process(delta: float) -> void:
 			var elapsed_seconds := floorf(_health_regen_accumulator)
 			_health_regen_accumulator -= elapsed_seconds
 			heal(regen_per_second * elapsed_seconds, self)
+	
+	# Sinergia Seiva: A cada 4 segundos, cura e ganha acúmulo de Crescimento (máx 3)
+	if float(synergy_bonuses.get("seiva_pulse_heal_pct", 0.0)) > 0.0:
+		_seiva_timer += delta
+		if _seiva_timer >= 4.0:
+			_seiva_timer -= 4.0
+			var h_amount := get_max_health() * float(synergy_bonuses.get("seiva_pulse_heal_pct", 0.0))
+			heal(h_amount, self)
+			seiva_growth_stacks = mini(seiva_growth_stacks + 1, 3)
+			CombatFeedback.create_status_indicator(self, "+CRESCIMENTO (%d)" % seiva_growth_stacks, 0.7)
+
+	# Sinergia Correnteza: A cada 5 segundos, todos os integrantes vivos recebem mana e escudo por 2s
+	if float(synergy_bonuses.get("correnteza_mana", 0.0)) > 0.0:
+		_correnteza_timer += delta
+		if _correnteza_timer >= 5.0:
+			_correnteza_timer -= 5.0
+			add_mana(float(synergy_bonuses.get("correnteza_mana", 0.0)))
+			var sh_val := get_max_health() * float(synergy_bonuses.get("correnteza_shield_pct", 0.0))
+			set_shield_with_source(sh_val, ShieldSource.CLASS)
+			CombatFeedback.create_status_indicator(self, "+CORRENTEZA", 0.6)
 
 # ==============================================================================
 # ELEMENTOS VISUAIS DE COMBATE NO TABULEIRO

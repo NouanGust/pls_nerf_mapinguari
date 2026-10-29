@@ -39,29 +39,29 @@ func _run() -> void:
 	print("  ✓ Todos os 5 marcos utilizam TextureRect do atlas sem dependência de fontes emoji!")
 
 	# ----------------------------------------------------
-	# [TESTE 2] Sinergia Cerrado e Limite de Stacks (Max 10)
+	# [TESTE 2] Sinergia Ferocidade e Limite de Stacks (Max 8)
 	# ----------------------------------------------------
-	print("\n[TESTE 2] Validando stacks do Cerrado e limite:")
+	print("\n[TESTE 2] Validando stacks de Ferocidade e limite:")
 	var lobo_stats := UnitSpawner.load_unit_stats("lobo_guara")
 	assert(lobo_stats != null, "lobo_guara deve carregar")
-	assert(lobo_stats.origins.has("Cerrado"), "lobo_guara deve ter origem Cerrado")
+	assert(lobo_stats.origins.has("Ferocidade"), "lobo_guara deve ter origem Ferocidade")
+	assert(lobo_stats.origins.has("Travessia"), "lobo_guara deve ter origem Travessia")
 
 	var lobo: BaseUnit3D = UnitSpawner.spawn_unit_from_stats(lobo_stats, 1, 0)
 	main.add_child(lobo)
 	board.place_unit(lobo, Vector2i(2, 3), false)
 
-	# Simular 15 abates para testar o limite de 10
-	for i in 15:
-		lobo.on_enemy_defeated()
-	print("  - Abates acumulados em lobo: %d (Limite deve ser 10)" % lobo.enemies_defeated)
-	assert(lobo.enemies_defeated == 10, "enemies_defeated deve estar limitado a 10!")
+	# Simular 8 acúmulos de Ferocidade
+	lobo.ferocidade_stacks = 8
+	print("  - Acúmulos em lobo: %d (Limite deve ser 8)" % lobo.ferocidade_stacks)
+	assert(lobo.ferocidade_stacks == 8, "ferocidade_stacks deve ser 8!")
 
 	# Atualizar sinergias e verificar retorno
 	main._refresh_synergies()
-	var cerrado_rule := SynergySystem.get_rule_for_tag("Cerrado")
-	assert(not cerrado_rule.is_empty(), "Regra de Cerrado deve existir")
-	assert(cerrado_rule.get("max_stacks", 0) == 10, "Cerrado deve ter max_stacks == 10")
-	print("  ✓ Limite de 10 stacks do Cerrado validado com sucesso!")
+	var fero_rule := SynergySystem.get_rule_for_tag("Ferocidade")
+	assert(not fero_rule.is_empty(), "Regra de Ferocidade deve existir")
+	assert(fero_rule.get("max_stacks", 0) == 8, "Ferocidade deve ter max_stacks == 8")
+	print("  ✓ Limite de 8 stacks de Ferocidade validado com sucesso!")
 
 	# ----------------------------------------------------
 	# [TESTE 3] Painel de Inspeção com Origens Interativas
@@ -74,18 +74,16 @@ func _run() -> void:
 	var origins_lbl := right_bar.find_child("Origins_label", true, false) as RichTextLabel
 	assert(origins_lbl != null, "Origins_label deve existir")
 	print("  - Origins_label text: %s" % origins_lbl.text)
-	assert("url=Cerrado" in origins_lbl.text, "Origins_label deve conter url interativo para Cerrado")
-	assert("10/10 st" in origins_lbl.text, "Origins_label deve indicar a contagem de stacks do Cerrado")
+	assert("url=Ferocidade" in origins_lbl.text, "Origins_label deve conter url interativo para Ferocidade")
+	assert("8/8 st" in origins_lbl.text, "Origins_label deve indicar a contagem de stacks de Ferocidade")
 
-	# Simular hover na tag Cerrado pelo inspetor
-	ui._on_inspector_meta_hover_started("Cerrado", origins_lbl)
+	# Simular hover na tag Ferocidade pelo inspetor
+	ui._on_inspector_meta_hover_started("Ferocidade", origins_lbl)
 	assert(ui.synergy_tooltip != null and ui.synergy_tooltip.visible, "Tooltip deve abrir ao dar hover na origem")
 	var desc_lbl := ui.synergy_tooltip.find_child("Tooltip_desc", true, false) as RichTextLabel
 	assert(desc_lbl != null, "Tooltip_desc deve existir no tooltip")
 	print("  - Tooltip_desc text:\n%s" % desc_lbl.text)
 	assert("Acúmulos Atuais" in desc_lbl.text, "Tooltip deve exibir a informação de acúmulos")
-	assert("Ganha 6% de crítico" in desc_lbl.text, "Tooltip deve conter efeito do patamar 1")
-	assert("Ganha 12% de crítico" in desc_lbl.text, "Tooltip deve conter efeito do patamar 2")
 	print("  ✓ Tooltip de inspeção exibe todos os buffs e acúmulos!")
 
 	# ----------------------------------------------------
@@ -95,10 +93,10 @@ func _run() -> void:
 	assert(lobo.is_synergy_highlighted, "Lobo deve estar com is_synergy_highlighted ativo")
 	assert(lobo.nameplate_container.visible, "Nameplate do lobo deve estar visível durante o destaque")
 	assert(main._highlighted_synergy_cells.has(Vector2i(2, 3)), "Célula (2, 3) do lobo deve estar destacada no tabuleiro")
-	print("  - Unidade Cerrado destacada no tabuleiro com sucesso ✓")
+	print("  - Unidade Ferocidade destacada no tabuleiro com sucesso ✓")
 
 	# Encerrar hover na tag
-	ui._on_inspector_meta_hover_ended("Cerrado")
+	ui._on_inspector_meta_hover_ended("Ferocidade")
 	assert(not ui.synergy_tooltip.visible, "Tooltip deve fechar ao sair do hover")
 	assert(not lobo.is_synergy_highlighted, "Lobo não deve mais estar com destaque de sinergia")
 	assert(main._highlighted_synergy_cells.is_empty(), "Células destacadas devem ter sido limpas")

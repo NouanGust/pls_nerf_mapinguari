@@ -4,22 +4,23 @@
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mapinguari.webp" id="1_xuf38"]
 
 [resource]
+origins = Array[String](["Ferocidade", "Vigília"])
+thematic_origins = Array[String](["Ferocidade", "Vigília"])
+classes = Array[String]([])
+combat_role = "Porradeiro"
 script = ExtResource("1_4nu4d")
 unit_name = "Mapinguari"
 unit_id = "mapinguari"
 description = "A besta mítica do coração da Amazônia! Uma lenda viva tão temível que todos imploram: por favor nerfem o Mapinguari!"
 tier = 5
 cost = 5
-combat_role = "Porradeiro"
 icon = ExtResource("1_xuf38")
 max_health = 2100.0
-attack_damage = 150.0
+attack_damage = 115.0
 attack_speed = 0.85
 armor = 65.0
 magic_resist = 50.0
 movement_speed = 150.0
-origins = Array[String](["Amazônico"])
-classes = Array[String](["Protetor da Mata", "Tank"])
 ability_name = "Rugido da Fúria Lendária"
 ability_description = "A besta mítica do coração da Amazônia! Uma lenda viva tão temível que todos imploram: por favor nerfem o Mapinguari!"
 ability_duration = 4.0

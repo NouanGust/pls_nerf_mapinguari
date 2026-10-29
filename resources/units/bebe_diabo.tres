@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+origins = Array[String](["Assombro", "Vozes"])
+thematic_origins = Array[String](["Assombro", "Vozes"])
+classes = Array[String]([])
+combat_role = "Conjurador"
+script = ExtResource("1_stats")
+unit_name = "Bebê-Diabo"
+unit_id = "bebe_diabo"
+description = "Entidade sobrenatural do medo urbano; seu choro agudo e horripilante reverbera em ondas de choque que laceram mentes inimigas."
+lore = "Nascido dos boatos e do pavor noturno nas vielas da metrópole."
+tier = 1
+cost = 1
+max_health = 410.0
+health_regen = 0.0
+attack_damage = 25.0
+attack_speed = 0.90
+attack_range = 3
+critical_chance = 0.00
+critical_damage = 2.0
+armor = 10.0
+magic_resist = 20.0
+movement_speed = 210.0
+is_stationary = false
+can_fly = false
+max_mana = 70.0
+starting_mana = 20.0
+mana_per_attack = 12.0
+mana_per_second = 0.0
+mana_when_hit = 10.0
+affinities = Array[String]([])
+biomes = Array[String](["Urbano"])
+ability_name = "Grito Pavoroso"
+ability_description = "Emite um grito estridente pavoroso causando dano mágico em cone e reduzindo ataque inimigo."
+ability_damage = 160.0
+ability_heal = 0.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 3
+ability_duration = 0.0
+ability_cooldown = 0.0
+ability_range = 4.0
+ability_damage_type = 1
+target_priority = 0
+is_tank = false
+is_assassin = false
+is_ranged = true
+prefers_backline = true
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.00

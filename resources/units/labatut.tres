@@ -4,6 +4,10 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_vjcm3"]
 
 [resource]
+origins = Array[String](["Assombro", "Ferocidade"])
+thematic_origins = Array[String](["Assombro", "Ferocidade"])
+classes = Array[String]([])
+combat_role = "Porradeiro"
 script = ExtResource("1_vjcm3")
 unit_name = "Labatut"
 unit_id = "labatut"
@@ -11,17 +15,14 @@ description = "Monstro feroz e agressivo que golpeia brutalmente e entra em fren
 lore = "Ser das águas turvas."
 tier = 3
 cost = 3
-combat_role = "Porradeiro"
 icon = ExtResource("1_a4wlh")
 max_health = 880.0
 health_regen = 3.0
-attack_damage = 78.0
+attack_damage = 76.0
 armor = 35.0
 magic_resist = 30.0
 starting_mana = 20.0
 mana_per_second = 5.0
-origins = Array[String](["Amazônico"])
-classes = Array[String](["Aquático", "Suporte"])
 ability_name = "Corrente Curativa"
 ability_description = "Monstro feroz e agressivo que golpeia brutalmente e entra em frenesi aumentando o próprio ataque."
 ability_heal = 100.0

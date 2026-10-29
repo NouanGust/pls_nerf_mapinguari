@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+origins = Array[String](["Assombro", "Ferocidade"])
+thematic_origins = Array[String](["Assombro", "Ferocidade"])
+classes = Array[String]([])
+combat_role = "Porradeiro"
+script = ExtResource("1_stats")
+unit_name = "Cabra Cabriola"
+unit_id = "cabra_cabriola"
+description = "Fera caprina fantasmagórica das noites nordestinas; ataca com cabeçadas ferozes e apetite voraz que se fortalece em combate."
+lore = "Bicho-papão com dentes de navalha que assombra as serras e currais da Caatinga."
+tier = 2
+cost = 2
+max_health = 720.0
+health_regen = 0.0
+attack_damage = 65.0
+attack_speed = 1.00
+attack_range = 1
+critical_chance = 0.00
+critical_damage = 2.0
+armor = 26.0
+magic_resist = 24.0
+movement_speed = 215.0
+is_stationary = false
+can_fly = false
+max_mana = 80.0
+starting_mana = 20.0
+mana_per_attack = 10.0
+mana_per_second = 0.0
+mana_when_hit = 10.0
+affinities = Array[String]([])
+biomes = Array[String](["Caatinga"])
+ability_name = "Frenesi do Chifre"
+ability_description = "Desfere uma cabeçada brutal aumentando seu próprio poder de ataque e velocidade."
+ability_damage = 140.0
+ability_heal = 0.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 1
+ability_duration = 5.0
+ability_cooldown = 0.0
+ability_range = 1.5
+ability_damage_type = 0
+target_priority = 0
+is_tank = false
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.00

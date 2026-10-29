@@ -4,6 +4,10 @@
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/corpo_seco.webp" id="1_pdwky"]
 
 [resource]
+origins = Array[String](["Assombro", "Seiva"])
+thematic_origins = Array[String](["Assombro", "Seiva"])
+classes = Array[String]([])
+combat_role = "Atacante"
 script = ExtResource("1_mkq7j")
 unit_name = "Corpo-Seco"
 unit_id = "corpo_seco"
@@ -11,18 +15,15 @@ description = "Entidade rejeitada pela terra e pelo céu; sua maldição cresce 
 lore = "Cadáver ambulante de um homem tão ruim que nem a terra o quis."
 tier = 4
 cost = 4
-combat_role = "Atacante"
 icon = ExtResource("1_pdwky")
-max_health = 1100.0
-attack_damage = 105.0
-attack_speed = 1.10
+max_health = 680.0
+attack_damage = 78.0
+attack_speed = 1.1
 armor = 35.0
 magic_resist = 30.0
 movement_speed = 170.0
 max_mana = 80.0
 mana_per_attack = 8.0
-origins = Array[String](["Urbano"])
-classes = Array[String](["Assombração", "DPS"])
 ability_name = "Drenagem Vital"
 ability_description = "Entidade rejeitada pela terra e pelo céu; sua maldição cresce a cada golpe desferido, tornando seus ataques implacáveis."
 ability_damage = 130.0
@@ -30,3 +31,4 @@ ability_heal = 80.0
 ability_duration = 4.0
 ability_range = 2.5
 ability_damage_type = 2
+is_tank = false

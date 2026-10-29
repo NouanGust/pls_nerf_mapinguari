@@ -4,6 +4,10 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_pkwj0"]
 
 [resource]
+origins = Array[String](["Encanto", "Fulgor"])
+thematic_origins = Array[String](["Encanto", "Fulgor"])
+classes = Array[String]([])
+combat_role = "Conjurador"
 script = ExtResource("1_pkwj0")
 unit_name = "Alamoa"
 unit_id = "alamoa"
@@ -11,11 +15,10 @@ description = "A lendária aparição das ilhas de Fernando de Noronha; seu fulg
 lore = "Encanta pescadores com seu canto, levando-os para as profundezas."
 tier = 5
 cost = 5
-combat_role = "Conjurador"
 icon = ExtResource("1_iig5i")
 max_health = 1150.0
 health_regen = 5.0
-attack_damage = 65.0
+attack_damage = 50.0
 attack_speed = 1.00
 attack_range = 3
 armor = 30.0
@@ -25,12 +28,12 @@ max_mana = 90.0
 starting_mana = 50.0
 mana_per_attack = 8.0
 mana_per_second = 6.0
-origins = Array[String](["Litorâneo"])
-classes = Array[String](["Aquático", "Encantado"])
 ability_name = "Encanto de Noronha"
 ability_description = "A lendária aparição das ilhas de Fernando de Noronha; seu fulgor místico atrai e desintegra seus inimigos."
-ability_damage = 500.0
+ability_damage = 550.0
 ability_targets = 2
 ability_duration = 3.0
 ability_range = 4.0
 is_ranged = true
+ability_damage_type = 1
+prefers_backline = true

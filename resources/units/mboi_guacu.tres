@@ -4,6 +4,10 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_1owcb"]
 
 [resource]
+origins = Array[String](["Correnteza", "Ferocidade"])
+thematic_origins = Array[String](["Correnteza", "Ferocidade"])
+classes = Array[String]([])
+combat_role = "Porradeiro"
 script = ExtResource("1_1owcb")
 unit_name = "Mboi-Guaçu"
 unit_id = "mboi_guacu"
@@ -11,17 +15,14 @@ description = "A lendária grande cobra de fogo do Pantanal; um titã flamejante
 lore = "Grande cobra d'água que protege tesouros submersos."
 tier = 5
 cost = 5
-combat_role = "Porradeiro"
 icon = ExtResource("1_0em8i")
 max_health = 1950.0
-attack_damage = 145.0
+attack_damage = 110.0
 attack_speed = 0.85
 armor = 65.0
 magic_resist = 55.0
 movement_speed = 180.0
 mana_when_hit = 15.0
-origins = Array[String](["Pantaneiro"])
-classes = Array[String](["Aquático", "Tank"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Pantanal"])
 ability_name = "Chamas Ancestrais do Pantanal"

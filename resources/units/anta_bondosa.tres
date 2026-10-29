@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+origins = Array[String](["Vigília", "Travessia"])
+thematic_origins = Array[String](["Vigília", "Travessia"])
+classes = Array[String]([])
+combat_role = "Suporte"
+script = ExtResource("1_stats")
+unit_name = "Anta Bondosa"
+unit_id = "anta_bondosa"
+description = "Espírito compassivo dos campos e várzeas; sua presença serena abriga os feridos e concede recuperação a quem caminha ao seu lado."
+lore = "Caminha tranquila pelas noites de névoa oferecendo refúgio e cura aos perdidos."
+tier = 2
+cost = 2
+max_health = 560.0
+health_regen = 0.0
+attack_damage = 30.0
+attack_speed = 0.85
+attack_range = 2
+critical_chance = 0.00
+critical_damage = 2.0
+armor = 22.0
+magic_resist = 25.0
+movement_speed = 180.0
+is_stationary = false
+can_fly = false
+max_mana = 80.0
+starting_mana = 20.0
+mana_per_attack = 10.0
+mana_per_second = 0.0
+mana_when_hit = 6.0
+affinities = Array[String](["Fauna"])
+biomes = Array[String](["Pantanal"])
+ability_name = "Amparo da Várzea"
+ability_description = "Concede cura e purifica efeitos nos aliados dentro da sua aura adjacente."
+ability_damage = 0.0
+ability_heal = 140.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 3
+ability_duration = 0.0
+ability_cooldown = 0.0
+ability_range = 2.0
+ability_damage_type = 0
+target_priority = 0
+is_tank = false
+is_assassin = false
+is_ranged = false
+prefers_backline = true
+passive_aura_range = 1
+passive_aura_effect = "health_regen"
+passive_aura_power = 8.00

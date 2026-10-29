@@ -23,37 +23,37 @@ const COLUMN_ORDERS: Array = [
 ]
 
 ## Cada entrada acrescenta uma peça à composição no nível correspondente.
-## Repetições são intencionais nas regiões com elenco pequeno; não geram sinergias extras.
+## Formações regionais completas de 9 unidades baseadas na proposta oficial.
 const REGIONS: Dictionary = {
 	"cerrado": {
 		"name": "Cerrado", "color": Color("#d6ad57"),
-		"description": "Raízes resistentes e guardiões da savana. Flora, proteção e caça.",
-		"roster": ["pequi", "ipe_amarelo", "tamandua_bandeira", "pequi", "ipe_amarelo", "tamandua_bandeira", "ipe_amarelo", "tamandua_bandeira", "lobo_guara"],
-	},
-	"pantanal": {
-		"name": "Pantanal", "color": Color("#70b8be"),
-		"description": "Fauna das águas e lendas das cheias. Resistência, cura e magia.",
-		"roster": ["capivara", "aguape", "minhocao", "teiniagua", "mae_de_ouro", "tamandua_bandeira", "pau_brasil", "mboi_guacu", "romaozinho"],
-	},
-	"amazonia": {
-		"name": "Amazônia", "color": Color("#7cbb89"),
-		"description": "A floresta ganha força com seus protetores e suas grandes lendas.",
-		"roster": ["guarana", "vitoria_regia", "anhanga", "labatut", "caapora", "comadre_fulozinha", "sumauma", "mapinguari", "boiuna"],
+		"description": "Resistir à abertura, acumular ataques e alcançar alvos expostos.",
+		"roster": ["tatu_bola", "pequi", "tamandua_bandeira", "ipe_amarelo", "jararaca", "pai_do_mato", "boitata", "lobo_guara", "boi_misterioso"],
 	},
 	"caatinga": {
 		"name": "Caatinga", "color": Color("#d39168"),
-		"description": "Defesas do sertão e aves raras. Uma formação persistente e protetora.",
-		"roster": ["mandacaru", "tatu_bola", "arara_azul_lear", "mandacaru", "tatu_bola", "arara_azul_lear", "mandacaru", "arara_azul_lear", "ararinha_azul"],
+		"description": "Alternar defesa e lançamentos, sustentando o avanço do Boi Misterioso.",
+		"roster": ["mandacaru", "arara_azul_lear", "cabra_cabriola", "joao_galafuz", "matinta_perera", "boto_encantado", "caboclo_dagua", "ararinha_azul", "boi_misterioso"],
 	},
 	"mata_atlantica": {
 		"name": "Mata Atlântica", "color": Color("#8cae70"),
-		"description": "Flores, aves e árvores ancestrais. Suporte para uma linha de frente sólida.",
-		"roster": ["sabia_laranjeira", "brinco_de_princesa", "palmito_jucara", "jararaca", "pau_brasil", "sabia_laranjeira", "pau_brasil", "araucaria", "mutum_de_alagoas"],
+		"description": "Proteger uma formação que cresce com o tempo e sustenta dois Atacantes.",
+		"roster": ["tatu_bola", "brinco_de_princesa", "sabia_laranjeira", "bromelia", "jararaca", "palmito_jucara", "pau_brasil", "araucaria", "mutum_de_alagoas"],
 	},
 	"litoral": {
 		"name": "Litoral", "color": Color("#85b5dd"),
-		"description": "Mangues e encantos do mar. Criaturas aquáticas, flora e encantados.",
-		"roster": ["bromelia", "caranguejo_uca", "palmito_jucara", "cabeca_de_cuia", "caranguejo_uca", "cabeca_de_cuia", "pau_brasil", "alamoa", "mae_dagua"],
+		"description": "Vencer pelos lançamentos seguintes, usando água e encantamento como ritmo.",
+		"roster": ["bromelia", "caranguejo_uca", "palmito_jucara", "joao_galafuz", "loira_do_bonfim", "num_se_pode", "ipupiara", "alamoa", "mae_dagua"],
+	},
+	"pantanal": {
+		"name": "Pantanal", "color": Color("#70b8be"),
+		"description": "Circular entre alvos, combinando uma frente estável com duas ameaças de explosão.",
+		"roster": ["capivara", "aguape", "perna_cabeluda", "anta_bondosa", "teiniagua", "maozao", "onca_pintada", "mboi_guacu", "pe_de_garrafa"],
+	},
+	"amazonia": {
+		"name": "Amazônia", "color": Color("#7cbb89"),
+		"description": "Sustentar os grandes causadores de dano enquanto os guardiões preservam a frente.",
+		"roster": ["guarana", "vitoria_regia", "anhanga", "matinta_perera", "caapora", "comadre_fulozinha", "sumauma", "mapinguari", "boiuna"],
 	},
 }
 

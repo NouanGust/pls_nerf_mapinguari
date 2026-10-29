@@ -23,7 +23,7 @@ func capture(file_name: String) -> void:
 func _run() -> void:
 	check(not FileAccess.file_exists("res://project.godot"), "Executar o teste isolado da pasta fonte, contra o PCK")
 	var all_units := UnitSpawner.load_all_units()
-	check(all_units.size() == 45, "O pacote deve carregar as 45 unidades da loja")
+	check(all_units.size() == 66, "O pacote deve carregar as 66 unidades do catálogo")
 	var models = load("res://Scripts/Units/biodiversity_models.gd")
 	for id in models.ANIMALS.keys() + models.PLANTS.keys():
 		var model: Node3D = models.create_model(all_units[id])

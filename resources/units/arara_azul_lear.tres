@@ -4,6 +4,10 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
+origins = Array[String](["Vozes", "Ferocidade"])
+thematic_origins = Array[String](["Vozes", "Ferocidade"])
+classes = Array[String]([])
+combat_role = "Atacante"
 script = ExtResource("1_stats")
 unit_name = "Arara-azul-de-lear"
 unit_id = "arara_azul_lear"
@@ -11,7 +15,6 @@ description = "Ave veloz dos paredões da Caatinga; fustiga alvos à distância 
 lore = "Com precisão e coragem, vigia os paredões e os caminhos da Caatinga."
 tier = 2
 cost = 2
-combat_role = "Atacante"
 icon = ExtResource("1_pf8h1")
 max_health = 520.0
 attack_damage = 58.0
@@ -22,8 +25,6 @@ movement_speed = 235.0
 can_fly = true
 max_mana = 85.0
 mana_per_attack = 12.0
-origins = Array[String](["Caatinga"])
-classes = Array[String](["Caçador", "DPS"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Caatinga"])
 ability_name = "Voo de Lear"
@@ -32,3 +33,4 @@ ability_damage = 150.0
 ability_range = 6.0
 is_ranged = true
 prefers_backline = true
+attack_speed = 1.1

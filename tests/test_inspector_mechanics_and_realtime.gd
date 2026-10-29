@@ -18,7 +18,7 @@ func _run() -> void:
 	# 1. Carregar e verificar descrições mecânicas de todas as 45 unidades
 	print("\n[1] Verificando get_mechanics_description() para todas as unidades:")
 	var all_units := UnitSpawner.load_all_units()
-	assert(all_units.size() == 45, "Devem existir 45 unidades")
+	assert(all_units.size() == 66, "Devem existir 66 unidades")
 	
 	for unit_id in all_units.keys():
 		var stats: UnitStats = all_units[unit_id]

@@ -1,84 +1,75 @@
 class_name SynergySystem
 extends Node
 
-## Patamares por identidade: individuais, pares e composições de três ou mais.
-## Cada unit_id conta uma única vez, independentemente das estrelas ou cópias.
-## Apenas uma origem e até duas classes por unidade; tipos não ativam bônus.
+## As 9 origens temáticas da proposta (PROPOSTA_ORIGENS_SINERGIAS_E_EQUIPES.md):
+## Cada unidade possui exatamente duas origens e cada unit_id conta uma única vez.
+## Cada origem beneficia seus próprios integrantes vivos em combate.
 const RULES: Array[Dictionary] = [
-	{"field": "origins", "name": "Amazônico", "thresholds": [3, 6], "effects": [
-		{"text": "Regenera 4 de vida por segundo", "bonuses": {"health_regen": 4.0}},
-		{"text": "Regenera 8 de vida por segundo", "bonuses": {"health_regen": 8.0}},
+	{"field": "origins", "name": "Seiva", "thresholds": [3, 6, 9], "effects": [
+		{"text": "A cada 4s, cura 2% da vida máx e ganha +2% de poder (máx. 3 acúmulos)", "bonuses": {"seiva_pulse_heal_pct": 0.02, "seiva_growth_pct": 0.02}},
+		{"text": "A cada 4s, cura 3% da vida máx e ganha +4% de poder (máx. 3 acúmulos)", "bonuses": {"seiva_pulse_heal_pct": 0.03, "seiva_growth_pct": 0.04}},
+		{"text": "A cada 4s, cura 5% da vida máx e ganha +7% de poder (máx. 3 acúmulos)", "bonuses": {"seiva_pulse_heal_pct": 0.05, "seiva_growth_pct": 0.07}},
 	]},
-	{"field": "origins", "name": "Caatinga", "thresholds": [2, 4], "effects": [
-		{"text": "Recebe 8% menos dano", "bonuses": {"damage_reduction_pct": 0.08}},
-		{"text": "Recebe 15% menos dano e resiste a controle", "bonuses": {"damage_reduction_pct": 0.15, "control_resist_pct": 0.20}},
+	{"field": "origins", "name": "Vigília", "thresholds": [2, 4, 6, 8], "effects": [
+		{"text": "Ao cair de 50% de vida, ganha escudo de 8% da vida máx e 10% de resist. a controle por 4s", "bonuses": {"vigilia_shield_pct": 0.08, "vigilia_cc_resist_pct": 0.10}},
+		{"text": "Ao cair de 50% de vida, ganha escudo de 14% da vida máx e 15% de resist. a controle por 4s", "bonuses": {"vigilia_shield_pct": 0.14, "vigilia_cc_resist_pct": 0.15}},
+		{"text": "Ao cair de 50% de vida, ganha escudo de 20% da vida máx e 25% de resist. a controle por 4s", "bonuses": {"vigilia_shield_pct": 0.20, "vigilia_cc_resist_pct": 0.25}},
+		{"text": "Ao cair de 50% de vida, ganha escudo de 28% da vida máx e 35% de resist. a controle por 4s", "bonuses": {"vigilia_shield_pct": 0.28, "vigilia_cc_resist_pct": 0.35}},
 	]},
+	{"field": "origins", "name": "Correnteza", "thresholds": [3, 6, 9], "effects": [
+		{"text": "A cada 5s, ganha 6 de mana e escudo de 3% da vida máx por 2s", "bonuses": {"correnteza_mana": 6.0, "correnteza_shield_pct": 0.03}},
+		{"text": "A cada 5s, ganha 10 de mana e escudo de 5% da vida máx por 2s", "bonuses": {"correnteza_mana": 10.0, "correnteza_shield_pct": 0.05}},
+		{"text": "A cada 5s, ganha 16 de mana e escudo de 8% da vida máx por 2s", "bonuses": {"correnteza_mana": 16.0, "correnteza_shield_pct": 0.08}},
+	]},
+	{"field": "origins", "name": "Vozes", "thresholds": [3, 6, 9], "effects": [
+		{"text": "Ao conjurar, envia Eco dando 4 de mana a até 2 aliados de Vozes a 2 hexágonos", "bonuses": {"vozes_echo_mana": 4.0}},
+		{"text": "Ao conjurar, envia Eco dando 7 de mana a até 2 aliados de Vozes a 2 hexágonos", "bonuses": {"vozes_echo_mana": 7.0}},
+		{"text": "Ao conjurar, envia Eco dando 11 de mana a até 2 aliados de Vozes a 2 hexágonos", "bonuses": {"vozes_echo_mana": 11.0}},
+	]},
+	{"field": "origins", "name": "Ferocidade", "thresholds": [2, 4, 6, 8], "max_stacks": 8, "effects": [
+		{"text": "Ataques concedem +1,5% de ataque (máx. 8 acúmulos); cura 1% da vida a cada 3º ataque", "bonuses": {"ferocidade_atk_pct": 0.015, "ferocidade_heal_pct": 0.01}},
+		{"text": "Ataques concedem +2,5% de ataque (máx. 8 acúmulos); cura 1,5% da vida a cada 3º ataque", "bonuses": {"ferocidade_atk_pct": 0.025, "ferocidade_heal_pct": 0.015}},
+		{"text": "Ataques concedem +3,5% de ataque (máx. 8 acúmulos); cura 2% da vida a cada 3º ataque", "bonuses": {"ferocidade_atk_pct": 0.035, "ferocidade_heal_pct": 0.02}},
+		{"text": "Ataques concedem +5% de ataque (máx. 8 acúmulos); cura 3% da vida a cada 3º ataque", "bonuses": {"ferocidade_atk_pct": 0.05, "ferocidade_heal_pct": 0.03}},
+	]},
+	{"field": "origins", "name": "Travessia", "thresholds": [2, 4, 6, 8], "effects": [
+		{"text": "Ao trocar de alvo, ganha +12% vel. movimento por 2s e +10% de dano no primeiro golpe", "bonuses": {"travessia_speed_pct": 0.12, "travessia_burst_pct": 0.10}},
+		{"text": "Ao trocar de alvo, ganha +20% vel. movimento por 2s e +16% de dano no primeiro golpe", "bonuses": {"travessia_speed_pct": 0.20, "travessia_burst_pct": 0.16}},
+		{"text": "Ao trocar de alvo, ganha +30% vel. movimento por 2s e +24% de dano no primeiro golpe", "bonuses": {"travessia_speed_pct": 0.30, "travessia_burst_pct": 0.24}},
+		{"text": "Ao trocar de alvo, ganha +45% vel. movimento por 2s e +35% de dano no primeiro golpe", "bonuses": {"travessia_speed_pct": 0.45, "travessia_burst_pct": 0.35}},
+	]},
+	{"field": "origins", "name": "Assombro", "thresholds": [2, 4, 6, 8], "effects": [
+		{"text": "Golpes aplicam marca por 4s, reduzindo armadura e resistência mágica em 6%", "bonuses": {"assombro_shred_pct": 0.06}},
+		{"text": "Golpes aplicam marca por 4s, reduzindo armadura e resistência mágica em 10%", "bonuses": {"assombro_shred_pct": 0.10}},
+		{"text": "Golpes aplicam marca por 4s, reduzindo armadura e resistência mágica em 15%", "bonuses": {"assombro_shred_pct": 0.15}},
+		{"text": "Golpes aplicam marca por 4s, reduzindo armadura e resistência mágica em 22%", "bonuses": {"assombro_shred_pct": 0.22}},
+	]},
+	{"field": "origins", "name": "Encanto", "thresholds": [2, 4, 6, 8], "effects": [
+		{"text": "Após conjurar, a próxima habilidade tem dano, cura e escudos aumentados em +8%", "bonuses": {"encanto_power_pct": 0.08}},
+		{"text": "Após conjurar, a próxima habilidade tem dano, cura e escudos aumentados em +14%", "bonuses": {"encanto_power_pct": 0.14}},
+		{"text": "Após conjurar, a próxima habilidade tem dano, cura e escudos aumentados em +22%", "bonuses": {"encanto_power_pct": 0.22}},
+		{"text": "Após conjurar, a próxima habilidade tem dano, cura e escudos aumentados em +32%", "bonuses": {"encanto_power_pct": 0.32}},
+	]},
+	{"field": "origins", "name": "Fulgor", "thresholds": [1, 2, 3, 4], "effects": [
+		{"text": "+5 de mana inicial e +8% de potência na primeira habilidade", "bonuses": {"fulgor_start_mana": 5.0, "fulgor_power_pct": 0.08}},
+		{"text": "+10 de mana inicial e +12% de potência na primeira habilidade", "bonuses": {"fulgor_start_mana": 10.0, "fulgor_power_pct": 0.12}},
+		{"text": "+18 de mana inicial e +18% de potência na primeira habilidade", "bonuses": {"fulgor_start_mana": 18.0, "fulgor_power_pct": 0.18}},
+		{"text": "+28 de mana inicial e +25% de potência na primeira habilidade", "bonuses": {"fulgor_start_mana": 28.0, "fulgor_power_pct": 0.25}},
+	]},
+]
+
+const LEGACY_RULES: Array[Dictionary] = [
 	{"field": "origins", "name": "Cerrado", "thresholds": [2, 4], "max_stacks": 10, "effects": [
 		{"text": "Ganha 6% de crítico por abate (máx. 10 acúmulos)", "bonuses": {"crit_after_kill": 0.06}},
 		{"text": "Ganha 12% de crítico por abate (máx. 10 acúmulos)", "bonuses": {"crit_after_kill": 0.12}},
-	]},
-	{"field": "origins", "name": "Litorâneo", "thresholds": [2, 4], "effects": [
-		{"text": "+10% de velocidade de ataque", "bonuses": {"attack_speed_pct": 0.10}},
-		{"text": "+20% de velocidade de ataque e resistência a controle", "bonuses": {"attack_speed_pct": 0.20, "control_resist_pct": 0.20}},
-	]},
-	{"field": "origins", "name": "Mata Atlântica", "thresholds": [3, 5], "effects": [
-		{"text": "Regenera 4 de vida por segundo", "bonuses": {"health_regen": 4.0}},
-		{"text": "Regenera 8/s e cura de habilidades +15%", "bonuses": {"health_regen": 8.0, "healing_power_pct": 0.15}},
-	]},
-	{"field": "origins", "name": "Pantaneiro", "thresholds": [3, 5], "effects": [
-		{"text": "+8% de vida máxima e +15% de cura recebida", "bonuses": {"max_health_pct": 0.08, "healing_received_pct": 0.15}},
-		{"text": "+15% de vida máxima e +30% de cura recebida", "bonuses": {"max_health_pct": 0.15, "healing_received_pct": 0.30}},
-	]},
-	{"field": "origins", "name": "Sertanejo", "thresholds": [1], "effects": [
-		{"text": "Com pouca vida, recebe 10% menos dano", "bonuses": {"low_health_resistance_pct": 0.10}},
-	]},
-	{"field": "origins", "name": "Urbano", "thresholds": [2, 4], "effects": [
-		{"text": "+10% de velocidade de ataque; primeiro golpe +15%", "bonuses": {"attack_speed_pct": 0.10, "first_attack_bonus_pct": 0.15}},
-		{"text": "+20% de velocidade de ataque; primeiro golpe +30%", "bonuses": {"attack_speed_pct": 0.20, "first_attack_bonus_pct": 0.30}},
-	]},
-	{"field": "classes", "name": "Aquático", "thresholds": [2, 4], "effects": [
-		{"text": "+12 de resistência mágica", "bonuses": {"magic_resist_flat": 12.0}},
-		{"text": "+24 de resistência mágica", "bonuses": {"magic_resist_flat": 24.0}},
-	]},
-	{"field": "classes", "name": "Assombração", "thresholds": [2, 4], "effects": [
-		{"text": "Ataques têm 15% de chance de desacelerar", "bonuses": {"slow_on_hit_chance": 0.15}},
-		{"text": "Ataques têm 30% de chance de desacelerar", "bonuses": {"slow_on_hit_chance": 0.30}},
-	]},
-	{"field": "classes", "name": "Caçador", "thresholds": [2, 4], "effects": [
-		{"text": "Marca o alvo mais ferido; equipe causa +10% de dano", "bonuses": {"marked_target_damage_pct": 0.10}},
-		{"text": "Marca o alvo mais ferido; equipe causa +20% de dano", "bonuses": {"marked_target_damage_pct": 0.20}},
-	]},
-	{"field": "classes", "name": "DPS", "thresholds": [2, 4], "effects": [
-		{"text": "+8% de dano causado", "bonuses": {"damage_pct": 0.08}},
-		{"text": "+16% de dano causado", "bonuses": {"damage_pct": 0.16}},
-	]},
-	{"field": "classes", "name": "Encantado", "thresholds": [2, 4], "effects": [
-		{"text": "+15% de cura realizada", "bonuses": {"healing_power_pct": 0.15}},
-		{"text": "+30% de cura realizada", "bonuses": {"healing_power_pct": 0.30}},
-	]},
-	{"field": "classes", "name": "Metamorfo", "thresholds": [1], "effects": [
-		{"text": "20% de chance de esquivar do primeiro golpe", "bonuses": {"dodge_first_hit_chance": 0.20}},
-	]},
-	{"field": "classes", "name": "Místico", "thresholds": [2, 4], "effects": [
-		{"text": "+12% de cura realizada e +10% de geração de mana", "bonuses": {"healing_power_pct": 0.12, "mana_generation_pct": 0.10}},
-		{"text": "+24% de cura realizada e +20% de geração de mana", "bonuses": {"healing_power_pct": 0.24, "mana_generation_pct": 0.20}},
-	]},
-	{"field": "classes", "name": "Protetor da Mata", "thresholds": [2, 4], "effects": [
-		{"text": "+12 de armadura", "bonuses": {"armor_flat": 12.0}},
-		{"text": "+24 de armadura e regenera 3 de vida/s", "bonuses": {"armor_flat": 24.0, "health_regen": 3.0}},
-	]},
-	{"field": "classes", "name": "Suporte", "thresholds": [2, 4], "effects": [
-		{"text": "+15% de cura e escudos concedidos", "bonuses": {"healing_power_pct": 0.15, "shield_power_pct": 0.15}},
-		{"text": "+30% de cura e escudos concedidos", "bonuses": {"healing_power_pct": 0.30, "shield_power_pct": 0.30}},
-	]},
-	{"field": "classes", "name": "Tank", "thresholds": [3, 6], "effects": [
-		{"text": "+10% de vida máxima e 10 de armadura", "bonuses": {"max_health_pct": 0.10, "armor_flat": 10.0}},
-		{"text": "+20% de vida máxima e 20 de armadura", "bonuses": {"max_health_pct": 0.20, "armor_flat": 20.0}},
 	]},
 ]
 
 static func get_rule_for_tag(tag_name: String) -> Dictionary:
 	for rule in RULES:
+		if str(rule.get("name", "")) == tag_name:
+			return rule
+	for rule in LEGACY_RULES:
 		if str(rule.get("name", "")) == tag_name:
 			return rule
 	return {}
@@ -130,7 +121,8 @@ func update_synergies(units: Array) -> Dictionary:
 			if max_stacks > 0:
 				for unit in members:
 					if unit.stats and unit.stats.get(field).has(tag):
-						current_stacks = maxi(current_stacks, unit.enemies_defeated)
+						var u_st: int = int(unit.ferocidade_stacks if "ferocidade_stacks" in unit else unit.enemies_defeated)
+						current_stacks = maxi(current_stacks, u_st)
 				current_stacks = mini(current_stacks, max_stacks)
 
 			results[team_id].append({
@@ -149,11 +141,13 @@ func update_synergies(units: Array) -> Dictionary:
 			if tier_index < 0:
 				continue
 			var effect_bonuses: Dictionary = effect.bonuses
+			# Regra central: Cada origem beneficia seus próprios integrantes!
 			for unit in members:
-				var unit_bonuses: Dictionary = bonuses_by_unit[unit.get_instance_id()]
-				for key in effect_bonuses:
-					unit_bonuses[key] = float(unit_bonuses.get(key, 0.0)) + float(effect_bonuses[key])
-				bonuses_by_unit[unit.get_instance_id()] = unit_bonuses
+				if unit.stats and unit.stats.get(field).has(tag):
+					var unit_bonuses: Dictionary = bonuses_by_unit[unit.get_instance_id()]
+					for key in effect_bonuses:
+						unit_bonuses[key] = float(unit_bonuses.get(key, 0.0)) + float(effect_bonuses[key])
+					bonuses_by_unit[unit.get_instance_id()] = unit_bonuses
 		for unit in members:
 			unit.set_synergy_bonuses(bonuses_by_unit[unit.get_instance_id()])
 	return results

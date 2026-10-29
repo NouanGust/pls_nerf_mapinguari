@@ -4,6 +4,10 @@
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mae_agua.jpg" id="1_xs67q"]
 
 [resource]
+origins = Array[String](["Correnteza", "Encanto"])
+thematic_origins = Array[String](["Correnteza", "Encanto"])
+classes = Array[String]([])
+combat_role = "Suporte"
 script = ExtResource("1_i5pg7")
 unit_name = "Mãe-D'Água"
 unit_id = "mae_dagua"
@@ -11,7 +15,6 @@ description = "Iara, rainha dos rios e mares; suas bênçãos restauram todos os
 lore = "Rainha das águas, capaz de controlar mares e rios com um pensamento."
 tier = 5
 cost = 5
-combat_role = "Suporte"
 icon = ExtResource("1_xs67q")
 max_health = 1500.0
 health_regen = 15.0
@@ -23,8 +26,6 @@ magic_resist = 75.0
 movement_speed = 220.0
 starting_mana = 50.0
 mana_per_second = 10.0
-origins = Array[String](["Litorâneo"])
-classes = Array[String](["Encantado", "Suporte"])
 ability_name = "Bênção das Águas"
 ability_description = "Iara, rainha dos rios e mares; suas bênçãos restauram todos os aliados enquanto sua canção ecoa pelo campo."
 ability_heal = 350.0
@@ -32,7 +33,7 @@ ability_targets = 4
 ability_range = 10.0
 is_ranged = true
 prefers_backline = true
-passive_aura_range = 3
-passive_aura_effect = "power"
+passive_aura_range = 1
+passive_aura_effect = "health_regen"
 
-passive_aura_power = 0.22
+passive_aura_power = 12.0

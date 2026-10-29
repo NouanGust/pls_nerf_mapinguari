@@ -4,6 +4,10 @@
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/tutu_maramba.png" id="2_splash_art"]
 
 [resource]
+origins = Array[String](["Assombro", "Vozes"])
+thematic_origins = Array[String](["Assombro", "Vozes"])
+classes = Array[String]([])
+combat_role = "Tank"
 script = ExtResource("1_2wc1q")
 unit_name = "Tutu-Marambá"
 unit_id = "tutu_maramba"
@@ -11,17 +15,14 @@ description = "Devorador lendário e bicho-papão ancestral; sua carapaça sombr
 lore = "Monstro das sombras que encarna todos os medos infantis."
 tier = 5
 cost = 5
-combat_role = "Tank"
 icon = ExtResource("2_splash_art")
 max_health = 2300.0
-attack_damage = 120.0
+attack_damage = 44.0
 attack_speed = 0.75
 armor = 80.0
 magic_resist = 65.0
 movement_speed = 190.0
 mana_when_hit = 20.0
-origins = Array[String](["Urbano"])
-classes = Array[String](["Assombração", "Tank"])
 ability_name = "Presença Aterrorizante"
 ability_description = "Devorador lendário e bicho-papão ancestral; sua carapaça sombria amedronta todos ao redor enquanto absorve impactos colossais."
 ability_duration = 6.0

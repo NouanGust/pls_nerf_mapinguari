@@ -4,6 +4,10 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
+origins = Array[String](["Vozes", "Encanto"])
+thematic_origins = Array[String](["Vozes", "Encanto"])
+classes = Array[String]([])
+combat_role = "Suporte"
 script = ExtResource("1_stats")
 unit_name = "Sabiá Laranjeira"
 unit_id = "sabia_laranjeira"
@@ -17,13 +21,15 @@ magic_resist = 15.0
 movement_speed = 190.0
 can_fly = true
 max_mana = 70.0
-origins = Array[String](["Mata Atlântica"])
-classes = Array[String](["Caçador"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Mata Atlântica"])
-ability_name = "Bicada Veloz"
-ability_description = "Pássaro de canto mavioso; bica com rapidez incansável, aumentando o dano com a sequência de ataques."
+ability_name = "Canto da Alvorada"
+ability_description = "Entoa um canto sagrado nos hexágonos adjacentes amplificando o poder de ataque dos aliados."
 ability_damage = 95.0
 ability_duration = 4.0
 ability_damage_type = 0
 prefers_backline = true
+passive_aura_range = 1
+passive_aura_power = 0.1
+is_ranged = true
+passive_aura_effect = "power"

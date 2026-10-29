@@ -4,6 +4,10 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_wo830"]
 
 [resource]
+origins = Array[String](["Assombro", "Travessia"])
+thematic_origins = Array[String](["Assombro", "Travessia"])
+classes = Array[String]([])
+combat_role = "Assassino"
 script = ExtResource("1_wo830")
 unit_name = "Pisadeira"
 unit_id = "pisadeira"
@@ -11,7 +15,6 @@ description = "O terror lendário que assombra os tetos nas madrugadas; cai sobr
 lore = "Causa pesadelos terríveis, pisando no peito de quem dorme de barriga cheia."
 tier = 5
 cost = 5
-combat_role = "Assassino"
 icon = ExtResource("1_cqwwj")
 max_health = 1250.0
 attack_damage = 140.0
@@ -21,8 +24,6 @@ magic_resist = 45.0
 movement_speed = 190.0
 max_mana = 70.0
 starting_mana = 35.0
-origins = Array[String](["Urbano"])
-classes = Array[String](["Assombração", "Suporte"])
 ability_name = "Pisada do Pesadelo Fatal"
 ability_description = "O terror lendário que assombra os tetos nas madrugadas; cai sobre o peito das vítimas indefesas com força paralisante e esmagadora."
 ability_damage = 520.0
@@ -31,4 +32,4 @@ ability_range = 3.5
 stun_resist = 0.7
 
 is_assassin = true
-target_priority = 0
+target_priority = 1

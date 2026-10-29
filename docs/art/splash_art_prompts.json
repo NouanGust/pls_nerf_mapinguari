@@ -151,6 +151,138 @@
       "name": "Vitória-régia",
       "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Premium painterly dark-fantasy game key art, horror atmosphere, detailed natural textures, dramatic chiaroscuro, volumetric mist, restrained supernatural glow. Strong readable central silhouette, recognizable species anatomy, subject occupies 70% of frame with face or botanical focal point within central 60% so it works cropped as a tiny shop portrait. Keep shadow detail visible and subject clearly separated from background. Ominous and powerful rather than cute, no graphic gore, no humans. Subject: An eerie awakened giant Amazon water lily guardian on a black river at night. One immense circular green floating leaf with a tall upturned reddish rim and clear radial veins, a magnificent white flower blushing pink at its luminous center, thick thorny stalks and roots visible emerging from the water. Pale moonlight, turquoise healing motes and low violet mist. Distinct giant water lily morphology, not lotus, no humanoid.",
       "asset": "res://Assets/Units/SplashArts/vitoria_regia.png"
+    },
+    {
+      "id": "alamoa",
+      "name": "Alamoa",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Ancient bestiary etching, woodcut and fine metal engraving, dense ink cross-hatching, deep black ink washes, subtle sepia and soiled ivory parchment texture, chiaroscuro with a discrete accent of luminous pale amber-gold glow. Subject: The Alamoa, the spectral siren ghost of Fernando de Noronha archipelago. A tall, ethereal female apparition whose terrifying nature emerges from her dual anatomy: mesmerizing, cascading pale blonde hair floating unnaturally like sea mist and ocean foam, framing a hauntingly gaunt face where delicate pale features fade into a translucent, desiccated skeletal skull visible beneath paper-thin skin. Bony, elongated claw-like fingers held in a delicate summoning gesture, gathering a crackling sphere of blinding solar embers and radiant golden light between her palms. Draped in tattered, salt-encrusted nocturnal shrouds clinging like decomposing kelp around her ribcage and skeletal pelvis. Bare bony feet hovering barely inches above volcanic island stone and sea spray. Crisp silhouette, clear distinction between blonde hair crown, slender skeletal torso, and floating light source.",
+      "asset": "res://Assets/Units/SplashArts/alamoa.png"
+    },
+    {
+      "id": "anta_bondosa",
+      "name": "Anta Bondosa",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Ancient bestiary copperplate engraving and dark fantasy key art, horror atmosphere, detailed natural textures, chiaroscuro, volumetric mist. Subject: The Anta Bondosa, a benevolent yet eerie ancient tapir spirit guardian of flooded wetlands. Bulky, heavy-bodied South American tapir anatomy, short flexible proboscis snout, small dark eyes radiating deep calming amber light. Damp weathered hide covered in moss, clinging aquatic vines, and tiny blooming medicinal reeds that form a protective botanical crest along its neck and spine. Tiny glowing droplets of morning dew float gently around its broad cloven hooves in a circular ground aura. Standing sturdy in a grounded three-quarter pose, head lowered in calm watchfulness.",
+      "asset": "res://Assets/Units/SplashArts/anta_bondosa.png"
+    },
+    {
+      "id": "bebe_diabo",
+      "name": "Bebê-Diabo",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Medieval forbidden manuscript woodcut, ink etching, scratchy cross-hatching, chiaroscuro. Subject: The Bebe-Diabo, a terrifying Brazilian urban legend entity. A diminutive, grotesque imp-like infant creature standing precariously on gnarled, goat-like cloven feet. Leathery mottled greyish skin, two small pointed bone horn buds on a misshapen forehead, wild wide sunken eyes, and an unnervingly wide unhinged maw frozen in a piercing, sonic shriek. Rippling rings of acoustic distortion drawn as fine vibrating ink lines emanate from its open mouth, shaking dust on the ground. Three-quarter view, compact recognizable silhouette, eerie and deeply unsettling.",
+      "asset": "res://Assets/Units/SplashArts/bebe_diabo.png"
+    },
+    {
+      "id": "boi_misterioso",
+      "name": "Boi Misterioso",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Old bestiary metalplate engraving, dense ink hatching, black ink and raw umber tones, chiaroscuro. Subject: The Boi Misterioso, the colossal enchanted spectral bull of the dry sertao caatinga. Monumental muscular bovine anatomy, hunched powerful shoulder withers, jet-black scarred hide like cracked sun-baked leather. Enormous forward-curving lyre-shaped horns with smoldering crimson ember tips, dark nostrils expelling hot steam, glowing smoldering red eyes behind a heavy bone forehead crest. Heavy hooves rooted on parched cracked soil with faint embers beneath them. High-contrast silhouette, immense physical menace.",
+      "asset": "res://Assets/Units/SplashArts/boi_misterioso.png"
+    },
+    {
+      "id": "boitata",
+      "name": "Boitatá",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Antique ink engraving, woodblock illustration, intense chiaroscuro, volumetric mist. Subject: The Boitata, the ancient fiery serpent guardian of the forests. A massive serpentine body coiled into an upright S-curve, composed of swirling cold blue-green and amber flame forms woven with semi-translucent smoking scales. Clusters of dozens of luminous unblinking predatory eyes dot its serpentine crest and body, glowing with pale witch-fire. Its horned reptilian jaws part to release a focused beam of crackling magical flame. Coiled three-quarter full-body composition, dynamic yet stable silhouette.",
+      "asset": "res://Assets/Units/SplashArts/boitata.png"
+    },
+    {
+      "id": "boto_encantado",
+      "name": "Boto Encantado",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Fine line ink drawing, Renaissance bestiary engraving, muted sepia and pale rose-gold washes, chiaroscuro. Subject: The Boto Encantado, the shapeshifting pink river dolphin trickster of the Amazon. A tall, elegant yet uncanny male figure standing poised in a three-quarter view. Dressed in a damp, decaying vintage white linen suit with dripping cuffs. His face is handsome but unsettlingly smooth and waxy with pinkish dolphin-skin undertones, dark glassy eyes, and a classic brimmed straw hat tilted forward concealing the blowhole atop his head. Translucent droplets of swirling river water orbit his open palm like a protective aura.",
+      "asset": "res://Assets/Units/SplashArts/boto_encantado.png"
+    },
+    {
+      "id": "caboclo_dagua",
+      "name": "Caboclo d'Água do São Francisco",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Antique copperplate engraving, dense hatching, dark charcoal ink on stained paper, chiaroscuro. Subject: The Caboclo d'Agua, the legendary amphibious brute of the Sao Francisco River. Squat, impossibly broad and muscular humanoid silhouette, wet dark bronze skin covered in sleek interlocking river scales and river weed. Thick webbed clawed hands, a short spiny dorsal fin ridge extending down the spine, and a blunt, frog-like hairless head with glowing yellow slit eyes. Braced in a wide, immovable low-stance upon river rocks, water swirling around his heavy shins forming a miniature hydraulic barrier.",
+      "asset": "res://Assets/Units/SplashArts/caboclo_dagua.png"
+    },
+    {
+      "id": "cabra_cabriola",
+      "name": "Cabra Cabriola",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Old bestiary woodcut, gritty ink hatching, deep shadow washes on aged sepia paper. Subject: The Cabra Cabriola, the predatory horned goat demon of northeastern Brazilian legend. A feral, bipedal-leaning caprine horror with a ravenous posture. Coarse matted black and grey fleece, twisted ribbed horns sweeping backward, and an unnatural elongated snout equipped with rows of jagged wolf-like teeth. Muscular sinewy limbs ending in cloven black hooves, steam curling from flared nostrils, wild predatory yellow eyes. Poised in a three-quarter aggressive crouch, head low and ready to gore.",
+      "asset": "res://Assets/Units/SplashArts/cabra_cabriola.png"
+    },
+    {
+      "id": "capelobo",
+      "name": "Capelobo",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Heavy metalplate etching, deep cross-hatching, dark ink with iron-red tint on aged parchment, chiaroscuro. Subject: The Capelobo, a terrifying Amazonian cryptid combining a hulking werewolf body with a giant anteater. Massive bipedal hunched brute with shaggy black and iron-grey fur, powerful shoulders, and an unmistakably elongated cylindrical anteater snout with no ears. Its forearms terminate in massive, curved bone scythe claws ready to slash. A faint circular callus mark on its belly represents its legendary weak spot.",
+      "asset": "res://Assets/Units/SplashArts/capelobo.png"
+    },
+    {
+      "id": "capeta_vilarinho",
+      "name": "Capeta do Vilarinho",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Late 19th century prohibited manual engraving, delicate ink lines, deep black ink and antique ivory paper, chiaroscuro. Subject: The Capeta do Vilarinho, the sinister dancing devil of Brazilian ballroom folklore. An aristocratic, slender figure mid-waltz in a three-quarter view. Wearing a sharp tailored dark tailcoat and cravat; his handsome pale face bears an unmoving, charming yet chilling razor-sharp smile. The hem of his trousers pulls back slightly to unmistakably reveal polished black cloven goat hooves instead of human feet. Hands raised in dance posture.",
+      "asset": "res://Assets/Units/SplashArts/capeta_vilarinho.png"
+    },
+    {
+      "id": "chupa_cabra",
+      "name": "Chupa-Cabra",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Grimoire ink illustration, dense quill cross-hatching, dark ink washes on aged parchment. Subject: The Chupa-Cabra, the infamous nocturnal livestock stalker of Brazilian rural lore. A lean, athletic bipedal reptilian-canid creature crouched low in a predatory three-quarter ambush position. Leathery slate-grey skin, a prominent mohawk ridge of quill-like bone spines running down its spine from nape to tail, and glowing crimson-red eyes burning with predatory intent. Two long needle-like hollow fangs protrude over its lower lip.",
+      "asset": "res://Assets/Units/SplashArts/chupa_cabra.png"
+    },
+    {
+      "id": "curupira",
+      "name": "Curupira",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Antique bestiary copper engraving, detailed cross-hatching, dark ink with vivid crimson flame accents on stained paper. Subject: The Curupira, ancient primordial forest trickster and guardian of the wilderness. A compact, feral and muscular indigenous dwarf creature in three-quarter view. Wild voluminous mane of living red-orange fire hair blazing upward, weathered green-tinted skin, and feet unmistakably turned backward with heels in front and toes pointing behind. Standing crouched upon mossy roots, one hand touching the ground where inverted glowing spirit tracks confuse the trail.",
+      "asset": "res://Assets/Units/SplashArts/curupira.png"
+    },
+    {
+      "id": "ipupiara",
+      "name": "Ipupiara",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. 16th-century explorer manuscript woodcut, dense nautical engraving lines on sea-stained parchment. Subject: The Ipupiara, the monstrous sea-man titan of colonial Brazilian coastal chronicles. A colossal hulking marine entity in a powerful three-quarter stance. Massive barrel chest armored in thick greenish-black fish scales, powerful humanoid arms ending in webbed fin-blade hands tipped with razor talons, and a fearsome monstrous visage with catfish-like barbels, blank black ocean eyes, and jagged sea-beast tusks.",
+      "asset": "res://Assets/Units/SplashArts/ipupiara.png"
+    },
+    {
+      "id": "joao_galafuz",
+      "name": "João Galafuz",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Ancient engraving, delicate ink cross-hatching, deep ink and glowing teal-cyan and gold accents on aged parchment. Subject: The Joao Galafuz, the phantom sailor of the northeastern Brazilian coral reefs. A gaunt, spectral mariner apparition whose lower body dissolves into curling ocean mist, seaweed and phosphor-bright bioluminescent foam. His skeletal chest is draped in tattered colonial sailor garments; one arm extends holding an ornate, rusted storm lantern that blazes with an intensely bright sphere of exploding magical sea-light.",
+      "asset": "res://Assets/Units/SplashArts/joao_galafuz.png"
+    },
+    {
+      "id": "lobisomem_sertao",
+      "name": "Lobisomem do Sertão",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Historical woodcut engraving, dense scratchy ink hatching, raw umber washes on rough parchment. Subject: The Lobisomem do Sertao, the cursed werewolf of the arid Brazilian backlands. A tall, sinewy, ravenous lycanthrope in a three-quarter predatory stance. Emaciated yet lethally muscular frame, visible ribs beneath rough, dust-caked grey-brown fur torn by cactus spines, large drooping canine ears, and an elongated gaunt muzzle with a frothing snarl of yellow teeth. Feverish amber eyes gazing outward with animal agony and bloodlust.",
+      "asset": "res://Assets/Units/SplashArts/lobisomem_sertao.png"
+    },
+    {
+      "id": "loira_banheiro",
+      "name": "Loira do Banheiro",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Gothic ink etching, delicate cross-hatching, deep ink shadows with subtle tarnished silver highlights on aged paper. Subject: The Loira do Banheiro, Brazil's iconic mirror ghost urban legend. An ethereal teenage apparition in three-quarter view, wearing a faded, damp 1960s school uniform dress. Her skin is deathly porcelain white, framed by unkempt blonde hair; her nose has small white cotton plugs with tiny dried dark stains, and hollow melancholic eyes stare forward. Floating around her are large, jagged shards of broken antique mirror reflecting fractured glints of her face.",
+      "asset": "res://Assets/Units/SplashArts/loira_banheiro.png"
+    },
+    {
+      "id": "loira_bonfim",
+      "name": "Loira do Bonfim",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. 19th-century forbidden grimoire engraving, fine ink lines, deep black shadows on aged ivory paper. Subject: The Loira do Bonfim, the phantom midnight hitchhiker of cemetery gates. A slender, elegant female specter in a three-quarter poised walking pose. Dressed in a flowing, tattered Victorian white silk evening gown that trails like graveyard mist. Her pale, alluring face is half-veiled beneath sheer dark lace; beneath her delicate hand gesture lies an elongated, bone-carved stiletto blade glinting with cold spectral light.",
+      "asset": "res://Assets/Units/SplashArts/loira_bonfim.png"
+    },
+    {
+      "id": "maozao",
+      "name": "Mãozão",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Antique anatomical metal engraving meets dark fantasy woodcut on weathered parchment paper. Subject: The Maozao, the mythical colossal disembodied hand of Brazilian crossroads and ghost lore. A gigantic, weathered left hand standing supported on its five massive, gnarled finger tips like a grotesque fleshy arachnid bastion. Thick leathery grey skin, raised corded veins, cracked stone-like fingernails, and a severed wrist stump sealed with petrified calloused scar tissue. Braced defensively facing three-quarters toward the viewer.",
+      "asset": "res://Assets/Units/SplashArts/maozao.png"
+    },
+    {
+      "id": "num_se_pode",
+      "name": "Num-se-Pode",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Early woodblock engraving, dense charcoal hatching, towering vertical chiaroscuro on aged sepia paper. Subject: The Num-se-Pode, the terrifying shapeshifting apparition of Recife folklore that expands to impossible heights when gazed upon. A towering, unnaturally elongated humanoid specter draped in an immense black mourning shawl and flowing dark vestments that cascade like monolith walls. Her body stretches skyward in impossible proportions, shoulders broad and fortified, hood cast in deep black shadow.",
+      "asset": "res://Assets/Units/SplashArts/num_se_pode.png"
+    },
+    {
+      "id": "pai_do_mato",
+      "name": "Pai do Mato",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Renaissance natural history engraving, dense cross-hatching, deep ink and earthy sepia washes on rough paper. Subject: The Pai do Mato, the primal wild-man guardian of the deep Brazilian woodland. A massive, heavily muscled humanoid brute standing in a protective wide three-quarter stance. Entire body covered in long, shaggy matted pelt intertwined with creeping vines, tree bark and moss. A wild weathered face with a voluminous beard merging with his chest, crowned with two short, blunt forest-wood horns.",
+      "asset": "res://Assets/Units/SplashArts/pai_do_mato.png"
+    },
+    {
+      "id": "perna_cabeluda",
+      "name": "Perna Cabeluda",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. 19th-century satirical horror engraving, detailed fine-line cross-hatching on aged tea-stained paper. Subject: The Perna Cabeluda, the infamous autonomous severed leg of Recife urban folklore. A single, muscular, grotesque right human leg severed at the upper thigh, covered in dense, wiry black hair. Powerful bulging calf and hamstring muscles, veined and pulsating, ending in a wide foot with dirty sharp toenails gripping the cobblestones. Poised in a spring-loaded, dynamic three-quarter stance, ready to unleash kicks.",
+      "asset": "res://Assets/Units/SplashArts/perna_cabeluda.png"
+    },
+    {
+      "id": "saci_perere",
+      "name": "Saci-Pererê",
+      "prompt": "Use case: stylized-concept. Asset: individual splash art for Folchess, a Brazilian fauna, flora and folklore dark fantasy auto-chess game. Create one finished square 1024x1024 illustration, full bleed, no text, no letters, no logo, no border, no UI, no collage. Classic metal etching, dense cross-hatching, rich black ink with deep crimson accent on the magical cap, aged parchment background. Subject: The Saci-Perere, the iconic one-legged trickster spirit of Brazilian mythology. A lithe, muscular young black male entity standing deftly balanced on his single left leg in three-quarter view. Wearing a weathered, pointed magical red cap and ragged knee-length shorts, holding an old smoking clay pipe in his grin. Around his single foot swirls a miniature localized whirlwind of dry forest leaves.",
+      "asset": "res://Assets/Units/SplashArts/saci_perere.png"
     }
   ]
 }

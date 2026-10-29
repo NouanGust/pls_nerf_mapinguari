@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+origins = Array[String](["Assombro", "Travessia"])
+thematic_origins = Array[String](["Assombro", "Travessia"])
+classes = Array[String]([])
+combat_role = "Atacante"
+script = ExtResource("1_stats")
+unit_name = "Perna Cabeluda"
+unit_id = "perna_cabeluda"
+description = "Perna desmembrada e coberta de pelos que salta velozmente pelas ruas; ataca com chutes sucessivos e ritmo frenético."
+lore = "Salto sobrenatural nas madrugadas urbanas do Recife que chuta quem anda sozinho na calçada."
+tier = 2
+cost = 2
+max_health = 510.0
+health_regen = 0.0
+attack_damage = 58.0
+attack_speed = 1.25
+attack_range = 1
+critical_chance = 0.00
+critical_damage = 2.0
+armor = 18.0
+magic_resist = 18.0
+movement_speed = 250.0
+is_stationary = false
+can_fly = false
+max_mana = 60.0
+starting_mana = 15.0
+mana_per_attack = 10.0
+mana_per_second = 0.0
+mana_when_hit = 10.0
+affinities = Array[String]([])
+biomes = Array[String](["Urbano"])
+ability_name = "Voadora Desenfreada"
+ability_description = "Desfere uma sequência frenética de chutes aumentando sua cadência e dano por ataque."
+ability_damage = 130.0
+ability_heal = 0.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 1
+ability_duration = 5.0
+ability_cooldown = 0.0
+ability_range = 1.5
+ability_damage_type = 0
+target_priority = 0
+is_tank = false
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.00

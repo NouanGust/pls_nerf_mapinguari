@@ -4,6 +4,10 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
+origins = Array[String](["Ferocidade", "Travessia"])
+thematic_origins = Array[String](["Ferocidade", "Travessia"])
+classes = Array[String]([])
+combat_role = "Atacante"
 script = ExtResource("1_stats")
 unit_name = "Lobo-guará"
 unit_id = "lobo_guara"
@@ -11,19 +15,16 @@ description = "O lendário espírito do Cerrado; veloz líder da savana cujos at
 lore = "Seu rastro liga os frutos do campo aos novos brotos."
 tier = 5
 cost = 5
-combat_role = "Atacante"
 icon = ExtResource("1_8nhg3")
 max_health = 1400.0
-attack_damage = 135.0
-attack_speed = 1.25
+attack_damage = 130.0
+attack_speed = 1.2
 armor = 35.0
 magic_resist = 35.0
 movement_speed = 265.0
 max_mana = 90.0
 starting_mana = 20.0
 mana_per_attack = 12.0
-origins = Array[String](["Cerrado"])
-classes = Array[String](["Caçador", "Suporte"])
 affinities = Array[String](["Fauna", "Flora"])
 biomes = Array[String](["Cerrado", "Pantanal", "Pampa", "Mata Atlântica"])
 ability_name = "Uivo do Cerrado"

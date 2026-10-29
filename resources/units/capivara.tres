@@ -4,21 +4,23 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
+origins = Array[String](["Correnteza", "Vigília"])
+thematic_origins = Array[String](["Correnteza", "Vigília"])
+classes = Array[String]([])
+combat_role = "Tank"
 script = ExtResource("1_stats")
 unit_name = "Capivara"
 unit_id = "capivara"
 description = "Criatura pacífica e resiliente dos rios pantaneiros; mergulha e renova um escudo de águas calmas."
 icon = ExtResource("1_d2q23")
 max_health = 600.0
-attack_damage = 36.0
+attack_damage = 34.0
 attack_speed = 0.75
 armor = 25.0
 magic_resist = 20.0
 movement_speed = 190.0
 max_mana = 90.0
 mana_when_hit = 8.0
-origins = Array[String](["Pantaneiro"])
-classes = Array[String](["Aquático", "Tank"])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Pantanal"])
 ability_name = "Refúgio da Margem"

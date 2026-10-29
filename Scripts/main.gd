@@ -2130,13 +2130,17 @@ func _update_inspector_live_data(panel: Control, unit: BaseUnit3D) -> void:
 					v_lbl.text = live_stats[key]["val"]
 				slot.tooltip_text = live_stats[key]["tip"]
 
-	# Stacks de Cerrado em tempo real
+	# Stacks de Ferocidade e Seiva em tempo real
 	var origins_lbl = panel.find_child("Origins_label", true, false) as RichTextLabel
-	if origins_lbl and "Cerrado" in stats.origins:
+	if origins_lbl:
 		var origin_parts: Array[String] = []
 		for orig in stats.origins:
 			var extra := ""
-			if orig == "Cerrado":
+			if orig == "Ferocidade":
+				extra = " [color=#e67e22](%d/8 st)[/color]" % [unit.ferocidade_stacks]
+			elif orig == "Seiva":
+				extra = " [color=#2ecc71](%d/3 st)[/color]" % [unit.seiva_crescimento_stacks]
+			elif orig == "Cerrado":
 				extra = " [color=#e67e22](%d/10 st)[/color]" % [mini(unit.enemies_defeated, BaseUnit3D.MAX_CERRADO_STACKS)]
 			origin_parts.append("[url=%s][u][color=#f5da80]%s[/color][/u]%s[/url]" % [orig, orig, extra])
 		origins_lbl.text = "[color=#f1c40f]ORIGENS[/color]  %s" % (" · ".join(origin_parts))
@@ -2232,7 +2236,11 @@ func show_unit_inspector(unit: BaseUnit3D) -> void:
 		var origin_parts: Array[String] = []
 		for orig in stats.origins:
 			var extra := ""
-			if orig == "Cerrado":
+			if orig == "Ferocidade":
+				extra = " [color=#e67e22](%d/8 st)[/color]" % [unit.ferocidade_stacks]
+			elif orig == "Seiva":
+				extra = " [color=#2ecc71](%d/3 st)[/color]" % [unit.seiva_crescimento_stacks]
+			elif orig == "Cerrado":
 				extra = " [color=#e67e22](%d/10 st)[/color]" % [mini(unit.enemies_defeated, BaseUnit3D.MAX_CERRADO_STACKS)]
 			origin_parts.append("[url=%s][u][color=#f5da80]%s[/color][/u]%s[/url]" % [orig, orig, extra])
 		origins_lbl.text = "[color=#f1c40f]ORIGENS[/color]  %s" % (" · ".join(origin_parts) if not origin_parts.is_empty() else "—")
@@ -2240,10 +2248,14 @@ func show_unit_inspector(unit: BaseUnit3D) -> void:
 	# 8. Classes (com links de sinergia)
 	var classes_lbl = panel.find_child("Classes_label", true, false) as RichTextLabel
 	if classes_lbl:
-		var class_parts: Array[String] = []
-		for cls in stats.classes:
-			class_parts.append("[url=%s][u][color=#d8b4fe]%s[/color][/u][/url]" % [cls, cls])
-		classes_lbl.text = "[color=#9b59b6]CLASSES[/color]  %s" % (" · ".join(class_parts) if not class_parts.is_empty() else "—")
+		if stats.classes.is_empty():
+			classes_lbl.visible = false
+		else:
+			classes_lbl.visible = true
+			var class_parts: Array[String] = []
+			for cls in stats.classes:
+				class_parts.append("[url=%s][u][color=#d8b4fe]%s[/color][/u][/url]" % [cls, cls])
+			classes_lbl.text = "[color=#9b59b6]CLASSES[/color]  %s" % (" · ".join(class_parts) if not class_parts.is_empty() else "—")
 
 	# 9. Atualizar layout e componentes TFT
 	_update_tft_inspector(panel, unit, cur_hp, max_hp, cur_mana, max_mana, attack_dmg, attack_spd, dps, total_armor, phys_reduct, total_mr, mag_reduct)

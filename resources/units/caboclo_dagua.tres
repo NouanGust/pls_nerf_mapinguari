@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+origins = Array[String](["Correnteza", "Vigília"])
+thematic_origins = Array[String](["Correnteza", "Vigília"])
+classes = Array[String]([])
+combat_role = "Tank"
+script = ExtResource("1_stats")
+unit_name = "Caboclo d'Água do São Francisco"
+unit_id = "caboclo_dagua"
+description = "Guardião anfíbio dos remansos do Rio São Francisco; carapaça musculosa e bronzeada capaz de deter grandes correntezas e golpes."
+lore = "Habita as cavernas submersas do Velho Chico e vira embarcações de quem desrespeita o rio."
+tier = 3
+cost = 3
+max_health = 870.0
+health_regen = 0.0
+attack_damage = 38.0
+attack_speed = 0.75
+attack_range = 1
+critical_chance = 0.00
+critical_damage = 2.0
+armor = 40.0
+magic_resist = 35.0
+movement_speed = 185.0
+is_stationary = false
+can_fly = false
+max_mana = 90.0
+starting_mana = 20.0
+mana_per_attack = 10.0
+mana_per_second = 0.0
+mana_when_hit = 8.0
+affinities = Array[String]([])
+biomes = Array[String](["Caatinga"])
+ability_name = "Arrebentação do Velho Chico"
+ability_description = "Recebe escudo próprio e golpeia o solo com uma onda curta, atordoando inimigos adjacentes."
+ability_damage = 90.0
+ability_heal = 0.0
+ability_shield = 260.0
+ability_mana = 0.0
+ability_targets = 1
+ability_duration = 1.0
+ability_cooldown = 0.0
+ability_range = 1.5
+ability_damage_type = 1
+target_priority = 0
+is_tank = true
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.00

@@ -4,6 +4,10 @@
 [ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
+origins = Array[String](["Seiva", "Vigília"])
+thematic_origins = Array[String](["Seiva", "Vigília"])
+classes = Array[String]([])
+combat_role = "Porradeiro"
 script = ExtResource("1_stats")
 unit_name = "Pau Brasil"
 unit_id = "pau_brasil"
@@ -11,10 +15,9 @@ description = "Árvore histórica de cerne rubro maciço; sua madeira inquebráv
 lore = "Sua madeira rubra e flores douradas inspiram uma presença resistente."
 tier = 4
 cost = 4
-combat_role = "Porradeiro"
 icon = ExtResource("1_7h1lj")
 max_health = 1350.0
-attack_damage = 110.0
+attack_damage = 88.0
 attack_speed = 0.85
 armor = 50.0
 magic_resist = 35.0
@@ -22,8 +25,6 @@ movement_speed = 0.0
 is_stationary = true
 mana_per_attack = 12.0
 mana_per_second = 5.0
-origins = Array[String](["Mata Atlântica"])
-classes = Array[String](["Tank", "Protetor da Mata"])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Mata Atlântica"])
 ability_name = "Cerne Rubro"
@@ -36,3 +37,5 @@ is_tank = false
 passive_aura_range = 2
 passive_aura_effect = "power"
 passive_aura_power = 0.18
+attack_range = 4
+is_ranged = true

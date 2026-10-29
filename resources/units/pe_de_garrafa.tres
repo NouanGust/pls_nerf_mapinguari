@@ -4,6 +4,10 @@
 [ext_resource type="Texture2D" path="res://Assets/Units_teste/Pe_garrafa.png" id="1_rh75l"]
 
 [resource]
+origins = Array[String](["Travessia", "Assombro"])
+thematic_origins = Array[String](["Travessia", "Assombro"])
+classes = Array[String]([])
+combat_role = "Assassino"
 script = ExtResource("1_6nwsa")
 unit_name = "Pé-de-Garrafa"
 unit_id = "pe_de_garrafa"
@@ -11,7 +15,6 @@ description = "A temida entidade de uma perna só com casco redondo; emite um as
 lore = "Espectro de caçador amaldiçoado a vagar eternamente."
 tier = 5
 cost = 5
-combat_role = "Assassino"
 icon = ExtResource("1_rh75l")
 max_health = 1350.0
 attack_damage = 160.0
@@ -24,8 +27,6 @@ magic_resist = 35.0
 movement_speed = 250.0
 max_mana = 60.0
 mana_per_attack = 5.0
-origins = Array[String](["Sertanejo"])
-classes = Array[String](["Caçador", "DPS"])
 ability_name = "Tiro Certeiro"
 ability_description = "A temida entidade de uma perna só com casco redondo; emite um assobio horripilante e desaba sobre o inimigo mais vulnerável."
 ability_damage = 520.0
@@ -35,4 +36,4 @@ is_assassin = true
 is_ranged = true
 prefers_backline = true
 
-target_priority = 0
+target_priority = 1

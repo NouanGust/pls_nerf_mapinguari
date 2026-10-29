@@ -4,6 +4,10 @@
 [ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/sumauma.png" id="2_splash_art"]
 
 [resource]
+origins = Array[String](["Seiva", "Vigília"])
+thematic_origins = Array[String](["Seiva", "Vigília"])
+classes = Array[String]([])
+combat_role = "Tank"
 script = ExtResource("1_stats")
 unit_name = "Sumaúma"
 unit_id = "sumauma"
@@ -11,10 +15,9 @@ description = "Árvore-mãe da floresta; suas raízes monumentais retêm inimigo
 lore = "Suas grandes raízes sustentam e protegem a floresta ao redor."
 tier = 4
 cost = 4
-combat_role = "Tank"
 icon = ExtResource("2_splash_art")
 max_health = 1700.0
-attack_damage = 70.0
+attack_damage = 42.0
 attack_speed = 0.65
 armor = 65.0
 magic_resist = 45.0
@@ -23,8 +26,6 @@ is_stationary = true
 max_mana = 110.0
 mana_per_second = 5.0
 mana_when_hit = 15.0
-origins = Array[String](["Amazônico"])
-classes = Array[String](["Tank", "Protetor da Mata"])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Amazônia"])
 ability_name = "Raízes Guardiãs"
@@ -38,3 +39,5 @@ is_tank = true
 passive_aura_range = 2
 passive_aura_effect = "power"
 passive_aura_power = 0.18
+attack_range = 4
+is_ranged = true

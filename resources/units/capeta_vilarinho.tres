@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+origins = Array[String](["Encanto", "Vozes"])
+thematic_origins = Array[String](["Encanto", "Vozes"])
+classes = Array[String]([])
+combat_role = "Suporte"
+script = ExtResource("1_stats")
+unit_name = "Capeta do Vilarinho"
+unit_id = "capeta_vilarinho"
+description = "Galanteador misterioso dos salões de dança; seu compasso irresistível contagia aliados e perturba o equilíbrio dos adversários."
+lore = "Dançava como ninguém até que revelava patas de bode sob a barra da calça."
+tier = 4
+cost = 4
+max_health = 580.0
+health_regen = 0.0
+attack_damage = 34.0
+attack_speed = 1.00
+attack_range = 2
+critical_chance = 0.00
+critical_damage = 2.0
+armor = 18.0
+magic_resist = 28.0
+movement_speed = 225.0
+is_stationary = false
+can_fly = false
+max_mana = 75.0
+starting_mana = 25.0
+mana_per_attack = 8.0
+mana_per_second = 0.0
+mana_when_hit = 10.0
+affinities = Array[String]([])
+biomes = Array[String](["Urbano"])
+ability_name = "Valsa Sombria"
+ability_description = "Conduz uma valsa infernal que acelera aliados na aura e reduz velocidade dos inimigos."
+ability_damage = 120.0
+ability_heal = 0.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 1
+ability_duration = 4.0
+ability_cooldown = 0.0
+ability_range = 2.5
+ability_damage_type = 1
+target_priority = 0
+is_tank = false
+is_assassin = false
+is_ranged = false
+prefers_backline = true
+passive_aura_range = 1
+passive_aura_effect = "attack_speed"
+passive_aura_power = 0.20

@@ -29,12 +29,19 @@ static func create_damage_number(position: Vector3, amount: float, type: DamageT
 			label.text = "%d" % int(amount)
 			label.modulate = Color(0.5, 0.5, 1.0)  # Azul
 			label.font_size = 52
+		DamageType.SHIELD:
+			label.text = "-%d" % int(amount)
+			label.modulate = Color(0.22, 0.74, 0.98)  # Azul ciano de escudo (#38bdf8)
+			label.font_size = 46
 	
 	label.outline_size = 12
 	label.outline_modulate = Color.BLACK
 	
 	# Adicionar à cena
-	var scene_root = Engine.get_main_loop().root.get_child(0)
+	var scene_root := _get_scene_root()
+	if not scene_root:
+		label.queue_free()
+		return
 	scene_root.add_child(label)
 	
 	# Animação
@@ -61,7 +68,8 @@ enum DamageType {
 	DAMAGE,
 	HEAL,
 	CRITICAL,
-	ABILITY
+	ABILITY,
+	SHIELD
 }
 
 ## Criar efeito de habilidade
@@ -76,7 +84,10 @@ static func create_ability_effect(position: Vector3, ability_name: String, color
 	label.outline_size = 10
 	label.outline_modulate = Color.BLACK
 	
-	var scene_root = Engine.get_main_loop().root.get_child(0)
+	var scene_root := _get_scene_root()
+	if not scene_root:
+		label.queue_free()
+		return
 	scene_root.add_child(label)
 	
 	# Animação
@@ -124,14 +135,16 @@ static func create_hit_particles(position: Vector3, color: Color) -> void:
 	particles.color = color
 	particles.mesh = _get_particle_mesh()
 	
-	var scene_root = Engine.get_main_loop().root.get_child(0)
+	var scene_root := _get_scene_root()
 	if not scene_root:
 		particles.queue_free()
 		return
 	scene_root.add_child(particles)
 	
 	# Auto-destruir
-	await Engine.get_main_loop().create_timer(particles.lifetime + 0.1, false).timeout
+	var loop := Engine.get_main_loop() as SceneTree
+	if loop:
+		await loop.create_timer(particles.lifetime + 0.1, false).timeout
 	if is_instance_valid(particles):
 		particles.queue_free()
 
@@ -185,6 +198,28 @@ static func create_status_indicator(unit: Node3D, status: String, duration: floa
 	if duration > 0.4:
 		tween.tween_property(label, "modulate:a", 0.0, 0.35).set_delay(duration - 0.35)
 	
-	await Engine.get_main_loop().create_timer(duration, false).timeout
+	var loop := Engine.get_main_loop() as SceneTree
+	if loop:
+		await loop.create_timer(duration, false).timeout
 	if is_instance_valid(label):
 		label.queue_free()
+
+const LightningEffect = preload("res://Scripts/Systems/lightning_effect.gd")
+
+## Cria uma queda de relâmpago procedural no ponto alvo
+static func create_lightning_strike(target_position: Vector3, bolt_color: Color = Color("#fbbf24"), strike_height: float = 9.0) -> Node3D:
+	return LightningEffect.create_strike(target_position, bolt_color, strike_height)
+
+## Cria um feixe celestial vertical suave sobre o alvo
+static func create_celestial_beam(target_position: Vector3, beam_color: Color = Color("#fbbf24"), duration: float = 0.55) -> Node3D:
+	return LightningEffect.create_celestial_beam(target_position, beam_color, 8.0, 0.45, duration)
+
+static func _get_scene_root() -> Node:
+	var loop := Engine.get_main_loop() as SceneTree
+	if not loop:
+		return null
+	if loop.current_scene:
+		return loop.current_scene
+	if loop.root:
+		return loop.root.get_child(0) if loop.root.get_child_count() > 0 else loop.root
+	return null

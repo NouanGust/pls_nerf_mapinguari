@@ -5,6 +5,9 @@
 
 [resource]
 script = ExtResource("1_stats")
+cost = 1
+tier = 1
+combat_role = "Tank"
 unit_name = "Tatu-bola-do-nordeste"
 unit_id = "tatu_bola"
 description = "Símbolo de resistência do semiárido; enrola-se em uma esfera impenetrável renovando um escudo resistente."
@@ -18,11 +21,20 @@ magic_resist = 22.0
 movement_speed = 175.0
 max_mana = 90.0
 mana_when_hit = 8.0
-origins = Array[String](["Caatinga"])
-classes = Array[String](["Tank", "Protetor da Mata"])
+origins = Array[String](["Vigília", "Travessia"])
+classes = Array[String]([])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Caatinga", "Cerrado"])
 ability_name = "Carapaça Fechada"
 ability_description = "Símbolo de resistência do semiárido; enrola-se em uma esfera impenetrável renovando um escudo resistente."
-ability_shield = 110.0
+ability_shield = 180.0
 is_tank = true
+
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "tank_guard"
+attack_range = 1

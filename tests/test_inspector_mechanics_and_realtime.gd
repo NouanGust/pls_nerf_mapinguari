@@ -15,10 +15,10 @@ func _run() -> void:
 		clock.name = "BattleClock"
 		root.add_child(clock)
 
-	# 1. Carregar e verificar descrições mecânicas de todas as 45 unidades
+	# 1. Carregar e verificar descrições mecânicas de todas as 66 unidades
 	print("\n[1] Verificando get_mechanics_description() para todas as unidades:")
 	var all_units := UnitSpawner.load_all_units()
-	assert(all_units.size() == 45, "Devem existir 45 unidades")
+	assert(all_units.size() == 66, "Devem existir 66 unidades")
 	
 	for unit_id in all_units.keys():
 		var stats: UnitStats = all_units[unit_id]
@@ -32,7 +32,7 @@ func _run() -> void:
 		for c in desc1:
 			var code := c.unicode_at(0)
 			assert(code < 0x2500 or code > 0x1F9FF, "Caractere emoji detectado na descrição mecânica de %s: %s" % [unit_id, c])
-	print("  ✓ Todas as 45 unidades possuem descrições de habilidades puramente mecânicas e sem emojis!")
+	print("  ✓ Todas as 66 unidades possuem descrições de habilidades puramente mecânicas e sem emojis!")
 
 	# 2. Instanciar main.tscn e verificar inspetor
 	print("\n[2] Instanciando cena principal para testar inspetor:")

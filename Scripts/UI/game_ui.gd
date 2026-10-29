@@ -5,6 +5,9 @@ const UIStyle = preload("res://Scripts/UI/ui_style.gd")
 const ResponsiveLayout = preload("res://Scripts/UI/responsive_layout.gd")
 const UIAtlasCatalog = preload("res://Scripts/UI/ui_atlas_catalog.gd")
 const BestiaryModal = preload("res://Scripts/UI/bestiary_modal.gd")
+const SynergyPanelUI = preload("res://Scripts/UI/synergy_panel_ui.gd")
+const RoundBannerUI = preload("res://Scripts/UI/round_banner_ui.gd")
+const HUDAnimator = preload("res://Scripts/UI/hud_animator.gd")
 
 signal hud_visibility_changed(is_visible: bool)
 signal synergy_hover_started(synergy_name: String)
@@ -35,13 +38,6 @@ var _inspected_unit_star_level: int = 1
 @onready var streak_icon: TextureRect = get_node_or_null("Control/TopBar/Content/StreakBox/StreakIcon") as TextureRect
 @onready var streak_label: Label = get_node_or_null("Control/TopBar/Content/StreakBox/StreakLabel") as Label
 
-# Elementos do Banner de Rendimento
-@onready var resolution_banner: PanelContainer = get_node_or_null("Control/RoundResolutionBanner")
-@onready var banner_title: Label = get_node_or_null("Control/RoundResolutionBanner/Content/VBox/BannerTitle") as Label
-@onready var banner_detail: Label = get_node_or_null("Control/RoundResolutionBanner/Content/VBox/BannerDetail") as Label
-@onready var banner_icon: TextureRect = get_node_or_null("Control/RoundResolutionBanner/Content/BannerIcon") as TextureRect
-var _banner_tween: Tween
-
 # Elementos de Status
 @onready var board_count_label: Label = get_node_or_null("Control/BoardCountLabel")
 @onready var region_label: Label = get_node_or_null("Control/RegionLabel")
@@ -54,34 +50,42 @@ var _banner_tween: Tween
 @onready var shop: ShopUI = get_node_or_null("Control/BottomBar/ShopContainer") as ShopUI
 @onready var bench: BenchUI = get_node_or_null("Control/BenchPanel/BenchContent/BenchSlots") as BenchUI
 
-var hud_visible := true
-var hud_tween: Tween
-var visible_positions: Dictionary = {}
+# Componentes Modulares de UI
+var round_banner_ui: RoundBannerUI
+var synergy_panel_ui: SynergyPanelUI
+var hud_animator: HUDAnimator
+
 var sell_zone: PanelContainer
-
-# Sinergias
-var synergy_button: Button
-var synergy_panel: Control
-var synergy_list: VBoxContainer
-var synergy_row_active_template: PanelContainer
-var synergy_row_inactive_template: PanelContainer
-var spawned_synergy_rows: Array[Control] = []
-var synergy_tooltip: PanelContainer
-var _synergy_tooltip_origin: Vector2 = Vector2.ZERO
-
 var _responsive_ready: bool = false
 var _compact_layout: bool = false
 var _inspector_tween: Tween
 var _milestone_icons: Array[Control] = []
-var _last_player_synergies: Array = []
+
+# Propriedades de retrocompatibilidade
+var hud_visible: bool:
+	get: return hud_animator.hud_visible if hud_animator else true
+	set(val):
+		if hud_animator: hud_animator.hud_visible = val
+var visible_positions: Dictionary:
+	get: return hud_animator.visible_positions if hud_animator else {}
+var resolution_banner: Control:
+	get: return round_banner_ui.resolution_banner if round_banner_ui else null
+var synergy_button: Button:
+	get: return synergy_panel_ui.synergy_button if synergy_panel_ui else null
+var synergy_panel: Control:
+	get: return synergy_panel_ui.synergy_panel if synergy_panel_ui else null
+var synergy_tooltip: PanelContainer:
+	get: return synergy_panel_ui.synergy_tooltip if synergy_panel_ui else null
+var spawned_synergy_rows: Array[Control]:
+	get: return synergy_panel_ui.spawned_synergy_rows if synergy_panel_ui else []
 
 class MilestoneIcon extends TextureRect:
-	var text: String = "" # Mantido para compatibilidade com testes e leituras
+	var text: String = ""
 
 func _ready() -> void:
+	_init_ui_subsystems()
 	_apply_button_skins()
 	_build_sell_zone()
-	_bind_synergy_panel()
 	_setup_milestones()
 	_setup_inspector()
 	_setup_start_battle_button()
@@ -97,6 +101,18 @@ func _ready() -> void:
 	_layout_extra_panels()
 	_cache_panel_positions()
 	_play_hud_transition(true, true)
+
+func _init_ui_subsystems() -> void:
+	round_banner_ui = RoundBannerUI.new()
+	round_banner_ui.setup(hud)
+	
+	synergy_panel_ui = SynergyPanelUI.new()
+	synergy_panel_ui.setup(self, hud)
+	synergy_panel_ui.synergy_hover_started.connect(func(n: String) -> void: synergy_hover_started.emit(n))
+	synergy_panel_ui.synergy_hover_ended.connect(func() -> void: synergy_hover_ended.emit())
+	
+	hud_animator = HUDAnimator.new()
+	hud_animator.setup(self, hud, top_bar, bottom_bar, bench_panel, health_widget, right_bar, toggle_button)
 
 func _setup_start_battle_button() -> void:
 	if start_battle_button != null:
@@ -161,9 +177,7 @@ func update_board_capacity(units_on_board: int, board_limit: int) -> void:
 			board_count_label.text = "NO CAMPO · %d / %d (CHEIO)" % [units_on_board, board_limit]
 			board_count_label.add_theme_color_override("font_color", Color("#cbd5e1"))
 
-
 func update_round_display(current_round: int, in_combat: bool, time_remaining: float, is_pending: bool, round_outcomes: Dictionary = {}) -> void:
-	# Cálculo de estágio no estilo TFT (1-1, 1-2, 1-3, 1-4, 1-5...)
 	var stage_index := floori(float(current_round - 1) / 5.0) + 1
 	var stage_sub := ((current_round - 1) % 5) + 1
 	var stage_text := "%d-%d" % [stage_index, stage_sub]
@@ -172,12 +186,10 @@ func update_round_display(current_round: int, in_combat: bool, time_remaining: f
 		round_label.text = stage_text
 		round_label.tooltip_text = "Estágio %s · Round total: %d" % [stage_text, current_round]
 	
-	# Legado
 	var legacy_round := get_node_or_null("Control/TopBar/LegacyNodes/RoundLabel") as Label
 	if legacy_round:
 		legacy_round.text = "Round: %d" % current_round
 	
-	# Fase
 	if phase_label:
 		if in_combat:
 			phase_label.text = "COMBATE"
@@ -189,7 +201,6 @@ func update_round_display(current_round: int, in_combat: bool, time_remaining: f
 			phase_label.text = "PREP"
 			phase_label.add_theme_color_override("font_color", UIStyle.TEXT_CYAN)
 	
-	# Cronômetro
 	if timer_label:
 		if in_combat:
 			timer_label.text = "%02ds" % ceili(time_remaining)
@@ -201,7 +212,6 @@ func update_round_display(current_round: int, in_combat: bool, time_remaining: f
 			timer_label.text = "PREP"
 			timer_label.add_theme_color_override("font_color", UIStyle.TEXT_GOLD)
 
-	# Botão de iniciar batalha
 	if start_battle_button:
 		if in_combat or is_pending:
 			start_battle_button.visible = false
@@ -213,8 +223,6 @@ func update_round_display(current_round: int, in_combat: bool, time_remaining: f
 			start_battle_button.icon = UIAtlasCatalog.get_icon_texture("sword")
 			start_battle_button.expand_icon = true
 
-	
-	# Marcos de Round (Milestones)
 	if not _milestone_icons.is_empty():
 		var active_step := ((current_round - 1) % 5)
 		for i in _milestone_icons.size():
@@ -222,7 +230,6 @@ func update_round_display(current_round: int, in_combat: bool, time_remaining: f
 			var is_boss := (i == 4)
 			var round_for_step := (stage_index - 1) * 5 + 1 + i
 			if i < active_step:
-				# Passado (concluído) - Verde para vitórias, vermelho para derrotas
 				var won: bool = round_outcomes.get(round_for_step, true)
 				icon.text = ""
 				if is_boss:
@@ -234,7 +241,6 @@ func update_round_display(current_round: int, in_combat: bool, time_remaining: f
 				icon.add_theme_color_override("font_color", col)
 				icon.tooltip_text = "Round %d: %s" % [round_for_step, "Vitória" if won else "Derrota"]
 			elif i == active_step:
-				# Atual (ativo / em destaque)
 				icon.text = ""
 				icon.texture = UIAtlasCatalog.get_icon_texture("skull" if is_boss else "gem_orb")
 				var col := UIStyle.BORDER_CYAN if in_combat else UIStyle.TEXT_GOLD_BRIGHT
@@ -242,7 +248,6 @@ func update_round_display(current_round: int, in_combat: bool, time_remaining: f
 				icon.add_theme_color_override("font_color", col)
 				icon.tooltip_text = "Round %d: Em andamento (%s)" % [round_for_step, "Combate" if in_combat else "Preparação"]
 			else:
-				# Futuro
 				icon.text = ""
 				icon.texture = UIAtlasCatalog.get_icon_texture("skull" if is_boss else "gem_orb")
 				var col := Color(0.35, 0.45, 0.52, 0.45)
@@ -252,12 +257,9 @@ func update_round_display(current_round: int, in_combat: bool, time_remaining: f
 
 func update_player_stats(gold: int, health: int, level: int, xp: int, required_xp: int) -> void:
 	var is_max_level := level >= 9
-	
-	# Atualizar Loja (Ouro e Nível)
 	if shop:
 		shop.update_player_info(gold, level, xp, required_xp, is_max_level)
 	
-	# Atualizar Vida (Canto Inferior Direito)
 	if health_label:
 		health_label.text = "%d" % health
 		if health >= 60:
@@ -279,16 +281,12 @@ func update_player_stats(gold: int, health: int, level: int, xp: int, required_x
 			else:
 				fill_style.bg_color = Color("#e74c3c")
 	
-	# Compatibilidade com referências legadas
 	var leg_gold := get_node_or_null("Control/TopBar/LegacyNodes/GoldLabel") as Label
-	if leg_gold:
-		leg_gold.text = "Ouro: %d" % gold
+	if leg_gold: leg_gold.text = "Ouro: %d" % gold
 	var leg_hp := get_node_or_null("Control/TopBar/LegacyNodes/HealthLabel") as Label
-	if leg_hp:
-		leg_hp.text = "HP: %d" % health
+	if leg_hp: leg_hp.text = "HP: %d" % health
 	var leg_lvl := get_node_or_null("Control/TopBar/LegacyNodes/LevelLabel") as Label
-	if leg_lvl:
-		leg_lvl.text = "Nível %d" % level
+	if leg_lvl: leg_lvl.text = "Nível %d" % level
 
 func update_streak(win_streak: int, loss_streak: int) -> void:
 	if not streak_label:
@@ -302,52 +300,19 @@ func update_streak(win_streak: int, loss_streak: int) -> void:
 		var bonus := _calc_streak_bonus(win_streak)
 		streak_label.text = "%dV (+%dg)" % [win_streak, bonus]
 		streak_label.add_theme_color_override("font_color", Color("#2ecc71"))
-		if streak_icon:
-			streak_icon.texture = UIAtlasCatalog.get_icon_texture("lightning")
-		streak_label.tooltip_text = (
-			"Sequência de Vitórias: %d consecutivas\n" +
-			"Bônus de ouro por round: +%dg (máximo: +3g)\n\n" +
-			"Regras de Economia:\n" +
-			"• Vitória: +2g base + 1..3g por sequência\n" +
-			"  - 1 a 2 vitórias: +1g\n" +
-			"  - 3 a 4 vitórias: +2g\n" +
-			"  - 5+ vitórias: +3g\n" +
-			"• Derrota: +1g base + 1..3g por sequência\n" +
-			"• Empate: Quebra a economia (0g e reseta sequências)\n" +
-			"• Juros: +1g a cada 10g no banco (máx +5g)"
-		) % [win_streak, bonus]
+		if streak_icon: streak_icon.texture = UIAtlasCatalog.get_icon_texture("lightning")
+		streak_label.tooltip_text = "Sequência de Vitórias: %d consecutivas (+%dg)" % [win_streak, bonus]
 	elif loss_streak > 0:
 		var bonus := _calc_streak_bonus(loss_streak)
 		streak_label.text = "%dD (+%dg)" % [loss_streak, bonus]
 		streak_label.add_theme_color_override("font_color", Color("#e74c3c"))
-		if streak_icon:
-			streak_icon.texture = UIAtlasCatalog.get_icon_texture("skull")
-		streak_label.tooltip_text = (
-			"Sequência de Derrotas: %d consecutivas\n" +
-			"Bônus de compensação: +%dg (máximo: +3g)\n\n" +
-			"Regras de Economia:\n" +
-			"• Vitória: +2g base + 1..3g por sequência\n" +
-			"• Derrota: +1g base + 1..3g por sequência\n" +
-			"• Empate: Quebra a economia (0g e reseta sequências)\n" +
-			"• Juros: +1g a cada 10g no banco (máx +5g)"
-		) % [loss_streak, bonus]
+		if streak_icon: streak_icon.texture = UIAtlasCatalog.get_icon_texture("skull")
+		streak_label.tooltip_text = "Sequência de Derrotas: %d consecutivas (+%dg)" % [loss_streak, bonus]
 	else:
 		streak_label.text = "0 STREAK"
 		streak_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8, 1))
-		if streak_icon:
-			streak_icon.texture = UIAtlasCatalog.get_icon_texture("lightning")
-		streak_label.tooltip_text = (
-			"Sequência de Rounds: Nenhuma ativa\n" +
-			"Acumule vitórias ou derrotas seguidas para receber bônus de ouro!\n\n" +
-			"Regras de Economia:\n" +
-			"• Vitória: +2g base + 1..3g por sequência\n" +
-			"  - 1 a 2 vitórias: +1g\n" +
-			"  - 3 a 4 vitórias: +2g\n" +
-			"  - 5+ vitórias: +3g\n" +
-			"• Derrota: +1g base + 1..3g por sequência\n" +
-			"• Empate: Quebra a economia (0g e reseta sequências)\n" +
-			"• Juros: +1g a cada 10g no banco (máx +5g)"
-		)
+		if streak_icon: streak_icon.texture = UIAtlasCatalog.get_icon_texture("lightning")
+		streak_label.tooltip_text = "Sequência de Rounds: Nenhuma ativa"
 
 func _calc_streak_bonus(s: int) -> int:
 	if s >= 5: return 3
@@ -356,121 +321,32 @@ func _calc_streak_bonus(s: int) -> int:
 	return 0
 
 func show_round_resolution_banner(outcome_title: String, earned_gold: int, is_draw: bool, player_won: bool, round_gold: int = 0, streak_gold: int = 0, interest_gold: int = 0) -> void:
-	if not resolution_banner:
-		resolution_banner = get_node_or_null("Control/RoundResolutionBanner")
-	if not resolution_banner:
-		return
-	if not banner_title:
-		banner_title = get_node_or_null("Control/RoundResolutionBanner/Content/VBox/BannerTitle") as Label
-	if not banner_detail:
-		banner_detail = get_node_or_null("Control/RoundResolutionBanner/Content/VBox/BannerDetail") as Label
-	if not banner_icon:
-		banner_icon = get_node_or_null("Control/RoundResolutionBanner/Content/BannerIcon") as TextureRect
-	
-	if banner_icon:
-		banner_icon.texture = UIAtlasCatalog.get_icon_texture("coin")
-	
-	if is_draw:
-		banner_title.text = "EMPATE! +0 OURO"
-		banner_title.add_theme_color_override("font_color", Color("#91c9d8"))
-		banner_detail.text = "Empate quebrou a sequência · 0g juros"
-	elif player_won:
-		banner_title.text = "VITÓRIA! +%d OURO" % earned_gold
-		banner_title.add_theme_color_override("font_color", Color("#2ecc71"))
-		banner_detail.text = "+%dg round · +%dg sequência · +%dg juros" % [round_gold, streak_gold, interest_gold]
-	else:
-		banner_title.text = "DERROTA! +%d OURO" % earned_gold
-		banner_title.add_theme_color_override("font_color", Color("#e74c3c"))
-		banner_detail.text = "+%dg round · +%dg sequência · +%dg juros" % [round_gold, streak_gold, interest_gold]
-	
-	resolution_banner.show()
-	resolution_banner.modulate.a = 0.0
-	if _banner_tween and _banner_tween.is_running():
-		_banner_tween.kill()
-	_banner_tween = create_tween()
-	_banner_tween.tween_property(resolution_banner, "modulate:a", 1.0, 0.22)
-	_banner_tween.tween_interval(1.8)
-	_banner_tween.tween_property(resolution_banner, "modulate:a", 0.0, 0.3)
-	_banner_tween.tween_callback(resolution_banner.hide)
+	if round_banner_ui:
+		round_banner_ui.show_banner(earned_gold, is_draw, player_won, round_gold, streak_gold, interest_gold)
 
 func toggle_hud() -> void:
-	hud_visible = not hud_visible
-	if not hud_visible and is_instance_valid(synergy_tooltip):
-		synergy_tooltip.hide()
-	toggle_button.text = "HUD" if hud_visible else "+ UI"
-	toggle_button.tooltip_text = "Ocultar interface (H)" if hud_visible else "Mostrar interface (H)"
-	_play_hud_transition(hud_visible)
-	hud_visibility_changed.emit(hud_visible)
+	if hud_animator:
+		var is_vis: bool = hud_animator.toggle_hud(func() -> void:
+			if synergy_panel_ui: synergy_panel_ui.hide_tooltip()
+		)
+		hud_visibility_changed.emit(is_vis)
 
 func _cache_panel_positions() -> void:
-	visible_positions[top_bar] = top_bar.position
-	visible_positions[bottom_bar] = bottom_bar.position
-	visible_positions[bench_panel] = bench_panel.position
-	if health_widget:
-		visible_positions[health_widget] = health_widget.position
-	visible_positions[right_bar] = right_bar.position
+	if hud_animator:
+		hud_animator.cache_panel_positions()
 
 func _play_hud_transition(show_hud: bool, initial: bool = false) -> void:
-	if hud_tween and hud_tween.is_running():
-		hud_tween.kill()
-
-	if show_hud:
-		hud.show()
-		if initial:
-			hud.modulate.a = 0.0
-			_set_hidden_positions()
-	else:
-		hud.show()
-
-	hud_tween = create_tween()
-	hud_tween.set_parallel(true)
-	hud_tween.set_trans(Tween.TRANS_CUBIC)
-	hud_tween.set_ease(Tween.EASE_OUT if show_hud else Tween.EASE_IN)
-	hud_tween.tween_property(hud, "modulate:a", 1.0 if show_hud else 0.0, 0.26)
-	
-	var animated_panels := [top_bar, bottom_bar]
-	if health_widget:
-		animated_panels.append(health_widget)
-	
-	for panel in animated_panels:
-		var destination: Vector2 = visible_positions.get(panel, panel.position)
-		if not show_hud:
-			destination = _hidden_position(panel)
-		hud_tween.tween_property(panel, "position", destination, 0.3)
-
-	if right_bar.visible:
-		var right_destination: Vector2 = visible_positions[right_bar]
-		if not show_hud:
-			right_destination = _hidden_position(right_bar)
-		hud_tween.tween_property(right_bar, "position", right_destination, 0.3)
-
-	if not show_hud:
-		hud_tween.set_parallel(false)
-		hud_tween.tween_callback(hud.hide)
+	if hud_animator:
+		hud_animator.play_hud_transition(show_hud, initial)
 
 func _set_hidden_positions() -> void:
-	top_bar.position = _hidden_position(top_bar)
-	for panel in [bottom_bar]:
-		panel.position = _hidden_position(panel)
-	if health_widget:
-		health_widget.position = _hidden_position(health_widget)
-	if right_bar.visible:
-		right_bar.position = _hidden_position(right_bar)
-
-func _hidden_position(panel: Control) -> Vector2:
-	var destination: Vector2 = visible_positions.get(panel, panel.position)
-	if panel == top_bar:
-		destination.y = - panel.size.y - 20.0
-	elif panel == right_bar or panel == health_widget:
-		destination.x = get_viewport().get_visible_rect().size.x + 20.0
-	else:
-		destination.y = get_viewport().get_visible_rect().size.y + 20.0
-	return destination
+	if hud_animator:
+		hud_animator.set_hidden_positions()
 
 func _apply_button_skins() -> void:
-	synergy_button = hud.get_node_or_null("SynergyToggleButton") as Button
-	if synergy_button:
-		UIStyle.apply_button_skin(synergy_button, UIStyle.BORDER_GOLD)
+	var btn := hud.get_node_or_null("SynergyToggleButton") as Button
+	if btn:
+		UIStyle.apply_button_skin(btn, UIStyle.BORDER_GOLD)
 
 func get_sell_zone() -> Control:
 	return sell_zone
@@ -480,286 +356,20 @@ func set_sell_zone_visible(p_visible: bool) -> void:
 		sell_zone.visible = p_visible
 
 func update_synergies(synergies: Array) -> void:
-	_last_player_synergies = synergies.duplicate()
-	var active_count := 0
-	var ordered := synergies.duplicate()
-	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if bool(a.get("active", false)) != bool(b.get("active", false)):
-			return bool(a.get("active", false))
-		var a_progress := float(a.count) / maxf(float(a.threshold), 1.0)
-		var b_progress := float(b.count) / maxf(float(b.threshold), 1.0)
-		if not is_equal_approx(a_progress, b_progress):
-			return a_progress > b_progress
-		return str(a.name) < str(b.name)
-	)
-	for synergy in ordered:
-		if synergy.get("active", false):
-			active_count += 1
-	if is_instance_valid(synergy_button):
-		synergy_button.text = "Sinergias · %d" % active_count
-	if not is_instance_valid(synergy_list) or (not is_instance_valid(synergy_row_active_template) and not is_instance_valid(synergy_row_inactive_template)):
-		return
-	if is_instance_valid(synergy_tooltip):
-		synergy_tooltip.hide()
-	for row in spawned_synergy_rows:
-		if is_instance_valid(row):
-			row.queue_free()
-	spawned_synergy_rows.clear()
-	
-	for synergy in ordered:
-		var is_active: bool = synergy.get("active", false)
-		var template := synergy_row_active_template if is_active else synergy_row_inactive_template
-		if not is_instance_valid(template):
-			template = synergy_row_inactive_template if is_active else synergy_row_active_template
-		if not is_instance_valid(template):
-			continue
-		var row := template.duplicate() as PanelContainer
-		row.custom_minimum_size.y = 44
-		var icon_node := row.get_node_or_null("Row/Icon")
-		if icon_node:
-			icon_node.hide()
-		row.name = "Synergy_%s_%s" % [str(synergy.category).replace(" ", ""), str(synergy.name).replace(" ", "_")]
-		row.show()
-		var title := row.get_node_or_null("Row/Content/Header/TagLabel") as Label
-		var progress_text := row.get_node_or_null("Row/Content/Header/CountLabel") as Label
-		var progress := row.get_node_or_null("Row/Content/Progress") as ProgressBar
-		if title:
-			title.text = str(synergy.name)
-			title.add_theme_font_size_override("font_size", 14)
-			title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		if progress_text:
-			progress_text.add_theme_font_size_override("font_size", 13)
-			var stacks: int = int(synergy.get("stacks", 0))
-			var max_stacks: int = int(synergy.get("max_stacks", 0))
-			if max_stacks > 0:
-				progress_text.text = "%d/%d [%d/%dst]" % [synergy.count, synergy.threshold, stacks, max_stacks]
-			else:
-				progress_text.text = "%d/%d" % [synergy.count, synergy.threshold]
-		if progress:
-			progress.max_value = maxi(int(synergy.threshold), 1)
-			progress.value = mini(int(synergy.count), int(synergy.threshold))
-		
-		# Tooltip padrao desabilitado para usar exclusivamente o SynergyTooltip estilizado
-		row.tooltip_text = ""
-		row.mouse_filter = Control.MOUSE_FILTER_STOP
-		row.mouse_entered.connect(_on_synergy_row_hover_started.bind(synergy, row))
-		row.mouse_exited.connect(_on_synergy_row_hover_ended)
-		
-		synergy_list.add_child(row)
-		spawned_synergy_rows.append(row)
-	_fit_synergy_height.call_deferred()
-
-func _fit_synergy_height() -> void:
-	if synergy_panel:
-		var metrics := ResponsiveLayout.battle_metrics(get_viewport().get_visible_rect().size)
-		var available := maxf(float(metrics["bench_top"]) - synergy_panel.position.y - 8.0, 68.0)
-		synergy_panel.size.y = clampf(spawned_synergy_rows.size() * 50.0 + 16.0, 68.0, minf(440.0, available))
-
-func _bind_synergy_panel() -> void:
-	synergy_button = hud.get_node_or_null("SynergyToggleButton") as Button
-	synergy_panel = hud.get_node_or_null("SynergyPanel") as Control
-	synergy_list = hud.get_node_or_null("SynergyPanel/ScrollContainer/SynergyList") as VBoxContainer
-	synergy_row_active_template = synergy_list.get_node_or_null("SynergyRowTemplateActive") as PanelContainer if synergy_list else null
-	synergy_row_inactive_template = synergy_list.get_node_or_null("SynergyRowTemplateInactive") as PanelContainer if synergy_list else null
-	_ensure_synergy_tooltip()
-	if synergy_button and synergy_panel and not synergy_button.pressed.is_connected(_toggle_synergy_panel):
-		synergy_button.pressed.connect(_toggle_synergy_panel)
-	update_synergies([])
-
-func _toggle_synergy_panel() -> void:
-	if is_instance_valid(synergy_tooltip):
-		synergy_tooltip.hide()
-	if is_instance_valid(synergy_panel):
-		synergy_panel.visible = not synergy_panel.visible
-
-func _ensure_synergy_tooltip() -> void:
-	if not is_instance_valid(synergy_tooltip) and is_instance_valid(hud):
-		synergy_tooltip = hud.get_node_or_null("SynergyTooltip") as PanelContainer
-	if not is_instance_valid(synergy_tooltip) and is_instance_valid(hud):
-		synergy_tooltip = PanelContainer.new()
-		synergy_tooltip.name = "SynergyTooltip"
-		synergy_tooltip.z_index = 10
-		synergy_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var style := UIStyle.make_panel_style(UIStyle.BORDER_GOLD)
-		style.shadow_color = Color(0, 0, 0, 0.5)
-		style.shadow_size = 8
-		synergy_tooltip.add_theme_stylebox_override("panel", style)
-		
-		var vbox := VBoxContainer.new()
-		vbox.name = "VBoxContainer"
-		vbox.add_theme_constant_override("separation", 4)
-		vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		synergy_tooltip.add_child(vbox)
-		
-		var t_title := RichTextLabel.new()
-		t_title.name = "Tooltip_title"
-		t_title.bbcode_enabled = true
-		t_title.fit_content = true
-		t_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		t_title.add_theme_font_size_override("normal_font_size", 14)
-		vbox.add_child(t_title)
-		
-		var t_status := RichTextLabel.new()
-		t_status.name = "Tooltip_status"
-		t_status.bbcode_enabled = true
-		t_status.fit_content = true
-		t_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		t_status.add_theme_font_size_override("normal_font_size", 12)
-		vbox.add_child(t_status)
-		
-		var t_desc := RichTextLabel.new()
-		t_desc.name = "Tooltip_desc"
-		t_desc.bbcode_enabled = true
-		t_desc.fit_content = true
-		t_desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		t_desc.add_theme_font_size_override("normal_font_size", 12)
-		vbox.add_child(t_desc)
-		
-		var t_units := RichTextLabel.new()
-		t_units.name = "Tooltip_units"
-		t_units.bbcode_enabled = true
-		t_units.fit_content = true
-		t_units.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		t_units.add_theme_font_size_override("normal_font_size", 11)
-		vbox.add_child(t_units)
-		
-		hud.add_child(synergy_tooltip)
-	if is_instance_valid(synergy_tooltip):
-		synergy_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_prepare_synergy_tooltip_layout()
-		synergy_tooltip.hide()
-
-func _prepare_synergy_tooltip_layout(target_width: float = 300.0) -> void:
-	if not is_instance_valid(synergy_tooltip):
-		return
-	var viewport_size := get_viewport().get_visible_rect().size
-	var target_w := clampf(target_width, 240.0, maxf(viewport_size.x - 30.0, 240.0))
-	var inner_w := maxf(target_w - 24.0, 100.0)
-	synergy_tooltip.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	synergy_tooltip.custom_minimum_size = Vector2(target_w, 0.0)
-	synergy_tooltip.size = Vector2(target_w, 0.0)
-	var vbox := synergy_tooltip.get_node_or_null("VBoxContainer") as VBoxContainer
-	if vbox:
-		vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		vbox.custom_minimum_size = Vector2(inner_w, 0.0)
-		vbox.size = Vector2(inner_w, 0.0)
-		for child in vbox.get_children():
-			if child is Control:
-				child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				child.custom_minimum_size = Vector2(inner_w, 0.0)
-				child.size = Vector2(inner_w, 0.0)
-				if child is RichTextLabel:
-					child.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-					child.fit_content = true
-		vbox.reset_size()
-	synergy_tooltip.reset_size()
+	if synergy_panel_ui:
+		synergy_panel_ui.update_synergies(synergies)
 
 func _on_synergy_row_hover_started(synergy: Dictionary, row: Control) -> void:
-	_ensure_synergy_tooltip()
-	if not is_instance_valid(synergy_tooltip):
-		return
-	_prepare_synergy_tooltip_layout()
-	_update_synergy_tooltip_content(synergy)
-	_prepare_synergy_tooltip_layout()
-	var panel_global: Vector2 = synergy_panel.global_position if is_instance_valid(synergy_panel) else row.global_position
-	var panel_width: float = synergy_panel.size.x if is_instance_valid(synergy_panel) else row.size.x
-	_synergy_tooltip_origin = Vector2(panel_global.x + panel_width + 12.0, row.global_position.y)
-	_fit_synergy_tooltip(true)
-	synergy_tooltip.show()
-	_fit_synergy_tooltip.call_deferred()
-	synergy_hover_started.emit(str(synergy.get("name", "")))
+	if synergy_panel_ui:
+		synergy_panel_ui._on_synergy_row_hover_started(synergy, row)
 
 func _on_synergy_row_hover_ended() -> void:
-	if is_instance_valid(synergy_tooltip):
-		synergy_tooltip.hide()
-	synergy_hover_ended.emit()
+	if synergy_panel_ui:
+		synergy_panel_ui._on_synergy_row_hover_ended()
 
-func _fit_synergy_tooltip(force: bool = false) -> void:
-	if not is_instance_valid(synergy_tooltip):
-		return
-	if not force and not synergy_tooltip.visible:
-		return
-	var viewport_size := get_viewport().get_visible_rect().size
-	_prepare_synergy_tooltip_layout()
-	ResponsiveLayout.clamp_popup(synergy_tooltip, _synergy_tooltip_origin, viewport_size)
-
-func _update_synergy_tooltip_content(synergy: Dictionary) -> void:
-	if not is_instance_valid(synergy_tooltip):
-		return
-	var vbox := synergy_tooltip.get_node_or_null("VBoxContainer")
-	if not vbox:
-		return
-	var title_lbl := vbox.get_node_or_null("Tooltip_title") as RichTextLabel
-	var status_lbl := vbox.get_node_or_null("Tooltip_status") as RichTextLabel
-	var desc_lbl := vbox.get_node_or_null("Tooltip_desc") as RichTextLabel
-	var units_lbl := vbox.get_node_or_null("Tooltip_units") as RichTextLabel
-
-	var is_active: bool = synergy.get("active", false)
-	var count: int = int(synergy.get("count", 0))
-	var threshold: int = int(synergy.get("threshold", 1))
-	var cat_color := "#74e6f5" if str(synergy.get("category", "")) == "Origem" else "#ffd16b"
-	var tag_name: String = str(synergy.get("name", "Sinergia"))
-
-	if title_lbl:
-		title_lbl.text = "[b][color=#f5da80]%s[/color][/b] [color=%s]· %s[/color]" % [
-			tag_name,
-			cat_color,
-			str(synergy.get("category", "Sinergia"))
-		]
-
-	if status_lbl:
-		var status_text: String
-		if is_active:
-			status_text = "[color=#2ecc71]Ativa[/color] [color=#c5ddff](%d/%d)[/color]" % [count, threshold]
-		else:
-			var needed := maxi(threshold - count, 0)
-			status_text = "[color=#e74c3c]Inativa[/color] [color=#8fa3b0](faltam %d peça%s · %d/%d)[/color]" % [
-				needed, "s" if needed > 1 else "", count, threshold
-			]
-		var thresholds: Array = synergy.get("thresholds", [])
-		if not thresholds.is_empty():
-			var milestones_parts: Array[String] = []
-			for t in thresholds:
-				var t_val := int(t)
-				if count >= t_val:
-					milestones_parts.append("[b][color=#2ecc71](%d)[/color][/b]" % t_val)
-				else:
-					milestones_parts.append("[color=#5e7585]%d[/color]" % t_val)
-			status_text += "  ·  [color=#8fa3b0]Marcos:[/color] %s" % " -> ".join(milestones_parts)
-		status_lbl.text = status_text
-
-	if desc_lbl:
-		var rule := SynergySystem.get_rule_for_tag(tag_name)
-		var text_lines: Array[String] = []
-		if not rule.is_empty() and rule.has("effects"):
-			var rule_thresholds: Array = rule.get("thresholds", [])
-			var rule_effects: Array = rule.get("effects", [])
-			for i in rule_thresholds.size():
-				var t_val := int(rule_thresholds[i])
-				var eff_text := str(rule_effects[i].get("text", "")) if i < rule_effects.size() else ""
-				if count >= t_val:
-					text_lines.append("[b][color=#2ecc71](%d) %s[/color][/b]" % [t_val, eff_text])
-				else:
-					text_lines.append("[color=#94a3b8](%d) %s[/color]" % [t_val, eff_text])
-		else:
-			var desc: String = str(synergy.get("description", ""))
-			text_lines.append(desc if not desc.is_empty() else "Nenhum bônus adicional.")
-
-		var stacks: int = int(synergy.get("stacks", 0))
-		var max_stacks: int = int(synergy.get("max_stacks", 0))
-		if max_stacks > 0:
-			text_lines.append("[color=#ffd16b]Acúmulos Atuais:[/color] [b]%d / %d[/b] [color=#94a3b8](limite máximo)[/color]" % [stacks, max_stacks])
-
-		desc_lbl.text = "[color=#ffd32a]Efeitos e Bônus:[/color]\n%s" % "\n".join(text_lines)
-
-	if units_lbl:
-		var units: Array = synergy.get("units", [])
-		if not units.is_empty():
-			units_lbl.text = "[color=#74e6f5]Integrantes (%d):[/color] %s\n[color=#5e7585][i]Cada campeão único no tabuleiro conta 1 vez.[/i][/color]" % [
-				units.size(), ", ".join(units)
-			]
-		else:
-			units_lbl.text = "[color=#5e7585][i]Cada campeão único no tabuleiro conta 1 vez.[/i][/color]"
+func _fit_synergy_height() -> void:
+	if synergy_panel_ui:
+		synergy_panel_ui.fit_height()
 
 func _build_sell_zone() -> void:
 	sell_zone = PanelContainer.new()
@@ -794,8 +404,8 @@ func _make_info_label(text: String, font_size: int, color: Color) -> Label:
 func _layout_extra_panels() -> void:
 	if not is_instance_valid(hud) or not _responsive_ready:
 		return
-	if hud_tween and hud_tween.is_running():
-		hud_tween.kill()
+	if hud_animator and hud_animator.hud_tween and hud_animator.hud_tween.is_running():
+		hud_animator.hud_tween.kill()
 	if _inspector_tween and _inspector_tween.is_running():
 		_inspector_tween.kill()
 	
@@ -803,7 +413,6 @@ func _layout_extra_panels() -> void:
 	var metrics := ResponsiveLayout.battle_metrics(viewport_size)
 	var compact: bool = metrics["compact"]
 	
-	# 1. TopBar Centralizado (TFT)
 	var top_w := minf(640.0, viewport_size.x - 40.0)
 	ResponsiveLayout.place(top_bar, Rect2((viewport_size.x - top_w) * 0.5, 12.0, top_w, 56.0))
 	
@@ -811,23 +420,15 @@ func _layout_extra_panels() -> void:
 		var banner_w := minf(340.0, viewport_size.x - 40.0)
 		ResponsiveLayout.place(resolution_banner, Rect2((viewport_size.x - banner_w) * 0.5, 74.0, banner_w, 54.0))
 	
-	## 2. Informações sob o TopBar (No Campo & Região)
-	#ResponsiveLayout.place(board_count_label, Rect2((viewport_size.x - 260.0) * 0.5, 72.0, 260.0, 22.0))
-	#ResponsiveLayout.place(region_label, Rect2((viewport_size.x - 400.0) * 0.5, 94.0, 400.0, 20.0))
-	#if region_label:
-		#region_label.clip_text = true
-		#region_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	
-	# 3. Sinergias (Lateral Esquerda)
-	ResponsiveLayout.place(synergy_button, Rect2(14.0, 12.0, 140.0, 36.0))
-	var synergy_top := 54.0
-	ResponsiveLayout.place(synergy_panel, Rect2(14.0, synergy_top, 240.0, 70.0))
-	if compact != _compact_layout:
-		synergy_panel.visible = not compact
+	if is_instance_valid(synergy_button):
+		ResponsiveLayout.place(synergy_button, Rect2(14.0, 12.0, 140.0, 36.0))
+	if is_instance_valid(synergy_panel):
+		ResponsiveLayout.place(synergy_panel, Rect2(14.0, 54.0, 240.0, 70.0))
+		if compact != _compact_layout:
+			synergy_panel.visible = not compact
 	_compact_layout = compact
 	_fit_synergy_height()
 	
-	# 4. HUD e Pausa (Topo Direito)
 	ResponsiveLayout.place(toggle_button, Rect2(viewport_size.x - 68.0, 12.0, 54.0, 36.0))
 	var pause := get_node_or_null("PauseButton") as Button
 	if pause:
@@ -835,12 +436,10 @@ func _layout_extra_panels() -> void:
 		ResponsiveLayout.place(pause, Rect2(viewport_size.x - 180.0, 12.0, 106.0, 36.0))
 		UIStyle.apply_button_skin(pause, UIStyle.BORDER_SLATE)
 	
-	# 5. Banco de Unidades 2D oculto (usando agora o banco 3D no modelo)
 	if bench_panel:
 		bench_panel.visible = false
 		bench_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
-	# 6. Loja (Barra Inferior) com respiro nas bordas
 	var bar_margin_x := 18.0 if not compact else 8.0
 	var bar_margin_bottom := 10.0
 	var shop_h: float = metrics["shop_height"]
@@ -848,7 +447,6 @@ func _layout_extra_panels() -> void:
 	var bar_w := viewport_size.x - (bar_margin_x * 2.0)
 	ResponsiveLayout.place(bottom_bar, Rect2(bar_margin_x, shop_top, bar_w, shop_h))
 	
-	# Layout interno da barra inferior
 	var controls := bottom_bar.get_node_or_null("ControlsContainer") as Control
 	var gold_cont := bottom_bar.get_node_or_null("GoldContainer") as Control
 	var shop_btn := bottom_bar.get_node_or_null("ShopLabel") as Control
@@ -857,22 +455,16 @@ func _layout_extra_panels() -> void:
 		lock_btn = controls.get_node_or_null("LockButton") as Button
 	
 	var controls_w := 216.0
-	if controls:
-		ResponsiveLayout.place(controls, Rect2(16.0, 46.0, controls_w, shop_h - 54.0))
-	if gold_cont:
-		ResponsiveLayout.place(gold_cont, Rect2(16.0, 10.0, 104.0, 32.0))
-	if lock_btn:
-		ResponsiveLayout.place(lock_btn, Rect2(126.0, 10.0, 106.0, 32.0))
-	if shop_btn:
-		ResponsiveLayout.place(shop_btn, Rect2(bar_w - 78.0, shop_h - 40.0, 68.0, 30.0))
+	if controls: ResponsiveLayout.place(controls, Rect2(16.0, 46.0, controls_w, shop_h - 54.0))
+	if gold_cont: ResponsiveLayout.place(gold_cont, Rect2(16.0, 10.0, 104.0, 32.0))
+	if lock_btn: ResponsiveLayout.place(lock_btn, Rect2(126.0, 10.0, 106.0, 32.0))
+	if shop_btn: ResponsiveLayout.place(shop_btn, Rect2(bar_w - 78.0, shop_h - 40.0, 68.0, 30.0))
 	
 	var shop_left := controls_w + 26.0 if not compact else 14.0
 	var shop_right_margin := 88.0 if not compact else 14.0
 	var shop_w := maxf(480.0, bar_w - shop_left - shop_right_margin)
-	if shop:
-		shop.fit_shop(Rect2(shop_left, 8.0, shop_w, shop_h - 16.0))
+	if shop: shop.fit_shop(Rect2(shop_left, 8.0, shop_w, shop_h - 16.0))
 	
-	# 7. Vida (HP - Canto Inferior Direito sobre a barra da loja)
 	if health_widget:
 		var hp_w := 160.0
 		var hp_h := 54.0
@@ -880,11 +472,9 @@ func _layout_extra_panels() -> void:
 		var hp_y := shop_top - hp_h - 12.0
 		ResponsiveLayout.place(health_widget, Rect2(hp_x, hp_y, hp_w, hp_h))
 	
-	# 8. Zona de Venda (Sobre a loja durante arraste)
 	if is_instance_valid(sell_zone):
 		ResponsiveLayout.place(sell_zone, Rect2((viewport_size.x - 280.0) * 0.5, shop_top - 68.0, 280.0, 56.0))
 	
-	# 9. Inspetor Lateral
 	var inspector_w := minf(310.0, viewport_size.x - 20.0)
 	ResponsiveLayout.place(right_bar, Rect2(viewport_size.x - inspector_w - 10.0, 70.0, inspector_w, maxf(shop_top - 80.0, 100.0)))
 	var close_btn := right_bar.get_node_or_null("CloseButton") as Button
@@ -906,8 +496,7 @@ func _setup_inspector() -> void:
 	right_bar.add_theme_stylebox_override("panel", panel_style)
 	
 	var frame := right_bar.get_node_or_null("PanelFrame") as CanvasItem
-	if frame:
-		frame.visible = false
+	if frame: frame.visible = false
 	var vbox := right_bar.find_child("VBoxContainer", true, false) as Control
 	if vbox:
 		vbox.grow_vertical = Control.GROW_DIRECTION_END
@@ -960,63 +549,12 @@ func _setup_inspector() -> void:
 		classes_lbl.meta_hover_ended.connect(_on_inspector_meta_hover_ended)
 
 func _on_inspector_meta_hover_started(meta: Variant, source_label: Control) -> void:
-	var tag_name := str(meta)
-	var rule := SynergySystem.get_rule_for_tag(tag_name)
-	if rule.is_empty():
-		return
-	
-	_ensure_synergy_tooltip()
-	if not is_instance_valid(synergy_tooltip):
-		return
-	
-	var current_syn := _find_player_synergy_by_name(tag_name)
-	var count := int(current_syn.get("count", 0))
-	var tier_index := -1
-	for i in rule.thresholds.size():
-		if count >= int(rule.thresholds[i]):
-			tier_index = i
-	var display_tier := maxi(tier_index, 0)
-	var effect: Dictionary = rule.effects[display_tier] if display_tier < rule.effects.size() else rule.effects[0]
-	var next_threshold := int(rule.thresholds.back())
-	for threshold in rule.thresholds:
-		if count < int(threshold):
-			next_threshold = int(threshold)
-			break
-	
-	var syn_data := {
-		"name": tag_name,
-		"category": "Origem" if str(rule.get("field", "")) == "origins" else "Classe",
-		"count": count,
-		"threshold": next_threshold,
-		"thresholds": rule.thresholds.duplicate(),
-		"active": tier_index >= 0,
-		"description": effect.text,
-		"units": current_syn.get("units", []),
-		"stacks": current_syn.get("stacks", 0),
-		"max_stacks": int(rule.get("max_stacks", 0)),
-	}
-	_prepare_synergy_tooltip_layout()
-	_update_synergy_tooltip_content(syn_data)
-	_prepare_synergy_tooltip_layout()
-	
-	var panel_global: Vector2 = right_bar.global_position if is_instance_valid(right_bar) else source_label.global_position
-	_synergy_tooltip_origin = Vector2(panel_global.x - 315.0, source_label.global_position.y)
-	_fit_synergy_tooltip(true)
-	synergy_tooltip.show()
-	_fit_synergy_tooltip.call_deferred()
-	
-	synergy_hover_started.emit(tag_name)
+	if synergy_panel_ui:
+		synergy_panel_ui.show_inspector_tooltip(str(meta), source_label, right_bar)
 
 func _on_inspector_meta_hover_ended(_meta: Variant = null) -> void:
-	if is_instance_valid(synergy_tooltip):
-		synergy_tooltip.hide()
-	synergy_hover_ended.emit()
-
-func _find_player_synergy_by_name(tag_name: String) -> Dictionary:
-	for syn in _last_player_synergies:
-		if str(syn.get("name", "")) == tag_name:
-			return syn
-	return {}
+	if synergy_panel_ui:
+		synergy_panel_ui.hide_tooltip()
 
 func show_inspector() -> void:
 	if not right_bar:
@@ -1033,9 +571,8 @@ func show_inspector() -> void:
 	_inspector_tween.tween_property(right_bar, "position", destination, 0.25)
 
 func hide_inspector(immediate: bool = false) -> void:
-	if is_instance_valid(synergy_tooltip):
-		synergy_tooltip.hide()
-	synergy_hover_ended.emit()
+	if synergy_panel_ui:
+		synergy_panel_ui.hide_tooltip()
 	if not right_bar or not right_bar.visible:
 		return
 	if _inspector_tween and _inspector_tween.is_running():

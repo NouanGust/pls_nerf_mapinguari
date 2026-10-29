@@ -5,6 +5,9 @@
 
 [resource]
 script = ExtResource("1_stats")
+cost = 1
+tier = 1
+combat_role = "Suporte"
 unit_name = "Sabiá Laranjeira"
 unit_id = "sabia_laranjeira"
 description = "Pássaro de canto mavioso; bica com rapidez incansável, aumentando o dano com a sequência de ataques."
@@ -17,13 +20,21 @@ magic_resist = 15.0
 movement_speed = 190.0
 can_fly = true
 max_mana = 70.0
-origins = Array[String](["Mata Atlântica"])
-classes = Array[String](["Caçador"])
+origins = Array[String](["Vozes", "Encanto"])
+classes = Array[String]([])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Mata Atlântica"])
 ability_name = "Bicada Veloz"
 ability_description = "Pássaro de canto mavioso; bica com rapidez incansável, aumentando o dano com a sequência de ataques."
-ability_damage = 95.0
+ability_damage = 0.0
 ability_duration = 4.0
 ability_damage_type = 0
 prefers_backline = true
+
+is_tank = false
+is_assassin = false
+is_ranged = false
+passive_aura_range = 1
+passive_aura_effect = "power"
+passive_aura_power = 0.12
+attack_range = 1

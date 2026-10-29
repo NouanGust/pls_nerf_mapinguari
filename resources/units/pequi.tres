@@ -5,6 +5,9 @@
 
 [resource]
 script = ExtResource("1_stats")
+cost = 1
+tier = 1
+combat_role = "Suporte"
 unit_name = "Pequi"
 unit_id = "pequi"
 description = "Fruto emblemático do Cerrado; arremessa sementes repletas de espinhos arcanos que explodem no alvo."
@@ -12,19 +15,26 @@ icon = ExtResource("1_uw4xo")
 max_health = 460.0
 attack_damage = 32.0
 attack_speed = 0.85
-attack_range = 4
+attack_range = 1
 armor = 15.0
 magic_resist = 20.0
 movement_speed = 0.0
 is_stationary = true
 max_mana = 75.0
 mana_per_second = 3.0
-origins = Array[String](["Cerrado"])
-classes = Array[String](["Místico"])
+origins = Array[String](["Seiva", "Vigília"])
+classes = Array[String]([])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Cerrado"])
 ability_name = "Semente Espinhosa"
 ability_description = "Fruto emblemático do Cerrado; arremessa sementes repletas de espinhos arcanos que explodem no alvo."
-ability_damage = 120.0
-is_ranged = true
+ability_damage = 0.0
+is_ranged = false
 prefers_backline = true
+
+is_tank = false
+is_assassin = false
+passive_aura_range = 1
+passive_aura_effect = "defense"
+passive_aura_power = 12.0
+ability_heal = 110.0

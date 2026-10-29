@@ -108,9 +108,11 @@ const ROLE_PORRADEIRO: String = "Porradeiro"
 @export var ability_mana: float = 0.0
 @export var ability_targets: int = 1
 @export var ability_duration: float = 0.0
-@export var ability_cooldown: float = 0.0
 @export var ability_range: float = 0.0
+@export var ability_cooldown: float = 0.0
 @export var ability_damage_type: DamageType = DamageType.MAGICAL
+@export var ability_kind: String = ""
+@export var ability_params: Dictionary = {}
 
 ## ============================================
 ## COMPORTAMENTO DE IA
@@ -160,11 +162,11 @@ func get_tier_color() -> Color:
 func is_valid() -> bool:
 	if unit_name.is_empty() or unit_id.is_empty():
 		return false
-	if origins.size() != 1 or classes.is_empty() or classes.size() > 2:
+	if origins.size() != 2:
 		return false
-	if origins[0].is_empty() or classes[0].is_empty():
+	if origins[0].is_empty() or origins[1].is_empty() or origins[0] == origins[1]:
 		return false
-	return classes.size() == 1 or (not classes[1].is_empty() and classes[0] != classes[1])
+	return not get_combat_role().is_empty()
 
 func has_origin(origin_name: String) -> bool:
 	return origins.has(origin_name)
@@ -173,8 +175,7 @@ func has_class(class_label: String) -> bool:
 	return classes.has(class_label)
 
 func get_attack_range_hexes() -> int:
-	# A classe também protege cadastros futuros com flag de IA inconsistente.
-	return 1 if is_tank or has_class("Tank") else maxi(attack_range, 1)
+	return 1 if is_tank or is_tank_role() or has_class("Tank") else maxi(attack_range, 1)
 
 func has_affinity(affinity_name: String) -> bool:
 	return affinities.has(affinity_name)
@@ -186,7 +187,7 @@ func get_combat_role() -> String:
 		return ROLE_TANK
 	if is_assassin:
 		return ROLE_ASSASSINO
-	if has_class("Suporte"):
+	if has_class("Suporte") or passive_aura_range > 0:
 		return ROLE_SUPORTE
 	if has_class("DPS") or has_class("Caçador"):
 		return ROLE_ATACANTE
@@ -232,94 +233,137 @@ func is_porradeiro_role() -> bool:
 func get_mechanics_description(current_star: int = 1) -> String:
 	match unit_id:
 		"aguape":
-			return "Emana aguas purificadas e medicinais, curando todos os aliados adjacentes a cada conjuracao."
+			return "Aura adjacente cura aliados continuamente; a habilidade potencializa a regeneracao por 4s."
 		"alamoa":
-			return "Seduz e hipnotiza o alvo com seu fulgor insular, causando alto dano magico e atordoando o inimigo por 2.0s."
+			return "Concentra um clarao insular em area apos aviso breve, desferindo alto dano magico concentrado."
 		"anhanga":
-			return "Solta um rugido aterrorizante da floresta que atordoa todos os inimigos na vanguarda por 2.0s."
+			return "Recebe escudo protetor e provoca inimigos proximos, atraindo a atencao para sua carapaca."
 		"arara_azul_lear":
-			return "Alca voo rapido e fustiga o alvo a distancia com penas perfurantes, causando dano fisico e acelerando seus proprios ataques."
+			return "Ataques consecutivos acumulam cadencia; a habilidade concede surto imediato de velocidade de ataque."
 		"ararinha_azul":
-			return "Entoa um canto sagrado da Caatinga que restaura vida a todos os aliados vivos no campo de batalha."
+			return "Aura adjacente concede resistencia a controle; a habilidade distribui escudos nos aliados da aura."
 		"araucaria":
-			return "Ergue uma colossal copa protetora milenar, concedendo um escudo massivo a todos os aliados adjacentes."
+			return "Endurece o tronco anciao recebendo escudo e enraiza inimigos proximos, impedindo movimento."
 		"boiuna":
-			return "Invoca um diluvio flamejante que varre o campo adversario, causando dano magico a inimigos e curando a si mesma."
+			return "Invoca uma onda sombria que varre a linha inimiga causando grande dano magico."
 		"brinco_de_princesa":
-			return "Desabrocha flores aromaticas suaves que revitalizam aliados proximos, restaurando vida a cada conjuracao."
+			return "Acumula essencia floral e detona petalas misticas em pequena area com dano magico."
 		"bromelia":
-			return "Libera o orvalho sagrado retido em sua roseta, curando aliados adjacentes e concedendo mana."
+			return "Aura adjacente melhora cura recebida; a habilidade distribui agua curativa e escudos na area."
 		"caapora":
-			return "Dispara uma flecha perfurante de energia magica em linha reta, atravessando todos os inimigos no caminho."
+			return "Disparos sucessivos acumulam dano de ataque; a habilidade acelera sua sequencia ofensiva."
 		"cabeca_de_cuia":
-			return "Lanca seu braco espectral arrastando o inimigo mais distante para a sua frente e desferindo um golpe de dano magico."
+			return "Puxa o inimigo distante para a sua frente e desfere golpes com roubo de vida e resistencia temporaria."
 		"capivara":
-			return "Mergulha na margem e renova um escudo de aguas calmas que absorve dano por 4.0s."
+			return "Assume postura defensiva serena, recebendo escudo e interrompendo brevemente inimigos ao redor."
 		"caranguejo_uca":
-			return "Trava pincas e fecha a carapaca solida, causando dano fisico ao alvo e ganhando um escudo de protecao."
+			return "Fecha a carapaca solida, prendendo um inimigo proximo e ganhando grande reforco de defesa."
 		"comadre_fulozinha":
-			return "Chicoteia os inimigos com urtigas misticas da mata, causando dano magico em area e aplicando lentidao."
+			return "Assobio cortante causa dano magico em area e desacelera os inimigos atingidos."
 		"corpo_seco":
-			return "Crava garras murchas no alvo, drenando vida continuamente e causando dano magico."
+			return "Ataques acumulam vigor ofensivo; a habilidade potencializa o proprio ataque e velocidade."
 		"cumacanga":
-			return "Salta em chamas pelos ceus e explode no alvo mais fragil, causando dano magico em area aos inimigos."
+			return "Arremessa a cabeca em chamas numa area, causando explosao de dano magico concentrado."
 		"guarana":
-			return "Concede infusao de vigor e cafeina pura, acelerando a velocidade de ataque e concedendo mana aos aliados adjacentes."
+			return "Aura adjacente concede velocidade de ataque aos aliados; a habilidade dobra o beneficio por 4s."
 		"ipe_amarelo":
-			return "Floresce em ouro sob a pressao do combate, erguendo uma couraca de escudo resistente por 4.0s."
+			return "Explosao de flores douradas causa dano magico em area apos breve canalizacao."
 		"jararaca":
-			return "Da um bote furtivo pelas sombras da serapilheira sobre o inimigo mais vulneravel, desferindo dano fisico letal."
+			return "Salta furtivamente sobre o inimigo mais vulneravel, desferindo mordida venenosa de alto dano fisico."
 		"labatut":
-			return "Entra em frenesi brutal desferindo golpes vorazes, curando-se e aumentando seu poder de ataque."
+			return "Entra em combate cerrado brutal, aumentando seu proprio ataque e defesa enquanto golpeia."
 		"lobo_guara":
-			return "Solta um uivo que ecoa pelo Cerrado, restaurando vida e inspirando velocidade e chance critica a alcateia."
+			return "Acumula velocidade de ataque a cada disparo consecutivo; a habilidade acelera sua sequencia letal."
 		"mae_dagua":
-			return "Entoa um canto irresistivel das mares, banhando todos os aliados em cura milagrosa e restaurando mana."
+			return "Aura adjacente regenera vida continua; a habilidade protege os aliados na aura com escudo protetor."
 		"mae_de_ouro":
-			return "Conjura relampagos dourados ancestrais que atingem inimigos causando dano magico e curando aliados."
+			return "Concentra brilho mitico e detona relampagos dourados em area, causando alto dano magico."
 		"mandacaru":
-			return "Ergue uma barreira de espinhos defensivos, ganhando escudo proprio e refletindo dano a quem ataca-lo."
+			return "Endurece a estrutura espinhosa, ganhando escudo proprio e reduzindo dano recebido."
 		"mapinguari":
-			return "Entra em furia primordial estrondosa, ganhando velocidade de ataque extrema e desferindo golpes de dano magico em area."
+			return "Desfere golpes brutais continuos, aumentando o proprio ataque e recuperando vida por ataque."
 		"matinta_perera":
-			return "Transforma-se em passaro sombrio e mergulha na presa mais vulneravel com um assobio cortante, causando alto dano magico."
+			return "Mergulha em voo rasante sobre o alvo vulneravel com um assobio cortante de alto dano magico."
 		"mboi_guacu":
-			return "Envolve o alvo em constricao de fogo, prendendo o inimigo e causando dano magico continuo por queimadura."
+			return "Fortalece o corpo imenso e desfere mordidas flamejantes que queimam o alvo."
 		"minhocao":
-			return "Gera um violento terremoto subterraneo que arremessa e atordoa os inimigos na vanguarda por 1.8s e causa dano magico."
+			return "Abala o solo com tremor violento, arremessando e atordoando inimigos da vanguarda e ganhando defesa."
 		"mutum_de_alagoas":
-			return "Abre suas asas sagradas protegendo o campo, curando aliados e concedendo escudo protetor."
+			return "Dispara projeteis de penas sucessivas acumulando cadencia; a habilidade amplifica ataque e velocidade."
 		"onca_pintada":
-			return "Executa uma emboscada letal pelas costas da presa com menor vida, causando dano fisico critico massivo."
+			return "Emboscada pelas sombras sobre a presa mais fragil, desferindo dano fisico critico massivo."
 		"palmito_jucara":
-			return "Distribui frutos sagrados e seiva revigorante, curando aliados e acelerando sua barra de mana."
+			return "Dispara sementes em cadencia constante; a habilidade acelera o ataque e velocidade dos disparos."
 		"papa_figo":
-			return "Aplica um toque gelido sinistro, drenando vida do alvo e transferindo cura aos aliados feridos."
+			return "Aura adjacente reduz o poder de ataque dos inimigos; a habilidade intensifica o enfraquecimento."
 		"pau_brasil":
-			return "Desaba seu cerne rubro macico contra a vanguarda inimiga, causando dano fisico esmagador e atordoando alvos proximos."
+			return "Golpes pesados de cerne rubro; a habilidade endurece o tronco e aumenta o proprio ataque."
 		"pe_de_garrafa":
-			return "Gira em um salto circular assobiando e desaba sobre o alvo mais fragil, causando dano fisico devastador."
+			return "Persegue o alvo vulneravel e desfere pisao circular devastador com dano fisico explosivo."
 		"pequi":
-			return "Arremessa frutos espinhosos do Cerrado que explodem em estilhacos no impacto, perfurando a linha de frente inimiga."
+			return "Aura adjacente concede armadura e resistencia aos aliados; a habilidade restaura vida aos aliados da aura."
 		"pisadeira":
-			return "Cai pesadamente sobre o peito da vitima mais fragil, paralisando-a por 2.5s e causando dano fisico esmagador."
+			return "Cai pesadamente sobre o alvo mais fragil, causando dano fisico esmagador e breve paralisia."
 		"quibungo":
-			return "Abre a bocarra nas costas e morde violentamente o alvo atual, causando dano fisico e engolindo-o temporariamente."
+			return "Bocarra nas costas morde vorazmente o alvo, concedendo roubo de vida e aumento de ataque."
 		"romaozinho":
-			return "Teletransporta-se pelas sombras em travessura caotica, causando dano magico a inimigos e restaurando grande quantidade de vida."
+			return "Marca o inimigo mais vulneravel pelas sombras e explode a marca com dano de habilidade."
 		"sabia_laranjeira":
-			return "Desfere uma rajada rapida e implacavel de bicadas, causando dano fisico e aumentando sua velocidade de ataque."
+			return "Canto melodioso em aura adjacente aumenta ataque dos aliados; a habilidade intensifica o efeito."
 		"sumauma":
-			return "Finte raizes gigantescas no solo que retem inimigos por 2.0s, concedendo escudo e cura a aliados."
+			return "Fixa raizes ancestrais no chao, prendendo inimigos proximos e recebendo um escudo massivo."
 		"tamandua_bandeira":
-			return "Desfere golpes brutais com suas garras curvadas, causando dano fisico e quebrando 40% da armadura do alvo."
+			return "Golpes pesados de garras curvadas; a habilidade fortalece o proprio ataque e defesa."
 		"tatu_bola":
-			return "Enrola-se em uma esfera defensiva impenetravel, recebendo um escudo proprio que absorve dano por 4.0s."
+			return "Enrola-se em esfera blindada recebendo escudo e interrompendo o inimigo mais proximo."
 		"teiniagua":
-			return "Canaliza e arremessa uma esfera magica de fogo arcano que explode no alvo, causando dano magico concentrado."
+			return "Canaliza brilho mistico e arremessa esfera ardente causando dano magico concentrado."
 		"tutu_maramba":
-			return "Exibe sua carapaca sombria de bicho-papao amedrontando os inimigos ao redor, reduzindo dano recebido em 40% e absorvendo impactos."
+			return "Assusta e amedronta inimigos proximos, reduzindo dano sofrido e ampliando a propria carapaca."
 		"vitoria_regia":
-			return "Abre sua gigantesca folha circular emanando uma aura de aguas puras que restaura vida a aliados adjacentes."
+			return "Aura adjacente concede escudos periodicos a aliados; a habilidade renova e fortalece a protecao."
+		"anta_bondosa":
+			return "Aura adjacente regenera vida continua; a habilidade socorre aliados proximos com cura imediata."
+		"bebe_diabo":
+			return "Grito estridente de aparicao causa dano magico em pequena area aos adversarios."
+		"boi_misterioso":
+			return "Chifradas pesadas e avanco rustico; a habilidade amplia o proprio ataque e defesas na vanguarda."
+		"boitata":
+			return "Sinaliza uma faixa de fogo que percorre o campo adversario causando grande dano magico e queimadura."
+		"boto_encantado":
+			return "Aura adjacente reduz dano sofrido por aliados; a habilidade concede escudos protetores na area."
+		"caboclo_dagua":
+			return "Invoca uma onda curta que interrompe inimigos proximos e concede couraca de defesa propria."
+		"cabra_cabriola":
+			return "Cabecadas implacaveis; a habilidade amplia seu proprio ataque e resistencia em luta proxima."
+		"capelobo":
+			return "Garras vorazes e presenca imponente; a habilidade concede frenesi de ataque e tenacidade."
+		"capeta_vilarinho":
+			return "Aura de danca acelera velocidade de ataque de aliados; a habilidade amplia o bonus e atrasa inimigos."
+		"chupa_cabra":
+			return "Bote predatorio contra a presa vulneravel causando alto dano e recuperando vida propria."
+		"curupira":
+			return "Aura de pegadas invertidas causa lentidao a inimigos; a habilidade concede resistencia a controle aos aliados."
+		"ipupiara":
+			return "Golpes pesados das aguas; a habilidade amplia o dano de ataque e concede carapaca temporaria."
+		"joao_galafuz":
+			return "Clarao maritimo que explode apos breve aviso, causando dano magico em area."
+		"lobisomem_sertao":
+			return "Transformacao sob a lua sertaneja que aumenta ataque, defesas e recuperacao por golpes."
+		"loira_banheiro":
+			return "Espelho espectral que explode em estilhas magicos em area apos breve aviso."
+		"loira_bonfim":
+			return "Encontro subito contra alvo vulneravel, desferindo golpe rapido de alto dano concentrado."
+		"maozao":
+			return "Palmada espectral macica desorienta inimigos proximos com lentidao e concede armadura propria."
+		"num_se_pode":
+			return "Cresce em estatura sombria, aumentando vida efetiva com escudo e interrompendo inimigos ao redor."
+		"pai_do_mato":
+			return "Rugido da mata fechada que atrai e provoca inimigos proximos enquanto amplia defesas."
+		"perna_cabeluda":
+			return "Sequencia veloz de chutes sucessivos; a habilidade aumenta ainda mais a cadencia e dano de ataque."
+		"saci_perere":
+			return "Aura de redemoinho reduz velocidade de ataque adversaria; a habilidade fortalece a mobilidade da equipe."
 		_:
 			return ability_description if ability_description != "" else description
+

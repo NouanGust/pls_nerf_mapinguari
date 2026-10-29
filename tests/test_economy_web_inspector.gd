@@ -82,16 +82,18 @@ func _run() -> void:
 	assert(main.win_streak == 1, "Win streak deve ser 1")
 	print("  ✓ Ganho de round com bônus base, sequência e juros verificado com sucesso!")
 
-	print("\n[TESTE 4] Verificando que empate quebra a economia (reseta streaks e dá 0 gold):")
+	print("\n[TESTE 4] Verificando que empate quebra a sequência de streak e concede ouro com juros:")
 	main.win_streak = 4
 	main.loss_streak = 0
 	var gold_before_draw: int = main.player_gold
+	var expected_interest: int = main.calculate_interest(gold_before_draw)
+	var expected_draw_earned: int = main.gold_on_draw + expected_interest
 	main.combat_active = true
 	main.end_combat(false, true, "Empate Forçado", true)
 	assert(main.win_streak == 0, "Empate deve resetar win_streak para 0")
 	assert(main.loss_streak == 0, "Empate deve manter loss_streak em 0")
-	assert(main.player_gold == gold_before_draw, "Empate não deve render gold nem juros. Esperado %d, atual %d" % [gold_before_draw, main.player_gold])
-	print("  ✓ Empate quebra a economia com sucesso (0 gold, 0 juros, streaks zeradas)!")
+	assert(main.player_gold == gold_before_draw + expected_draw_earned, "Empate deve render gold_on_draw (%d) + juros (%d). Esperado %d, atual %d" % [main.gold_on_draw, expected_interest, gold_before_draw + expected_draw_earned, main.player_gold])
+	print("  ✓ Empate verificado com sucesso (+%d ouro, streaks zeradas)!" % expected_draw_earned)
 
 	# [TESTE 5] Shader de unidade possuída na loja
 	for i in 10:

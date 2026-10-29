@@ -22,3 +22,5 @@ Build/
 
 # Configurações de agentes / IDE locais
 .agents/
+scratch/
+

@@ -1,5 +1,7 @@
 extends Node3D
 
+const UnitInspectorPanel = preload("res://Scripts/UI/unit_inspector_panel.gd")
+
 const Progression = preload("res://Scripts/Systems/level_progression.gd")
 const Regions = preload("res://Scripts/Systems/region_rosters.gd")
 const CampaignStore = preload("res://Scripts/Systems/campaign_store.gd")
@@ -13,13 +15,34 @@ var _combat_generation: int = 0
 
 var entry_transition: BattleTransition
 var _entry_in_progress: bool = false
-var _overlay: GameOverlay
+const CampaignSession = preload("res://Scripts/Systems/campaign_session.gd")
+var campaign_session: CampaignSession = CampaignSession.new()
+
+var _overlay: GameOverlay:
+	get: return campaign_session.overlay if campaign_session else null
+	set(val):
+		if campaign_session: campaign_session.overlay = val
 var _run_ready: bool = false
-var _save_pending: bool = false
-var _leaving: bool = false
-var _load_failed: bool = false
-var _campaign_state: String = "active"
-var _save_warning: Label
+var _save_pending: bool:
+	get: return campaign_session.save_pending if campaign_session else false
+	set(val):
+		if campaign_session: campaign_session.save_pending = val
+var _leaving: bool:
+	get: return campaign_session.leaving if campaign_session else false
+	set(val):
+		if campaign_session: campaign_session.leaving = val
+var _load_failed: bool:
+	get: return campaign_session.load_failed if campaign_session else false
+	set(val):
+		if campaign_session: campaign_session.load_failed = val
+var _campaign_state: String:
+	get: return campaign_session.campaign_state if campaign_session else "active"
+	set(val):
+		if campaign_session: campaign_session.campaign_state = val
+var _save_warning: Label:
+	get: return campaign_session.save_warning if campaign_session else null
+	set(val):
+		if campaign_session: campaign_session.save_warning = val
 
 @export_enum("cerrado", "pantanal", "amazonia", "caatinga", "mata_atlantica", "litoral") var region_id: String = "cerrado"
 var enemy_level: int = 1
@@ -40,7 +63,44 @@ var synergy_system: SynergySystem
 
 
 ## Estado do jogador
-var player_gold: int = 3
+var _player_gold_fallback: int = 3
+var _win_streak_fallback: int = 0
+var _loss_streak_fallback: int = 0
+var _economy_cached: Node = null
+
+var economy: Node:
+	get:
+		if not is_instance_valid(_economy_cached):
+			_economy_cached = get_node_or_null("/root/EconomyManager")
+		return _economy_cached
+
+var player_gold: int:
+	get:
+		return economy.player_gold if is_instance_valid(economy) else _player_gold_fallback
+	set(val):
+		if is_instance_valid(economy):
+			economy.set_gold(val)
+		else:
+			_player_gold_fallback = val
+
+var win_streak: int:
+	get:
+		return economy.win_streak if is_instance_valid(economy) else _win_streak_fallback
+	set(val):
+		if is_instance_valid(economy):
+			economy.win_streak = val
+		else:
+			_win_streak_fallback = val
+
+var loss_streak: int:
+	get:
+		return economy.loss_streak if is_instance_valid(economy) else _loss_streak_fallback
+	set(val):
+		if is_instance_valid(economy):
+			economy.loss_streak = val
+		else:
+			_loss_streak_fallback = val
+
 var player_health: int = 100
 var player_level: int = 1
 var player_xp: int = 0
@@ -49,10 +109,20 @@ var combat_active: bool = false
 var round_resolution_pending: bool = false
 
 ## Unidades do jogador
-var bench_units: Array[BaseUnit3D] = []  # Reserva
-var max_bench_size: int = 9
+const BenchManager = preload("res://Scripts/Systems/bench_manager.gd")
+var bench_manager: BenchManager = BenchManager.new()
+var bench_units: Array[BaseUnit3D]:
+	get: return bench_manager.bench_units
+	set(val): bench_manager.bench_units = val
+var max_bench_size: int:
+	get: return bench_manager.max_bench_size
+	set(val): bench_manager.max_bench_size = val
 var dragging_unit: BaseUnit3D = null
-var combat_report_entries: Dictionary = {}
+const CombatCoordinator = preload("res://Scripts/Systems/combat_coordinator.gd")
+var combat_coordinator: CombatCoordinator = CombatCoordinator.new()
+var combat_report_entries: Dictionary:
+	get: return combat_coordinator.combat_report_entries
+	set(val): combat_coordinator.combat_report_entries = val
 var active_synergies: Dictionary = {}
 var battle_time_remaining: float = 0.0
 var cutscene_in_progress: bool = false
@@ -71,7 +141,7 @@ func _process(delta: float) -> void:
 
 @export var gold_on_win: int = 2
 @export var gold_on_loss: int = 1
-@export var gold_on_draw: int = 0
+@export var gold_on_draw: int = 1
 @export var round_transition_seconds: float = 2.5
 @export var battle_duration_seconds: float = 60.0
 @export_range(1.0, 10.0, 0.25) var stationary_stalemate_seconds: float = 3.0
@@ -80,22 +150,24 @@ func _process(delta: float) -> void:
 @export var max_loss_streak_bonus: int = 3
 
 func calculate_streak_bonus(streak: int) -> int:
-	if streak >= 5:
-		return 3
-	elif streak >= 3:
-		return 2
-	elif streak >= 1:
-		return 1
+	if is_instance_valid(economy):
+		return economy.calculate_streak_bonus(streak)
+	if streak >= 5: return 3
+	elif streak >= 3: return 2
+	elif streak >= 1: return 1
 	return 0
 
-func calculate_interest(gold: int) -> int:
-	return clampi(int(gold / 10), 0, 5)
+func calculate_interest(gold: int = -1) -> int:
+	if is_instance_valid(economy):
+		return economy.calculate_interest(gold)
+	var g := player_gold if gold < 0 else gold
+	return clampi(int(g / 10), 0, 5)
 
-var win_streak: int = 0
-var loss_streak: int = 0
 var round_outcomes: Dictionary = {}
 
 func _ready() -> void:
+	campaign_session.setup(self)
+	combat_coordinator.setup(self)
 	get_tree().auto_accept_quit = false
 	if is_instance_valid(entry_transition):
 		_entry_in_progress = true
@@ -524,103 +596,15 @@ func _on_unit_purchased(unit_stats: UnitStats, cost: int) -> void:
 	print("%s comprado por %dg!" % [unit_stats.unit_name, cost])
 
 func add_unit_to_bench(unit: BaseUnit3D) -> bool:
-	if not unit: return false
-	
-	if bench_units.size() >= max_bench_size:
-		return false
-	
-	if board.get_unit_at(unit.board_position) == unit:
-		board.remove_unit(unit.board_position)
-		
-	if not bench_units.has(unit):
-		bench_units.append(unit)
-	unit.visible = true
-	unit.team = 0
-	unit.debug_movement = false
-	unit.use_navigation = false
-	unit.rotation.y = 0.0
-	unit.set_hovered(false)
-	unit._update_status_visibility()
-	_realign_bench_units()
-	
-	print("%s enviado para o banco (%d/%d)" % [unit.stats.unit_name, bench_units.size(), max_bench_size])
-	return true
+	return bench_manager.add_unit(unit, board)
 
 func _realign_bench_units(animate: bool = true) -> void:
-	for i in bench_units.size():
-		var u: BaseUnit3D = bench_units[i]
-		if not is_instance_valid(u):
-			continue
-		u.visible = true
-		u.team = 0
-		u.board_position = Vector2i(i, -1)
-		u.rotation.y = 0.0
-		u._update_status_visibility()
-		var target_pos := board.get_bench_slot_world_position(i)
-		if animate and is_inside_tree():
-			var tween := create_tween()
-			tween.set_ease(Tween.EASE_OUT)
-			tween.set_trans(Tween.TRANS_QUAD)
-			tween.tween_property(u, "global_position", target_pos, 0.25)
-		else:
-			u.global_position = target_pos
+	bench_manager.realign_units(board, animate)
 
 func _resolve_unit_merges() -> void:
-	# Recalcula as cópias na preparação: vender uma reserva pode desfazer o trio.
 	if combat_active or round_resolution_pending:
 		return
-	while true:
-		var copies_by_key: Dictionary = {}
-		var owned_units: Array[BaseUnit3D] = []
-		owned_units.append_array(bench_units)
-		for unit in board.get_all_units():
-			if unit is BaseUnit3D and unit not in owned_units:
-				owned_units.append(unit)
-		for unit in owned_units:
-			if unit.team != 0 or unit.current_state == BaseUnit3D.State.DEAD or unit.star_level >= 4:
-				continue
-			var key := "%s:%d" % [unit.stats.unit_id, unit.star_level]
-			if not copies_by_key.has(key):
-				copies_by_key[key] = []
-			copies_by_key[key].append(unit)
-
-		var merge_copies: Array = []
-		for key in copies_by_key:
-			if copies_by_key[key].size() >= 3:
-				merge_copies = copies_by_key[key]
-				break
-		if merge_copies.is_empty():
-			break
-
-		merge_copies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
-			return board.get_unit_at(a.board_position) == a and board.get_unit_at(b.board_position) != b
-		)
-		var consumed: Array = merge_copies.slice(0, 3)
-		var old_star: int = consumed[0].star_level
-		var survivor: BaseUnit3D = consumed[0]
-		for candidate in consumed:
-			if board.get_unit_at(candidate.board_position) == candidate:
-				survivor = candidate
-				break
-		var total_invested := 0
-		for unit in consumed:
-			total_invested += unit.invested_gold
-			if unit == survivor:
-				continue
-			if bench_units.has(unit):
-				bench_units.erase(unit)
-			if board.get_unit_at(unit.board_position) == unit:
-				board.remove_unit(unit.board_position)
-			unit.queue_free()
-		survivor.invested_gold = total_invested
-		survivor.promote_to_star(old_star + 1)
-		if survivor.star_level == 2:
-			AudioManager.play_2_star_up()
-		elif survivor.star_level >= 3:
-			AudioManager.play_3_star_up()
-		print("%s evoluiu para %d estrelas" % [survivor.stats.unit_name, survivor.star_level])
-
-	_realign_bench_units()
+	bench_manager.resolve_merges(board)
 	_update_shop_exclusions()
 	_refresh_synergies()
 
@@ -785,41 +769,9 @@ func spawn_and_place(unit_id: String, grid_pos: Vector2i, stars: int, team_id: i
 		print("Failed to spawn: %s" % unit_id)
 	return null
 func _auto_deploy_bench_units() -> void:
-	if not board or bench_units.is_empty():
-		return
-	var free_slots := get_board_unit_limit() - get_player_units_on_board_count()
-	if free_slots <= 0:
-		return
-	
-	var free_cells: Array[Vector2i] = []
-	for row in range(board.rows - 1, board.rows - board.player_rows - 1, -1):
-		for col in range(board.columns):
-			var cell := Vector2i(col, row)
-			if not board.is_cell_occupied(cell):
-				free_cells.append(cell)
-	
-	var deployed_count := 0
-	while deployed_count < free_slots and not bench_units.is_empty() and not free_cells.is_empty():
-		var unit: BaseUnit3D = bench_units.pop_front()
-		if not is_instance_valid(unit):
-			continue
-		var target_cell: Vector2i = free_cells.pop_front()
-		unit.visible = true
-		unit.team = 0
-		unit.use_navigation = true
-		if not unit.is_in_group("player_units"):
-			unit.add_to_group("player_units")
-		if board.place_unit(unit, target_cell, true):
-			unit.board_position = target_cell
-			deployed_count += 1
-		else:
-			bench_units.push_front(unit)
-			break
-	
-	if deployed_count > 0:
-		_realign_bench_units(false)
-		_resolve_unit_merges()
-		update_ui()
+	bench_manager.auto_deploy(board, get_board_unit_limit(), get_player_units_on_board_count())
+	_resolve_unit_merges()
+	update_ui()
 
 func is_boss_round() -> bool:
 	if current_round % 5 == 0:
@@ -991,91 +943,16 @@ func start_combat() -> void:
 	check_combat_end()
 
 func _capture_combat_roster(units: Array) -> void:
-	combat_report_entries.clear()
-	for candidate in units:
-		if not (candidate is BaseUnit3D):
-			continue
-		var unit: BaseUnit3D = candidate
-		if not unit.visible or unit.current_state == BaseUnit3D.State.DEAD:
-			continue
-		var instance_id := unit.get_instance_id()
-		combat_report_entries[instance_id] = {
-			"name": unit.stats.unit_name,
-			"team": unit.team,
-			"icon": unit.stats.icon,
-			"damage_dealt": 0.0,
-			"healing_done": 0.0,
-			"damage_received": 0.0,
-		}
-		if not unit.combat_metric_recorded.is_connected(_on_combat_metric_recorded):
-			unit.combat_metric_recorded.connect(_on_combat_metric_recorded)
+	combat_coordinator.capture_roster(units)
 
 func _on_combat_metric_recorded(unit: BaseUnit3D, metric: StringName, amount: float) -> void:
-	if not is_instance_valid(unit):
-		return
-	var instance_id := unit.get_instance_id()
-	if not combat_report_entries.has(instance_id):
-		return
-	var entry: Dictionary = combat_report_entries[instance_id]
-	entry[metric] = float(entry.get(metric, 0.0)) + amount
-	combat_report_entries[instance_id] = entry
+	combat_coordinator.on_metric_recorded(unit, metric, amount)
 
 func check_combat_end() -> void:
-	var generation := _combat_generation
-	var deadline_msec := BattleClock.now_msec() + int(maxf(battle_duration_seconds, 1.0) * 1000.0)
-	var stalemate_since_msec: int = -1
-	while combat_active:
-		await get_tree().create_timer(0.25, false).timeout
-		if not combat_active or generation != _combat_generation:
-			return
-		battle_time_remaining = maxf(float(deadline_msec - BattleClock.now_msec()) / 1000.0, 0.0)
-		_update_round_label()
-		
-		var player_units: Array = []
-		var enemy_units: Array = []
-		for unit in board.get_all_units():
-			if not (unit is BaseUnit3D) or unit.current_state == BaseUnit3D.State.DEAD:
-				continue
-			if unit.team == 0:
-				player_units.append(unit)
-			else:
-				enemy_units.append(unit)
-		
-		if player_units.is_empty() and enemy_units.is_empty():
-			end_combat(false, true)
-			return
-		if player_units.is_empty() or enemy_units.is_empty():
-			end_combat(player_units.size() > 0)
-			return
-		if battle_time_remaining <= 0.0:
-			end_combat(false, true)
-			return
-		if _is_stationary_stalemate(player_units, enemy_units):
-			if stalemate_since_msec < 0:
-				stalemate_since_msec = BattleClock.now_msec()
-			elif BattleClock.now_msec() - stalemate_since_msec >= int(stationary_stalemate_seconds * 1000.0):
-				end_combat(false, true, "Unidades imóveis sem alcance entre os times")
-				return
-		else:
-			stalemate_since_msec = -1
+	combat_coordinator.monitor_combat_loop(battle_duration_seconds, stationary_stalemate_seconds)
 
 func _is_stationary_stalemate(player_units: Array, enemy_units: Array) -> bool:
-	if player_units.is_empty() or enemy_units.is_empty():
-		return false
-	# Espera efeitos em andamento e exclui qualquer sobrevivente móvel.
-	# O banco não participa: estas listas vêm apenas das unidades do tabuleiro.
-	for candidate in player_units + enemy_units:
-		var unit := candidate as BaseUnit3D
-		if not unit.stats.is_stationary or unit.has_pending_combat_effects():
-			return false
-	for player_candidate in player_units:
-		var player := player_candidate as BaseUnit3D
-		for enemy_candidate in enemy_units:
-			var enemy := enemy_candidate as BaseUnit3D
-			# Basta um lado alcançar o outro para a luta continuar normalmente.
-			if player.is_target_in_attack_range(enemy) or enemy.is_target_in_attack_range(player):
-				return false
-	return true
+	return combat_coordinator.is_stationary_stalemate(player_units, enemy_units)
 
 func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "", skip_report: bool = false) -> void:
 	if not combat_active:
@@ -1100,6 +977,10 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 		unit.in_combat = false
 		unit._was_stunned = false
 		unit.stunned_until_msec = 0
+		unit.clear_shield()
+	for b_unit in bench_units:
+		if b_unit is BaseUnit3D:
+			b_unit.clear_shield()
 	if drag_handler:
 		drag_handler.cancel_drag()
 		dragging_unit = null
@@ -1110,39 +991,59 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 	var streak_bonus: int = 0
 	var interest: int = 0
 	var outcome_name: String = ""
-	if is_draw:
-		win_streak = 0
-		loss_streak = 0
-		round_gold = gold_on_draw # 0
-		streak_bonus = 0
-		interest = 0 # Empate quebra a economia: 0 de juros e 0 de ouro
-		earned_gold = 0
-		player_health -= 5
-		round_outcomes[current_round] = false
-		outcome_name = "Empate"
-	elif player_won:
-		win_streak += 1
-		loss_streak = 0
-		AudioManager.play_win_streak(win_streak)
-		streak_bonus = calculate_streak_bonus(win_streak)
-		round_gold = gold_on_win
-		interest = calculate_interest(player_gold)
-		earned_gold = round_gold + streak_bonus + interest
-		player_gold += earned_gold
-		round_outcomes[current_round] = true
-		outcome_name = "Vitória"
+
+	if is_instance_valid(economy):
+		var econ_result: Dictionary = economy.resolve_round_economy(player_won, is_draw)
+		earned_gold = econ_result["earned_gold"]
+		round_gold = econ_result["round_gold"]
+		streak_bonus = econ_result["streak_bonus"]
+		interest = econ_result["interest"]
+		outcome_name = econ_result["outcome_name"]
+		if is_draw:
+			player_health -= 5
+			round_outcomes[current_round] = false
+		elif player_won:
+			AudioManager.play_win_streak(win_streak)
+			round_outcomes[current_round] = true
+		else:
+			AudioManager.play_loss_streak(loss_streak)
+			player_health -= 10
+			round_outcomes[current_round] = false
 	else:
-		loss_streak += 1
-		win_streak = 0
-		AudioManager.play_loss_streak(loss_streak)
-		streak_bonus = calculate_streak_bonus(loss_streak)
-		round_gold = gold_on_loss
-		interest = calculate_interest(player_gold)
-		earned_gold = round_gold + streak_bonus + interest
-		player_gold += earned_gold
-		player_health -= 10
-		round_outcomes[current_round] = false
-		outcome_name = "Derrota"
+		if is_draw:
+			win_streak = 0
+			loss_streak = 0
+			round_gold = gold_on_draw
+			streak_bonus = 0
+			interest = calculate_interest(player_gold)
+			earned_gold = round_gold + streak_bonus + interest
+			player_gold += earned_gold
+			player_health -= 5
+			round_outcomes[current_round] = false
+			outcome_name = "Empate"
+		elif player_won:
+			win_streak += 1
+			loss_streak = 0
+			AudioManager.play_win_streak(win_streak)
+			streak_bonus = calculate_streak_bonus(win_streak)
+			round_gold = gold_on_win
+			interest = calculate_interest(player_gold)
+			earned_gold = round_gold + streak_bonus + interest
+			player_gold += earned_gold
+			round_outcomes[current_round] = true
+			outcome_name = "Vitória"
+		else:
+			loss_streak += 1
+			win_streak = 0
+			AudioManager.play_loss_streak(loss_streak)
+			streak_bonus = calculate_streak_bonus(loss_streak)
+			round_gold = gold_on_loss
+			interest = calculate_interest(player_gold)
+			earned_gold = round_gold + streak_bonus + interest
+			player_gold += earned_gold
+			player_health -= 10
+			round_outcomes[current_round] = false
+			outcome_name = "Derrota"
 	# Todo resultado encerra um round, inclusive derrota e empate.
 	current_round += 1
 	_grant_round_xp()
@@ -1186,10 +1087,7 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 	prepare_next_round()
 
 func _get_combat_report_data() -> Array[Dictionary]:
-	var report_data: Array[Dictionary] = []
-	for entry in combat_report_entries.values():
-		report_data.append(entry.duplicate(true))
-	return report_data
+	return combat_coordinator.get_report_data()
 
 func prepare_next_round() -> void:
 	print("preparando round")
@@ -1210,7 +1108,7 @@ func prepare_next_round() -> void:
 			else:
 				unit.current_health = unit.get_max_health()
 				unit.current_mana = unit.stats.starting_mana
-				unit.current_shield = 0.0
+				unit.clear_shield()
 				unit.current_state = BaseUnit3D.State.IDLE
 				unit.current_target = null
 				unit.global_position = home_pos
@@ -1221,6 +1119,10 @@ func prepare_next_round() -> void:
 			board.place_unit(unit, unit.board_position, false)
 			unit.in_combat = false
 			unit.velocity = Vector3.ZERO
+
+	for node in get_tree().get_nodes_in_group("units"):
+		if node is BaseUnit3D:
+			node.clear_shield()
 				
 	# Os sobreviventes já voltaram às casas e os mortos já foram restaurados.
 	# Resolve também evoluções em cadeia antes de sortear a próxima loja.
@@ -1463,684 +1365,6 @@ func inspect_unit_at_mouse(mouse_pos: Vector2) -> void:
 	else:
 		hide_unit_inspector()
 
-func _format_star_trio(v1: Variant, v2: Variant, v3: Variant, active_star: int, suffix: String = "", prefix: String = "") -> String:
-	var s1 := "%s%s%s" % [prefix, str(v1), suffix]
-	var s2 := "%s%s%s" % [prefix, str(v2), suffix]
-	var s3 := "%s%s%s" % [prefix, str(v3), suffix]
-	match active_star:
-		1:
-			s1 = "[b][color=#ffd16b]%s[/color][/b]" % s1
-		2:
-			s2 = "[b][color=#ffd16b]%s[/color][/b]" % s2
-		3, 4:
-			s3 = "[b][color=#ffd16b]%s[/color][/b]" % s3
-	return "%s / %s / %s" % [s1, s2, s3]
-
-func _get_or_create_inspector_label(panel: Node, label_name: String, insert_before_name: String = "") -> RichTextLabel:
-	var lbl = panel.find_child(label_name, true, false) as RichTextLabel
-	if not lbl:
-		var vbox = panel.find_child("VBoxContainer", true, false)
-		if vbox:
-			lbl = RichTextLabel.new()
-			lbl.name = label_name
-			lbl.bbcode_enabled = true
-			lbl.fit_content = true
-			lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			lbl.scroll_active = false
-			if not insert_before_name.is_empty():
-				var target_child = vbox.find_child(insert_before_name, false, false)
-				if target_child:
-					vbox.add_child(lbl)
-					vbox.move_child(lbl, target_child.get_index())
-					return lbl
-			vbox.add_child(lbl)
-	return lbl
-
-func _get_or_create_ability_floating_card(control_parent: Control) -> PanelContainer:
-	if is_instance_valid(_ability_floating_card):
-		return _ability_floating_card
-	
-	var card := PanelContainer.new()
-	card.name = "AbilityFloatingCard"
-	card.top_level = true
-	card.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	card.z_index = 35
-	card.visible = false
-	card.mouse_filter = Control.MOUSE_FILTER_PASS
-	
-	var card_style := StyleBoxFlat.new()
-	card_style.bg_color = Color("#0f172a")
-	card_style.border_color = Color("#8b5cf6")
-	card_style.border_width_left = 2
-	card_style.border_width_top = 2
-	card_style.border_width_right = 2
-	card_style.border_width_bottom = 2
-	card_style.corner_radius_top_left = 8
-	card_style.corner_radius_top_right = 8
-	card_style.corner_radius_bottom_left = 8
-	card_style.corner_radius_bottom_right = 8
-	card_style.content_margin_left = 12
-	card_style.content_margin_top = 10
-	card_style.content_margin_right = 12
-	card_style.content_margin_bottom = 10
-	card_style.shadow_color = Color(0, 0, 0, 0.75)
-	card_style.shadow_size = 12
-	card.add_theme_stylebox_override("panel", card_style)
-	
-	var vbox := VBoxContainer.new()
-	vbox.name = "CardVBox"
-	vbox.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	vbox.add_theme_constant_override("separation", 6)
-	card.add_child(vbox)
-	
-	control_parent.add_child(card)
-	_ability_floating_card = card
-	return card
-
-func _hide_ability_floating_card() -> void:
-	if is_instance_valid(_ability_floating_card):
-		_ability_floating_card.visible = false
-
-func _show_ability_floating_card(unit: BaseUnit3D, panel: Control) -> void:
-	if not is_instance_valid(unit) or not unit.stats or not is_instance_valid(panel):
-		return
-	var card := _get_or_create_ability_floating_card(panel.get_parent() as Control)
-	var vbox := card.get_node("CardVBox") as VBoxContainer
-	for child in vbox.get_children():
-		child.queue_free()
-	
-	var stats := unit.stats
-	var star := clampi(unit.star_level, 1, 4)
-	
-	# 1. Header (Ícone + Nome da Habilidade + Custo de Mana + Tipo de Dano)
-	var header_hbox := HBoxContainer.new()
-	header_hbox.add_theme_constant_override("separation", 10)
-	
-	var icon_rect := TextureRect.new()
-	icon_rect.texture = stats.icon
-	icon_rect.custom_minimum_size = Vector2(34, 34)
-	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	header_hbox.add_child(icon_rect)
-	
-	var title_vbox := VBoxContainer.new()
-	title_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_vbox.add_theme_constant_override("separation", 2)
-	
-	var name_lbl := Label.new()
-	name_lbl.text = stats.ability_name
-	name_lbl.add_theme_font_size_override("font_size", 13)
-	name_lbl.add_theme_color_override("font_color", Color("#f8fafc"))
-	title_vbox.add_child(name_lbl)
-	
-	var badges_hbox := HBoxContainer.new()
-	badges_hbox.add_theme_constant_override("separation", 6)
-	
-	var dmg_type_str := "Mágico"
-	var dmg_color := Color("#c084fc")
-	match stats.ability_damage_type:
-		UnitStats.DamageType.PHYSICAL:
-			dmg_type_str = "Físico"
-			dmg_color = Color("#fb923c")
-		UnitStats.DamageType.MAGICAL:
-			dmg_type_str = "Mágico"
-			dmg_color = Color("#c084fc")
-		UnitStats.DamageType.TRUE:
-			dmg_type_str = "Verdadeiro"
-			dmg_color = Color("#facc15")
-			
-	var type_badge := Label.new()
-	type_badge.text = "[ %s ]" % dmg_type_str
-	type_badge.add_theme_font_size_override("font_size", 10)
-	type_badge.add_theme_color_override("font_color", dmg_color)
-	badges_hbox.add_child(type_badge)
-	
-	if stats.max_mana > 0:
-		var mana_badge := Label.new()
-		mana_badge.text = "%d Mana" % int(stats.max_mana)
-		mana_badge.add_theme_font_size_override("font_size", 10)
-		mana_badge.add_theme_color_override("font_color", Color("#67e8f9"))
-		badges_hbox.add_child(mana_badge)
-		
-	title_vbox.add_child(badges_hbox)
-	header_hbox.add_child(title_vbox)
-	vbox.add_child(header_hbox)
-	
-	# 2. Descrição Mecânica Clara da Habilidade
-	var desc_lbl := RichTextLabel.new()
-	desc_lbl.bbcode_enabled = true
-	desc_lbl.fit_content = true
-	desc_lbl.scroll_active = false
-	desc_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	desc_lbl.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	desc_lbl.text = "[color=#cbd5e1]%s[/color]" % stats.get_mechanics_description(star)
-	desc_lbl.custom_minimum_size = Vector2(256, 0)
-	vbox.add_child(desc_lbl)
-	
-	# 3. Tabela de Escalonamento por Estrela (Scaling)
-	var scaling_box := PanelContainer.new()
-	scaling_box.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	var sc_style := StyleBoxFlat.new()
-	sc_style.bg_color = Color("#1e1b4b66")
-	sc_style.border_color = Color("#6366f1")
-	sc_style.border_width_left = 1
-	sc_style.border_width_top = 1
-	sc_style.border_width_right = 1
-	sc_style.border_width_bottom = 1
-	sc_style.corner_radius_top_left = 6
-	sc_style.corner_radius_top_right = 6
-	sc_style.corner_radius_bottom_left = 6
-	sc_style.corner_radius_bottom_right = 6
-	sc_style.content_margin_left = 8
-	sc_style.content_margin_top = 6
-	sc_style.content_margin_right = 8
-	sc_style.content_margin_bottom = 6
-	scaling_box.add_theme_stylebox_override("panel", sc_style)
-	
-	var sc_vbox := VBoxContainer.new()
-	sc_vbox.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	sc_vbox.add_theme_constant_override("separation", 3)
-	
-	var sc_title := Label.new()
-	sc_title.text = "Escalonamento por Estrela (Verificado):"
-	sc_title.add_theme_font_size_override("font_size", 10)
-	sc_title.add_theme_color_override("font_color", Color("#a5b4fc"))
-	sc_vbox.add_child(sc_title)
-	
-	var sc_lines: Array[String] = []
-	var m1: float = stats.get_star_multiplier(1)
-	var m2: float = stats.get_star_multiplier(2)
-	var m3: float = stats.get_star_multiplier(3)
-	
-	if stats.ability_damage > 0.0:
-		var d1 := int(stats.ability_damage * m1)
-		var d2 := int(stats.ability_damage * m2)
-		var d3 := int(stats.ability_damage * m3)
-		var trio := _format_star_trio(d1, d2, d3, star)
-		sc_lines.append("[color=#94a3b8]Dano Base:[/color] [ %s ]" % trio)
-		
-	if stats.ability_shield > 0.0:
-		var s1 := int(stats.ability_shield * m1)
-		var s2 := int(stats.ability_shield * m2)
-		var s3 := int(stats.ability_shield * m3)
-		var trio := _format_star_trio(s1, s2, s3, star)
-		sc_lines.append("[color=#94a3b8]Escudo:[/color] [ %s ]" % trio)
-		
-	if stats.ability_heal > 0.0:
-		var h1 := int(stats.ability_heal * m1)
-		var h2 := int(stats.ability_heal * m2)
-		var h3 := int(stats.ability_heal * m3)
-		var trio := _format_star_trio(h1, h2, h3, star)
-		sc_lines.append("[color=#94a3b8]Cura:[/color] [ %s ]" % trio)
-		
-	sc_lines.append("[color=#64748b]Multiplicadores: Nivel 1 (x1.0) · Nivel 2 (x1.8) · Nivel 3 (x2.6)[/color]")
-	sc_lines.append("[color=#22c55e][ Escalonamento Ativo ][/color]")
-	
-	var sc_rtl := RichTextLabel.new()
-	sc_rtl.bbcode_enabled = true
-	sc_rtl.fit_content = true
-	sc_rtl.scroll_active = false
-	sc_rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sc_rtl.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	sc_rtl.text = "\n".join(sc_lines)
-	sc_vbox.add_child(sc_rtl)
-	
-	scaling_box.add_child(sc_vbox)
-	vbox.add_child(scaling_box)
-	
-	card.custom_minimum_size = Vector2(280, 0)
-	card.reset_size()
-	
-	var panel_rect: Rect2 = panel.get_global_rect()
-	var tactical_row: Control = panel.find_child("TFT_TacticalRow", true, false) as Control
-	var anchor_y: float = tactical_row.global_position.y if tactical_row else panel_rect.position.y + 120.0
-	var card_x: float = panel_rect.position.x - card.size.x - 12.0
-	var viewport_h: float = get_viewport().get_visible_rect().size.y
-	var max_y: float = maxf(viewport_h - card.size.y - 12.0, 10.0)
-	var card_y: float = clampf(anchor_y - 10.0, 10.0, max_y)
-	card.global_position = Vector2(card_x, card_y)
-	card.show()
-	card.modulate.a = 0.0
-	var tw := card.create_tween()
-	tw.tween_property(card, "modulate:a", 1.0, 0.15)
-
-func _update_tft_inspector(
-	panel: Control,
-	unit: BaseUnit3D,
-	cur_hp: int,
-	max_hp: int,
-	cur_mana: int,
-	max_mana: int,
-	attack_dmg: int,
-	attack_spd: float,
-	dps: int,
-	total_armor: float,
-	phys_reduct: int,
-	total_mr: float,
-	mag_reduct: int
-) -> void:
-	var vbox := panel.find_child("VBoxContainer", true, false) as VBoxContainer
-	if not vbox:
-		return
-	var stats := unit.stats
-	var star := clampi(unit.star_level, 1, 4)
-
-	# 1. BARRAS DE VIDA E MANA (Estilo TFT)
-	var bars_container = vbox.find_child("TFT_BarsContainer", false, false) as VBoxContainer
-	if not bars_container:
-		bars_container = VBoxContainer.new()
-		bars_container.name = "TFT_BarsContainer"
-		bars_container.add_theme_constant_override("separation", 4)
-		vbox.add_child(bars_container)
-		var p_frame = vbox.find_child("PortraitFrame", false, false)
-		if p_frame:
-			vbox.move_child(bars_container, p_frame.get_index() + 1)
-
-	# Barra de Vida
-	var hp_bar = bars_container.find_child("InspectorHpBar", false, false) as ProgressBar
-	var hp_label: Label = null
-	if not hp_bar:
-		hp_bar = ProgressBar.new()
-		hp_bar.name = "InspectorHpBar"
-		hp_bar.custom_minimum_size = Vector2(0, 18)
-		hp_bar.show_percentage = false
-		var hp_bg := StyleBoxFlat.new()
-		hp_bg.bg_color = Color("#052e16")
-		hp_bg.corner_radius_top_left = 3
-		hp_bg.corner_radius_top_right = 3
-		hp_bg.corner_radius_bottom_left = 3
-		hp_bg.corner_radius_bottom_right = 3
-		hp_bar.add_theme_stylebox_override("background", hp_bg)
-		var hp_fill := StyleBoxFlat.new()
-		hp_fill.bg_color = Color("#22c55e")
-		hp_fill.corner_radius_top_left = 3
-		hp_fill.corner_radius_top_right = 3
-		hp_fill.corner_radius_bottom_left = 3
-		hp_fill.corner_radius_bottom_right = 3
-		hp_bar.add_theme_stylebox_override("fill", hp_fill)
-
-		hp_label = Label.new()
-		hp_label.name = "HpTextLabel"
-		hp_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-		hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		hp_label.add_theme_font_size_override("font_size", 11)
-		hp_label.add_theme_color_override("font_color", Color.WHITE)
-		hp_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
-		hp_label.add_theme_constant_override("shadow_offset_x", 1)
-		hp_label.add_theme_constant_override("shadow_offset_y", 1)
-		hp_bar.add_child(hp_label)
-		bars_container.add_child(hp_bar)
-	else:
-		hp_label = hp_bar.find_child("HpTextLabel", false, false) as Label
-
-	# Barra de Escudo (Aparece sob a vida se houver escudo ativo)
-	var shield_bar = bars_container.find_child("InspectorShieldBar", false, false) as ProgressBar
-	var shield_label: Label = null
-	if not shield_bar:
-		shield_bar = ProgressBar.new()
-		shield_bar.name = "InspectorShieldBar"
-		shield_bar.custom_minimum_size = Vector2(0, 14)
-		shield_bar.show_percentage = false
-		var sh_bg := StyleBoxFlat.new()
-		sh_bg.bg_color = Color("#082f49")
-		sh_bg.corner_radius_top_left = 3
-		sh_bg.corner_radius_top_right = 3
-		sh_bg.corner_radius_bottom_left = 3
-		sh_bg.corner_radius_bottom_right = 3
-		shield_bar.add_theme_stylebox_override("background", sh_bg)
-		var sh_fill := StyleBoxFlat.new()
-		sh_fill.bg_color = Color("#06b6d4")
-		sh_fill.corner_radius_top_left = 3
-		sh_fill.corner_radius_top_right = 3
-		sh_fill.corner_radius_bottom_left = 3
-		sh_fill.corner_radius_bottom_right = 3
-		shield_bar.add_theme_stylebox_override("fill", sh_fill)
-
-		shield_label = Label.new()
-		shield_label.name = "ShieldTextLabel"
-		shield_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-		shield_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		shield_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		shield_label.add_theme_font_size_override("font_size", 10)
-		shield_label.add_theme_color_override("font_color", Color("#cffafe"))
-		shield_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
-		shield_label.add_theme_constant_override("shadow_offset_x", 1)
-		shield_label.add_theme_constant_override("shadow_offset_y", 1)
-		shield_bar.add_child(shield_label)
-		bars_container.add_child(shield_bar)
-		bars_container.move_child(shield_bar, hp_bar.get_index() + 1)
-	else:
-		shield_label = shield_bar.find_child("ShieldTextLabel", false, false) as Label
-
-	var cur_shield := maxi(int(unit.current_shield), 0)
-	hp_bar.max_value = maxf(max_hp, 1.0)
-	hp_bar.value = cur_hp
-	if hp_label:
-		var bonus_hp_text := ""
-		if float(unit.synergy_bonuses.get("max_health_pct", 0.0)) > 0.0:
-			bonus_hp_text = " (+%d%%)" % int(float(unit.synergy_bonuses.get("max_health_pct", 0.0)) * 100.0)
-		if cur_shield > 0:
-			hp_label.text = "%d (+%d) / %d%s" % [cur_hp, cur_shield, max_hp, bonus_hp_text]
-		else:
-			hp_label.text = "%d / %d%s" % [cur_hp, max_hp, bonus_hp_text]
-
-	if cur_shield > 0:
-		shield_bar.visible = true
-		shield_bar.max_value = maxf(max_hp, 1.0)
-		shield_bar.value = cur_shield
-		if shield_label:
-			shield_label.text = "Escudo: %d" % cur_shield
-	else:
-		shield_bar.visible = false
-
-	# Barra de Mana
-	var mana_bar = bars_container.find_child("InspectorManaBar", false, false) as ProgressBar
-	var mana_label: Label = null
-	if not mana_bar:
-		mana_bar = ProgressBar.new()
-		mana_bar.name = "InspectorManaBar"
-		mana_bar.custom_minimum_size = Vector2(0, 14)
-		mana_bar.show_percentage = false
-		var mp_bg := StyleBoxFlat.new()
-		mp_bg.bg_color = Color("#082f49")
-		mp_bg.corner_radius_top_left = 3
-		mp_bg.corner_radius_top_right = 3
-		mp_bg.corner_radius_bottom_left = 3
-		mp_bg.corner_radius_bottom_right = 3
-		mana_bar.add_theme_stylebox_override("background", mp_bg)
-		var mp_fill := StyleBoxFlat.new()
-		mp_fill.bg_color = Color("#0284c7")
-		mp_fill.corner_radius_top_left = 3
-		mp_fill.corner_radius_top_right = 3
-		mp_fill.corner_radius_bottom_left = 3
-		mp_fill.corner_radius_bottom_right = 3
-		mana_bar.add_theme_stylebox_override("fill", mp_fill)
-
-		mana_label = Label.new()
-		mana_label.name = "ManaTextLabel"
-		mana_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-		mana_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		mana_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		mana_label.add_theme_font_size_override("font_size", 10)
-		mana_label.add_theme_color_override("font_color", Color.WHITE)
-		mana_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
-		mana_label.add_theme_constant_override("shadow_offset_x", 1)
-		mana_label.add_theme_constant_override("shadow_offset_y", 1)
-		mana_bar.add_child(mana_label)
-		bars_container.add_child(mana_bar)
-	else:
-		mana_label = mana_bar.find_child("ManaTextLabel", false, false) as Label
-
-	mana_bar.max_value = maxf(stats.max_mana, 1.0)
-	mana_bar.value = cur_mana
-	if mana_label:
-		mana_label.text = "%d / %d" % [cur_mana, int(stats.max_mana)]
-
-	# 2. LINHA TÁTICA (Habilidade + Badges de Função e Alcance)
-	var tactical_row = vbox.find_child("TFT_TacticalRow", false, false) as HBoxContainer
-	if not tactical_row:
-		tactical_row = HBoxContainer.new()
-		tactical_row.name = "TFT_TacticalRow"
-		tactical_row.add_theme_constant_override("separation", 8)
-		vbox.add_child(tactical_row)
-		vbox.move_child(tactical_row, bars_container.get_index() + 1)
-
-	# Botão de Habilidade
-	var ability_btn = tactical_row.find_child("AbilityButton", false, false) as Button
-	if not ability_btn:
-		ability_btn = Button.new()
-		ability_btn.name = "AbilityButton"
-		ability_btn.custom_minimum_size = Vector2(44, 44)
-		ability_btn.expand_icon = true
-		ability_btn.icon = stats.icon
-		var btn_style := StyleBoxFlat.new()
-		btn_style.bg_color = Color("#1e1b4b")
-		btn_style.border_color = Color("#a855f7")
-		btn_style.border_width_left = 2
-		btn_style.border_width_top = 2
-		btn_style.border_width_right = 2
-		btn_style.border_width_bottom = 2
-		btn_style.corner_radius_top_left = 6
-		btn_style.corner_radius_top_right = 6
-		btn_style.corner_radius_bottom_left = 6
-		btn_style.corner_radius_bottom_right = 6
-		ability_btn.add_theme_stylebox_override("normal", btn_style)
-		ability_btn.add_theme_stylebox_override("hover", btn_style)
-		ability_btn.add_theme_stylebox_override("pressed", btn_style)
-		tactical_row.add_child(ability_btn)
-	else:
-		ability_btn.icon = stats.icon
-
-	if ability_btn.mouse_entered.is_connected(_show_ability_floating_card):
-		ability_btn.mouse_entered.disconnect(_show_ability_floating_card)
-	ability_btn.mouse_entered.connect(_show_ability_floating_card.bind(unit, panel))
-	if not ability_btn.mouse_exited.is_connected(_hide_ability_floating_card):
-		ability_btn.mouse_exited.connect(_hide_ability_floating_card)
-	# Desativar tooltip padrão nativo para evitar sobreposição feia com o card flutuante
-	ability_btn.tooltip_text = ""
-
-	# Coluna com Badges táticos
-	var badges_vbox = tactical_row.find_child("BadgesVBox", false, false) as VBoxContainer
-	if not badges_vbox:
-		badges_vbox = VBoxContainer.new()
-		badges_vbox.name = "BadgesVBox"
-		badges_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		badges_vbox.add_theme_constant_override("separation", 3)
-		tactical_row.add_child(badges_vbox)
-
-	var role_badge = badges_vbox.find_child("RoleBadge", false, false) as Label
-	if not role_badge:
-		role_badge = Label.new()
-		role_badge.name = "RoleBadge"
-		role_badge.add_theme_font_size_override("font_size", 11)
-		role_badge.add_theme_color_override("font_color", Color("#38bdf8"))
-		role_badge.mouse_filter = Control.MOUSE_FILTER_PASS
-		var p_style := StyleBoxFlat.new()
-		p_style.bg_color = Color("#0f172a99")
-		p_style.corner_radius_top_left = 4
-		p_style.corner_radius_top_right = 4
-		p_style.corner_radius_bottom_left = 4
-		p_style.corner_radius_bottom_right = 4
-		p_style.content_margin_left = 6
-		p_style.content_margin_top = 2
-		p_style.content_margin_right = 6
-		p_style.content_margin_bottom = 2
-		role_badge.add_theme_stylebox_override("panel", p_style)
-		badges_vbox.add_child(role_badge)
-	role_badge.text = "[ %s ]" % stats.get_combat_role().to_upper()
-	role_badge.tooltip_text = "Função de Combate:\n%s" % stats.get_combat_role_description()
-
-	var range_badge = badges_vbox.find_child("RangeBadge", false, false) as Label
-	if not range_badge:
-		range_badge = Label.new()
-		range_badge.name = "RangeBadge"
-		range_badge.add_theme_font_size_override("font_size", 11)
-		range_badge.add_theme_color_override("font_color", Color("#cbd5e1"))
-		range_badge.mouse_filter = Control.MOUSE_FILTER_PASS
-		var r_style := StyleBoxFlat.new()
-		r_style.bg_color = Color("#0f172a99")
-		r_style.corner_radius_top_left = 4
-		r_style.corner_radius_top_right = 4
-		r_style.corner_radius_bottom_left = 4
-		r_style.corner_radius_bottom_right = 4
-		r_style.content_margin_left = 6
-		r_style.content_margin_top = 2
-		r_style.content_margin_right = 6
-		r_style.content_margin_bottom = 2
-		range_badge.add_theme_stylebox_override("panel", r_style)
-		badges_vbox.add_child(range_badge)
-	var pos_str := "Recuada" if stats.is_ranged else "Linha de Frente"
-	range_badge.text = "%s · %d Hex" % [pos_str, stats.get_attack_range_hexes()]
-	range_badge.tooltip_text = "Posicionamento Tático:\nIdeal na %s. Alcance efetivo de %d hexágonos." % [pos_str, stats.get_attack_range_hexes()]
-
-	# 3. GRID DE ATRIBUTOS 2x4 (Estilo TFT)
-	var stats_grid = vbox.find_child("TFT_StatsGrid", false, false) as GridContainer
-	if not stats_grid:
-		stats_grid = GridContainer.new()
-		stats_grid.name = "TFT_StatsGrid"
-		stats_grid.columns = 4
-		stats_grid.add_theme_constant_override("h_separation", 4)
-		stats_grid.add_theme_constant_override("v_separation", 4)
-		vbox.add_child(stats_grid)
-		vbox.move_child(stats_grid, tactical_row.get_index() + 1)
-
-	var stat_items := [
-		{"key": "ad", "icon": "sword", "val": str(attack_dmg), "color": "#fb923c", "tip": "Dano de Ataque: %d\nDano físico atual por ataque (inclui itens, sinergias e bônus)." % attack_dmg},
-		{"key": "ap", "icon": "magic_wand", "val": str(int(stats.ability_damage * stats.get_star_multiplier(star))), "color": "#c084fc", "tip": "Poder de Habilidade: %d\nDano base escalonado por estrelas (x%.1f)." % [int(stats.ability_damage * stats.get_star_multiplier(star)), stats.get_star_multiplier(star)]},
-		{"key": "arm", "icon": "armor_plate", "val": str(int(total_armor)), "color": "#60a5fa", "tip": "Armadura: %d\nReduz dano físico recebido em %d%%." % [int(total_armor), phys_reduct]},
-		{"key": "mr", "icon": "ring_amulet", "val": str(int(total_mr)), "color": "#2dd4bf", "tip": "Resistência Mágica: %d\nReduz dano mágico recebido em %d%%." % [int(total_mr), mag_reduct]},
-		{"key": "as", "icon": "lightning", "val": "%.2f" % attack_spd, "color": "#facc15", "tip": "Velocidade de Ataque: %.2f ataques por segundo." % attack_spd},
-		{"key": "crit", "icon": "sparkle", "val": "25%", "color": "#f43f5e", "tip": "Acerto Crítico: 25%%\nChance de ataques normais e magias causarem dano crítico amplificado."},
-		{"key": "rng", "icon": "arrows_double", "val": "%d Hex" % stats.get_attack_range_hexes(), "color": "#94a3b8", "tip": "Alcance de Ataque: %d hexágonos." % stats.get_attack_range_hexes()},
-		{"key": "dps", "icon": "skull", "val": str(dps), "color": "#e2e8f0", "tip": "DPS em Tempo Real: ~%d\nDano por segundo contínuo estimado (Ataque x Velocidade)." % dps}
-	]
-
-	for item in stat_items:
-		var slot_name = "Slot_" + item["key"]
-		var slot = stats_grid.find_child(slot_name, false, false) as PanelContainer
-		var val_lbl: Label = null
-		if not slot:
-			slot = PanelContainer.new()
-			slot.name = slot_name
-			slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			slot.mouse_filter = Control.MOUSE_FILTER_PASS
-			var s_box := StyleBoxFlat.new()
-			s_box.bg_color = Color("#1e293b66")
-			s_box.border_color = Color("#33415566")
-			s_box.border_width_left = 1
-			s_box.border_width_top = 1
-			s_box.border_width_right = 1
-			s_box.border_width_bottom = 1
-			s_box.corner_radius_top_left = 4
-			s_box.corner_radius_top_right = 4
-			s_box.corner_radius_bottom_left = 4
-			s_box.corner_radius_bottom_right = 4
-			s_box.content_margin_left = 4
-			s_box.content_margin_top = 3
-			s_box.content_margin_right = 4
-			s_box.content_margin_bottom = 3
-			slot.add_theme_stylebox_override("panel", s_box)
-
-			var hbox := HBoxContainer.new()
-			hbox.add_theme_constant_override("separation", 3)
-			hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-			var icon_r := UIAtlasCatalog.create_icon_rect(item["icon"], Vector2(14, 14))
-			icon_r.modulate = Color(item["color"])
-			hbox.add_child(icon_r)
-
-			val_lbl = Label.new()
-			val_lbl.name = "ValLabel"
-			val_lbl.add_theme_font_size_override("font_size", 10)
-			val_lbl.add_theme_color_override("font_color", Color("#f8fafc"))
-			hbox.add_child(val_lbl)
-
-			slot.add_child(hbox)
-			stats_grid.add_child(slot)
-		else:
-			val_lbl = slot.find_child("ValLabel", true, false) as Label
-
-		slot.tooltip_text = item["tip"]
-		if val_lbl:
-			val_lbl.text = item["val"]
-
-func _update_inspector_live_data(panel: Control, unit: BaseUnit3D) -> void:
-	if not is_instance_valid(unit) or not unit.stats or not is_instance_valid(panel):
-		return
-	var stats := unit.stats
-	var star := clampi(unit.star_level, 1, 4)
-
-	var cur_hp := maxi(int(unit.current_health), 0)
-	var max_hp := maxi(int(unit.get_max_health()), 1)
-	var cur_shield := maxi(int(unit.current_shield), 0)
-	var cur_mana := maxi(int(unit.current_mana), 0)
-	var max_mana := maxi(int(stats.max_mana), 1)
-
-	var attack_dmg := maxi(int(unit.get_attack_damage()), 0)
-	var attack_spd := unit.get_effective_attack_speed()
-	var dps := maxi(int(attack_dmg * attack_spd), 0)
-
-	var total_armor := unit.get_effective_armor()
-	var total_mr := unit.get_effective_magic_resist()
-	var phys_reduct: int = int(round((total_armor / (100.0 + total_armor)) * 100.0))
-	var mag_reduct: int = int(round((total_mr / (100.0 + total_mr)) * 100.0))
-
-	var ap_mult: float = 1.0 + float(unit.synergy_bonuses.get("ability_power_pct", 0.0))
-	var ap_val: int = int(stats.ability_damage * stats.get_star_multiplier(star) * ap_mult)
-	var crit_pct: int = int(round((0.25 + (mini(unit.enemies_defeated, BaseUnit3D.MAX_CERRADO_STACKS) * 0.06 if "Cerrado" in stats.origins else 0.0)) * 100.0))
-
-	# Barra de Vida
-	var hp_bar = panel.find_child("InspectorHpBar", true, false) as ProgressBar
-	if hp_bar:
-		hp_bar.max_value = max_hp
-		hp_bar.value = cur_hp
-		var hp_label = hp_bar.find_child("HpTextLabel", false, false) as Label
-		if hp_label:
-			var bonus_hp_text := ""
-			if float(unit.synergy_bonuses.get("max_health_pct", 0.0)) > 0.0:
-				bonus_hp_text = " (+%d%%)" % int(float(unit.synergy_bonuses.get("max_health_pct", 0.0)) * 100.0)
-			if cur_shield > 0:
-				hp_label.text = "%d (+%d) / %d%s" % [cur_hp, cur_shield, max_hp, bonus_hp_text]
-			else:
-				hp_label.text = "%d / %d%s" % [cur_hp, max_hp, bonus_hp_text]
-
-	# Barra de Escudo
-	var shield_bar = panel.find_child("InspectorShieldBar", true, false) as ProgressBar
-	if shield_bar:
-		if cur_shield > 0:
-			shield_bar.visible = true
-			shield_bar.max_value = max_hp
-			shield_bar.value = cur_shield
-			var shield_label = shield_bar.find_child("ShieldTextLabel", false, false) as Label
-			if shield_label:
-				shield_label.text = "Escudo: %d" % cur_shield
-		else:
-			shield_bar.visible = false
-
-	# Barra de Mana
-	var mana_bar = panel.find_child("InspectorManaBar", true, false) as ProgressBar
-	if mana_bar:
-		mana_bar.max_value = max_mana
-		mana_bar.value = cur_mana
-		var mana_label = mana_bar.find_child("ManaTextLabel", false, false) as Label
-		if mana_label:
-			mana_label.text = "%d / %d" % [cur_mana, int(stats.max_mana)]
-
-	# Grid de Atributos em Tempo Real
-	var stats_grid = panel.find_child("TFT_StatsGrid", true, false) as GridContainer
-	if stats_grid:
-		var live_stats := {
-			"ad": {"val": str(attack_dmg), "tip": "Dano de Ataque: %d\nDano físico atual por ataque (inclui itens, sinergias e bônus)." % attack_dmg},
-			"ap": {"val": str(ap_val), "tip": "Poder de Habilidade: %d\nDano base escalonado por estrelas (x%.1f) e amplificadores." % [ap_val, stats.get_star_multiplier(star)]},
-			"arm": {"val": str(int(total_armor)), "tip": "Armadura: %d\nReduz dano físico recebido em %d%%." % [int(total_armor), phys_reduct]},
-			"mr": {"val": str(int(total_mr)), "tip": "Resistência Mágica: %d\nReduz dano mágico recebido em %d%%." % [int(total_mr), mag_reduct]},
-			"as": {"val": "%.2f" % attack_spd, "tip": "Velocidade de Ataque: %.2f ataques por segundo." % attack_spd},
-			"crit": {"val": "%d%%" % crit_pct, "tip": "Acerto Crítico: %d%%\nChance de ataques normais e magias causarem dano crítico amplificado." % crit_pct},
-			"rng": {"val": "%d Hex" % stats.get_attack_range_hexes(), "tip": "Alcance de Ataque: %d hexágonos." % stats.get_attack_range_hexes()},
-			"dps": {"val": str(dps), "tip": "DPS em Tempo Real: ~%d\nDano por segundo contínuo estimado (Ataque x Velocidade)." % dps}
-		}
-		for key in live_stats.keys():
-			var slot = stats_grid.find_child("Slot_" + key, false, false) as Control
-			if slot:
-				var v_lbl = slot.find_child("ValLabel", true, false) as Label
-				if v_lbl:
-					v_lbl.text = live_stats[key]["val"]
-				slot.tooltip_text = live_stats[key]["tip"]
-
-	# Stacks de Cerrado em tempo real
-	var origins_lbl = panel.find_child("Origins_label", true, false) as RichTextLabel
-	if origins_lbl and "Cerrado" in stats.origins:
-		var origin_parts: Array[String] = []
-		for orig in stats.origins:
-			var extra := ""
-			if orig == "Cerrado":
-				extra = " [color=#e67e22](%d/10 st)[/color]" % [mini(unit.enemies_defeated, BaseUnit3D.MAX_CERRADO_STACKS)]
-			origin_parts.append("[url=%s][u][color=#f5da80]%s[/color][/u]%s[/url]" % [orig, orig, extra])
-		origins_lbl.text = "[color=#f1c40f]ORIGENS[/color]  %s" % (" · ".join(origin_parts))
-
 func show_unit_inspector(unit: BaseUnit3D) -> void:
 	if not is_instance_valid(unit) or not unit.stats or not ui:
 		return
@@ -2148,110 +1372,10 @@ func show_unit_inspector(unit: BaseUnit3D) -> void:
 	if not panel:
 		return
 	_inspected_unit = unit
-	var stats := unit.stats
-	
-	var name_lbl = panel.find_child("Name_label", true, false) as RichTextLabel
-	if name_lbl:
-		var tier_hex := "#" + stats.get_tier_color().to_html(false)
-		name_lbl.text = "[b]%s[/b] [color=%s](Tier %d · %dg)[/color]" % [
-			stats.unit_name, tier_hex, stats.tier, stats.cost
-		]
-		var star_box = panel.find_child("InspectorStarBox", true, false) as HBoxContainer
-		if not star_box:
-			star_box = HBoxContainer.new()
-			star_box.name = "InspectorStarBox"
-			star_box.alignment = BoxContainer.ALIGNMENT_CENTER
-			star_box.add_theme_constant_override("separation", 3)
-			name_lbl.get_parent().add_child(star_box)
-			name_lbl.get_parent().move_child(star_box, name_lbl.get_index() + 1)
-		for child in star_box.get_children():
-			child.queue_free()
-		var stars_count: int = clampi(unit.star_level, 1, 4)
-		for s in range(stars_count):
-			var star_icon := UIAtlasCatalog.create_icon_rect("star", Vector2(16, 16))
-			if stars_count >= 3:
-				star_icon.modulate = Color("#fbbf24")
-			elif stars_count == 2:
-				star_icon.modulate = Color("#e2e8f0")
-			else:
-				star_icon.modulate = Color("#cd7f32")
-			star_box.add_child(star_icon)
-	
-	var p_frame = panel.find_child("PortraitFrame", true, false)
-	if p_frame:
-		p_frame.modulate = stats.get_tier_color()
-	var img = panel.find_child("Image_container", true, false) as TextureRect
-	if img:
-		img.texture = stats.icon
-	
-	# Calcular valores numéricos
-	var cur_hp := int(unit.current_health)
-	var max_hp := int(unit.get_max_health())
-	var cur_mana := int(unit.current_mana)
-	var max_mana := int(stats.max_mana)
-	var attack_dmg := int(unit.get_attack_damage())
-	var attack_spd := unit.get_effective_attack_speed()
-	var dps := int(attack_dmg * attack_spd)
-	
-	var total_armor := unit.get_effective_armor()
-	var phys_reduct: int = int(round((total_armor / (100.0 + total_armor)) * 100.0))
-	var total_mr := unit.get_effective_magic_resist()
-	var mag_reduct: int = int(round((total_mr / (100.0 + total_mr)) * 100.0))
+	UnitInspectorPanel.show_inspector(unit, panel, ui)
 
-	# Atualizar e ocultar labels legadas para dar lugar aos componentes visuais elegantes
-	var hp_lbl = panel.find_child("Hp_label", true, false)
-	if hp_lbl:
-		hp_lbl.text = "[color=#2ecc71]VIDA[/color]  [b]%d[/b] / %d" % [cur_hp, max_hp]
-		hp_lbl.visible = false
-	var mana_lbl = panel.find_child("Mana_label", true, false)
-	if mana_lbl:
-		mana_lbl.text = "[color=#38bdf8]MANA[/color]  [b]%d[/b] / %d" % [cur_mana, max_mana]
-		mana_lbl.visible = false
-	var type_lbl = panel.find_child("Type_label", true, false)
-	if type_lbl:
-		type_lbl.visible = false
-	var range_lbl = panel.find_child("Range_label", true, false)
-	if range_lbl:
-		range_lbl.visible = false
-	var def_lbl = panel.find_child("Defense_label", true, false)
-	if def_lbl:
-		def_lbl.visible = false
-	var role_lbl = panel.find_child("Role_label", true, false)
-	if role_lbl:
-		role_lbl.visible = false
-	var sc_lbl = panel.find_child("Star_scaling_label", true, false)
-	if sc_lbl:
-		sc_lbl.visible = false
-	var aff_lbl = panel.find_child("Affinities_label", true, false)
-	if aff_lbl:
-		aff_lbl.visible = false
-
-	# 7. Origens (com links de sinergia)
-	var origins_lbl = panel.find_child("Origins_label", true, false) as RichTextLabel
-	if origins_lbl:
-		var origin_parts: Array[String] = []
-		for orig in stats.origins:
-			var extra := ""
-			if orig == "Cerrado":
-				extra = " [color=#e67e22](%d/10 st)[/color]" % [mini(unit.enemies_defeated, BaseUnit3D.MAX_CERRADO_STACKS)]
-			origin_parts.append("[url=%s][u][color=#f5da80]%s[/color][/u]%s[/url]" % [orig, orig, extra])
-		origins_lbl.text = "[color=#f1c40f]ORIGENS[/color]  %s" % (" · ".join(origin_parts) if not origin_parts.is_empty() else "—")
-	
-	# 8. Classes (com links de sinergia)
-	var classes_lbl = panel.find_child("Classes_label", true, false) as RichTextLabel
-	if classes_lbl:
-		var class_parts: Array[String] = []
-		for cls in stats.classes:
-			class_parts.append("[url=%s][u][color=#d8b4fe]%s[/color][/u][/url]" % [cls, cls])
-		classes_lbl.text = "[color=#9b59b6]CLASSES[/color]  %s" % (" · ".join(class_parts) if not class_parts.is_empty() else "—")
-
-	# 9. Atualizar layout e componentes TFT
-	_update_tft_inspector(panel, unit, cur_hp, max_hp, cur_mana, max_mana, attack_dmg, attack_spd, dps, total_armor, phys_reduct, total_mr, mag_reduct)
-	_update_inspector_live_data(panel, unit)
-	
-	if ui and ui.has_method("set_inspected_unit_data"):
-		ui.set_inspected_unit_data(stats, unit.star_level)
-	ui.show_inspector()
+func _update_inspector_live_data(panel: Control, unit: BaseUnit3D) -> void:
+	UnitInspectorPanel.update_live_data(panel, unit)
 
 var _highlighted_synergy_units: Array[BaseUnit3D] = []
 var _highlighted_synergy_cells: Array[Vector2i] = []
@@ -2274,7 +1398,7 @@ func highlight_units_with_synergy(synergy_name: String) -> void:
 			continue
 		if unit.team != 0 or unit.current_state == BaseUnit3D.State.DEAD or not unit.stats:
 			continue
-		var matches = unit.stats.origins.has(synergy_name) or unit.stats.classes.has(synergy_name)
+		var matches = unit.stats.origins.has(synergy_name)
 		if matches:
 			_highlighted_synergy_units.append(unit)
 			unit.set_synergy_highlighted(true)
@@ -2284,7 +1408,7 @@ func highlight_units_with_synergy(synergy_name: String) -> void:
 	
 	for unit in bench_units:
 		if is_instance_valid(unit) and unit.stats:
-			var matches := unit.stats.origins.has(synergy_name) or unit.stats.classes.has(synergy_name)
+			var matches := unit.stats.origins.has(synergy_name)
 			if matches:
 				_highlighted_synergy_units.append(unit)
 				unit.set_synergy_highlighted(true)
@@ -2302,13 +1426,9 @@ func clear_synergy_unit_highlights() -> void:
 func hide_unit_inspector() -> void:
 	_inspected_unit = null
 	clear_synergy_unit_highlights()
-	_hide_ability_floating_card()
-	if ui and ui.has_method("hide_inspector"):
-		ui.hide_inspector()
-	elif ui:
-		var panel = ui.get_node_or_null("Control/RightBar")
-		if panel:
-			panel.hide()
+	if ui:
+		var panel = ui.get_node_or_null("Control/RightBar") as Control
+		UnitInspectorPanel.hide_inspector(panel, ui)
 
 
 
@@ -2361,208 +1481,18 @@ func debug_initialization() -> void:
 
 # --- Pausa e campanhas independentes por região ---
 
-func _setup_pause_menu() -> void:
-	_overlay = GameOverlay.new()
-	add_child(_overlay)
-	_overlay.resume_requested.connect(_resume_game)
-	_overlay.menu_requested.connect(_leave_game.bind(false))
-	_overlay.quit_requested.connect(_leave_game.bind(true))
-	var pause_button := GameOverlay.button("Pausa", _open_pause)
-	pause_button.name = "PauseButton"
-	pause_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	pause_button.offset_left = -210
-	pause_button.offset_right = -80
-	pause_button.offset_top = 16
-	pause_button.offset_bottom = 68
-	pause_button.tooltip_text = "Pausar (Esc)"
-	pause_button.focus_mode = Control.FOCUS_NONE
-	ui.add_child(pause_button)
-	_save_warning = GameOverlay.label("", 18, Color("#ffbba0"))
-	_save_warning.name = "SaveWarning"
-	_save_warning.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	_save_warning.offset_top = 78
-	_save_warning.offset_bottom = 110
-	ui.add_child(_save_warning)
-	ui._layout_extra_panels.call_deferred()
-
-func _open_pause() -> void:
-	if _leaving or not _overlay:
-		return
-	if drag_handler and drag_handler.is_dragging:
-		drag_handler.cancel_drag()
-		dragging_unit = null
-	if camera:
-		camera.cancel_manual_orbit()
-	AudioManager.play_pause_music()
-	get_tree().paused = true
-	_overlay.set_match_time(match_elapsed_seconds)
-	_overlay.open("pause", true)
-
-func _resume_game() -> void:
-	if _load_failed:
-		_overlay.open("pause", true)
-		_overlay.show_error("Esta campanha não pôde ser carregada. Volte ao menu para preservar o arquivo.")
-		return
-	AudioManager.resume_region_music()
-	get_tree().paused = false
-	get_viewport().gui_release_focus()
-
-func _leave_game(quit_application: bool) -> void:
-	if _leaving:
-		return
-	if drag_handler and drag_handler.is_dragging:
-		drag_handler.cancel_drag()
-		dragging_unit = null
-	if _run_ready and not _save_campaign():
-		_open_pause()
-		_overlay.show_error("Não foi possível salvar. A partida continua aberta. Tente salvar novamente antes de sair.")
-		return
-	_leaving = true
-	if quit_application:
-		get_tree().quit()
-	else:
-		_return_to_menu.call_deferred()
-
-func _return_to_menu() -> void:
-	get_tree().paused = false
-	AudioManager.play_menu_music()
-	get_tree().change_scene_to_file("res://Scenes/UI/Menu.tscn")
+func _setup_pause_menu() -> void: campaign_session.setup_pause_menu()
+func _open_pause() -> void: campaign_session.open_pause()
+func _resume_game() -> void: campaign_session.resume_game()
+func _leave_game(quit_application: bool) -> void: campaign_session.leave_game(quit_application)
+func _return_to_menu() -> void: campaign_session.return_to_menu()
+func _schedule_save() -> void: campaign_session.schedule_save()
+func _flush_save() -> void: campaign_session.flush_save()
+func _unit_save_data(unit: BaseUnit3D) -> Dictionary: return campaign_session.unit_save_data(unit)
+func _capture_campaign() -> Dictionary: return campaign_session.capture_campaign()
+func _save_campaign() -> bool: return campaign_session.save_campaign()
+func _restore_campaign(run: Dictionary) -> bool: return campaign_session.restore_campaign(run)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		_leave_game(true)
-
-func _schedule_save() -> void:
-	if not _run_ready or _leaving or _save_pending:
-		return
-	_save_pending = true
-	_flush_save.call_deferred()
-
-func _flush_save() -> void:
-	_save_pending = false
-	if not is_inside_tree() or _leaving or not _run_ready:
-		return
-	if drag_handler and drag_handler.is_dragging:
-		return
-	_save_campaign()
-
-func _unit_save_data(unit: BaseUnit3D) -> Dictionary:
-	var pos := unit.board_position
-	# Garantir que unidades de campo fiquem obrigatoriamente dentro da zona do jogador (linhas 4..7)
-	if not unit.is_on_bench():
-		if pos.y < 4 or pos.y >= 8 or pos.x < 0 or pos.x >= 7:
-			for r in range(4, 8):
-				for c in range(7):
-					var candidate := Vector2i(c, r)
-					if not board.is_cell_occupied(candidate):
-						pos = candidate
-						unit.board_position = pos
-						break
-				if pos.y >= 4:
-					break
-	return {
-		"id": unit.stats.unit_id, "stars": unit.star_level,
-		"invested": unit.invested_gold,
-		"cell": [pos.x, pos.y],
-	}
-
-func _capture_campaign() -> Dictionary:
-	var saved_bench: Array[Dictionary] = []
-	var saved_field: Array[Dictionary] = []
-	var saved_shop: Array[String] = []
-	for unit in bench_units:
-		if is_instance_valid(unit) and not unit.is_queued_for_deletion():
-			saved_bench.append(_unit_save_data(unit))
-	# Inclui combatentes mortos: continuam pertencendo ao jogador, com sua casa inicial.
-	var field_positions: Array[Vector2i] = []
-	for unit in get_tree().get_nodes_in_group("player_units"):
-		if unit is BaseUnit3D and unit not in bench_units and not unit.is_queued_for_deletion():
-			var data := _unit_save_data(unit)
-			var cell := Vector2i(int(data["cell"][0]), int(data["cell"][1]))
-			# Evitar posições duplicadas no save
-			if cell in field_positions or cell.y < 4 or cell.y >= 8 or cell.x < 0 or cell.x >= 7:
-				for r in range(4, 8):
-					for c in range(7):
-						var candidate := Vector2i(c, r)
-						if candidate not in field_positions:
-							cell = candidate
-							data["cell"] = [cell.x, cell.y]
-							unit.board_position = cell
-							break
-					if cell not in field_positions:
-						break
-			field_positions.append(cell)
-			saved_field.append(data)
-	if shop_system and shop_system.current_units:
-		for stats in shop_system.current_units:
-			saved_shop.append(stats.unit_id if stats else "")
-	while saved_shop.size() < 5:
-		saved_shop.append("")
-	if saved_shop.size() > 5:
-		saved_shop.resize(5)
-	
-	var effective_level: int = clampi(maxi(player_level, saved_field.size()), 1, 9)
-	return {
-		"gold": player_gold, "health": player_health, "level": effective_level,
-		# Campos legados preservam a compatibilidade do formato do save.
-		"xp": player_xp, "enemy_level": int(Regions.get_enemy_stage(current_round)["level"]), "enemy_xp": 0,
-		"round": current_round, "win_streak": win_streak, "loss_streak": loss_streak,
-		"phase": "combat" if combat_active else ("resolved" if round_resolution_pending else "prep"),
-		"bench": saved_bench, "field": saved_field, "shop": saved_shop,
-		"locked": shop_system.is_shop_locked if shop_system else false,
-		"match_time": match_elapsed_seconds,
-	}
-
-func _save_campaign() -> bool:
-	if not _run_ready or _load_failed:
-		return false
-	if drag_handler and drag_handler.is_dragging:
-		return false
-	var result := CampaignStore.write_slot(region_id, _capture_campaign(), _campaign_state)
-	if _save_warning:
-		_save_warning.text = "" if result == OK else "Não foi possível salvar a campanha. Use Pausa para tentar novamente antes de sair."
-	if result != OK:
-		push_warning("Falha ao salvar campanha %s: %s" % [region_id, error_string(result)])
-	return result == OK
-
-func _restore_campaign(run: Dictionary) -> bool:
-	player_gold = int(run["gold"])
-	player_health = int(run["health"])
-	player_level = int(run["level"])
-	player_xp = int(run["xp"])
-	current_round = int(run["round"])
-	# Saves antigos passam a usar o marco correspondente ao round salvo.
-	enemy_level = int(Regions.get_enemy_stage(current_round)["level"])
-	win_streak = int(run["win_streak"])
-	loss_streak = int(run["loss_streak"])
-	match_elapsed_seconds = float(run.get("match_time", 0.0))
-	for zone in ["field", "bench"]:
-		for entry in run[zone]:
-			var unit := UnitSpawner.spawn_unit(str(entry["id"]), int(entry["stars"]), 0)
-			if not unit:
-				return false
-			unit.use_navigation = false
-			unit.debug_movement = false
-			add_child(unit)
-			unit.invested_gold = int(entry["invested"])
-			if zone == "bench":
-				if not add_unit_to_bench(unit):
-					return false
-			else:
-				var cell := Vector2i(int(entry["cell"][0]), int(entry["cell"][1]))
-				if not board.place_unit(unit, cell, false):
-					return false
-	shop_system.current_units.clear()
-	for id in run["shop"]:
-		shop_system.current_units.append(UnitSpawner.load_unit_stats(id) if id != "" else null)
-	shop_system.lock_shop(bool(run["locked"]))
-	shop_system.shop_refreshed.emit(shop_system.current_units)
-	if run["phase"] == "resolved":
-		# Recompensas e XP já foram gravados; só prepara o próximo round.
-		prepare_next_round()
-	else:
-		# Uma luta interrompida volta à preparação, sem premiar nem penalizar.
-		_resolve_unit_merges()
-		spawn_enemy_team()
-	_realign_bench_units(false)
-	return true

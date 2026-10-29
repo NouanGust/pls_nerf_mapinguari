@@ -5,6 +5,9 @@
 
 [resource]
 script = ExtResource("1_stats")
+cost = 1
+tier = 1
+combat_role = "Tank"
 unit_name = "Mandacaru"
 unit_id = "mandacaru"
 description = "Cacto imponente que desafia a seca; ergue espinhos defensivos e renova sua própria carapaça."
@@ -20,13 +23,22 @@ is_stationary = true
 max_mana = 90.0
 mana_per_second = 3.0
 mana_when_hit = 8.0
-origins = Array[String](["Caatinga"])
-classes = Array[String](["Tank", "Protetor da Mata"])
+origins = Array[String](["Seiva", "Vigília"])
+classes = Array[String]([])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Caatinga"])
 ability_name = "Cerca de Espinhos"
 ability_description = "Cacto imponente que desafia a seca; ergue espinhos defensivos e renova sua própria carapaça."
 ability_damage = 65.0
-ability_shield = 70.0
+ability_shield = 200.0
 ability_range = 2.0
 is_tank = true
+
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "tank_guard"
+attack_range = 1

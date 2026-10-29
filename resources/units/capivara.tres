@@ -5,6 +5,9 @@
 
 [resource]
 script = ExtResource("1_stats")
+cost = 1
+tier = 1
+combat_role = "Tank"
 unit_name = "Capivara"
 unit_id = "capivara"
 description = "Criatura pacífica e resiliente dos rios pantaneiros; mergulha e renova um escudo de águas calmas."
@@ -17,11 +20,20 @@ magic_resist = 20.0
 movement_speed = 190.0
 max_mana = 90.0
 mana_when_hit = 8.0
-origins = Array[String](["Pantaneiro"])
-classes = Array[String](["Aquático", "Tank"])
+origins = Array[String](["Correnteza", "Vigília"])
+classes = Array[String]([])
 affinities = Array[String](["Fauna"])
 biomes = Array[String](["Pantanal"])
 ability_name = "Refúgio da Margem"
 ability_description = "Criatura pacífica e resiliente dos rios pantaneiros; mergulha e renova um escudo de águas calmas."
-ability_shield = 100.0
+ability_shield = 180.0
 is_tank = true
+
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "tank_guard"
+attack_range = 1

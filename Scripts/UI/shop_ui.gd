@@ -399,9 +399,7 @@ func update_tooltip_labels(stats: UnitStats) -> void:
 		]
 		var traits_text: Array[String] = []
 		if not stats.origins.is_empty():
-			traits_text.append("[color=#74e6f5]Origens:[/color] %s" % ", ".join(stats.origins))
-		if not stats.classes.is_empty():
-			traits_text.append("[color=#ffd16b]Classes:[/color] %s" % ", ".join(stats.classes))
+			traits_text.append("[color=#74e6f5]Origens:[/color] %s" % " + ".join(stats.origins))
 		traits_text.append("[color=#fbbf24]Função:[/color] %s" % stats.get_combat_role())
 		if not traits_text.is_empty():
 			type_lbl.text += "\n" + "  ·  ".join(traits_text)

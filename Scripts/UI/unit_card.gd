@@ -250,6 +250,21 @@ func _update_traits_display(origins: Array[String], classes: Array[String]) -> v
 			lbl.add_theme_stylebox_override("normal", base_style)
 		traits_container.add_child(lbl)
 
+	if classes.is_empty() and unit_stats:
+		var role := unit_stats.get_combat_role()
+		if not role.is_empty():
+			var lbl := Label.new()
+			lbl.text = role
+			lbl.add_theme_font_size_override("font_size", 9)
+			lbl.add_theme_color_override("font_color", Color(0.85, 0.7, 1.0, 1))
+			lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+			lbl.add_theme_constant_override("outline_size", 2)
+			lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			lbl.clip_text = true
+			if base_style:
+				lbl.add_theme_stylebox_override("normal", base_style)
+			traits_container.add_child(lbl)
+
 func clear() -> void:
 	unit_stats = null
 	is_sold = false

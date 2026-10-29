@@ -208,15 +208,14 @@ func open_for_unit(stats: UnitStats, star_level: int = 1) -> void:
 	if lore_desc.is_empty():
 		lore_desc = "Criatura mística do folclore e da rica biodiversidade brasileira."
 	
-	var origins_str := ", ".join(stats.origins) if not stats.origins.is_empty() else "Nenhuma"
-	var classes_str := ", ".join(stats.classes) if not stats.classes.is_empty() else "Nenhuma"
+	var origins_str := " + ".join(stats.origins) if not stats.origins.is_empty() else "Nenhuma"
 	
 	_profile_lbl.text = "[b][size=20][color=#ffffff]%s[/color][/size][/b]  [color=#94a3b8](Tier %d · %d Ouro)[/color]\n" % [
 		stats.unit_name, stats.tier, stats.cost
 	]
 	_profile_lbl.text += "[color=#cbd5e1][i]\"%s\"[/i][/color]\n\n" % lore_desc
-	_profile_lbl.text += "[color=#74e6f5]Origens:[/color] [b]%s[/b]   ·   [color=#d8b4fe]Classes:[/color] [b]%s[/b]   ·   [color=#fbbf24]Função:[/color] [b]%s[/b]\n[color=#94a3b8][i]%s[/i][/color]" % [
-		origins_str, classes_str, stats.get_combat_role(), stats.get_combat_role_description()
+	_profile_lbl.text += "[color=#74e6f5]Origens:[/color] [b]%s[/b]   ·   [color=#fbbf24]Função:[/color] [b]%s[/b]\n[color=#94a3b8][i]%s[/i][/color]" % [
+		origins_str, stats.get_combat_role(), stats.get_combat_role_description()
 	]
 
 	# 2. Atributos Base & Escalonamento (Nível 1 / Nível 2 / Nível 3)
@@ -340,7 +339,7 @@ func open_for_unit(stats: UnitStats, star_level: int = 1) -> void:
 
 	# 4. Sinergias e Efeitos de Patamar
 	var syn_blocks: Array[String] = []
-	for tag in stats.origins + stats.classes:
+	for tag in stats.origins:
 		var rule := SynergySystem.get_rule_for_tag(tag)
 		if rule.is_empty():
 			continue

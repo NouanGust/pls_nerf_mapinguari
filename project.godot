@@ -30,6 +30,8 @@ ResponsiveLayout="*res://Scripts/UI/responsive_layout.gd"
 BattleClock="*res://Scripts/Systems/battle_clock.gd"
 GameSettings="*res://Scripts/Systems/game_settings.gd"
 AudioManager="*res://Scripts/Systems/audio_manager.tscn"
+EconomyManager="*res://Scripts/Systems/economy_manager.gd"
+UnitCatalog="*res://Scripts/Systems/unit_catalog.gd"
 
 [debug]
 

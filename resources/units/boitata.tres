@@ -1,0 +1,56 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/boitata.jpg" id="2_icon"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Boitatá"
+unit_id = "boitata"
+description = "Serpente de fogo sagrada que zela pelos campos e queima quem ameaca a mata."
+lore = "Serpente de fogo sagrada que zela pelos campos e queima quem ameaca a mata."
+tier = 4
+cost = 4
+combat_role = "Conjurador"
+icon = ExtResource("2_icon")
+max_health = 720.0
+health_regen = 0.0
+attack_damage = 40.0
+attack_speed = 1.0
+attack_range = 3
+critical_chance = 0.0
+critical_damage = 2.0
+armor = 28.0
+magic_resist = 35.0
+movement_speed = 200.0
+is_stationary = false
+can_fly = false
+max_mana = 100.0
+starting_mana = 0.0
+mana_per_attack = 10.0
+mana_per_second = 0.0
+mana_when_hit = 10.0
+origins = Array[String](["Vigília", "Fulgor"])
+classes = Array[String]([])
+affinities = Array[String]([])
+biomes = Array[String]([])
+ability_name = "Trilha Flamejante"
+ability_description = "Serpente de fogo sagrada que zela pelos campos e queima quem ameaca a mata."
+ability_damage = 380.0
+ability_heal = 0.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 1
+ability_duration = 0.0
+ability_cooldown = 0.0
+ability_range = 0.0
+ability_damage_type = 1
+ability_kind = "conjure_line"
+target_priority = 0
+is_tank = false
+is_assassin = false
+is_ranged = true
+prefers_backline = true
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0

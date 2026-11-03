@@ -1,0 +1,123 @@
+[gd_scene format=3 uid="uid://cvbmqfg3n5pmo"]
+
+[ext_resource type="Script" uid="uid://bgtfh75v2hq8" path="res://Scripts/main.gd" id="1_5yls4"]
+[ext_resource type="PackedScene" uid="uid://qf7yvxonap5j" path="res://Scenes/Board/board.tscn" id="2_p6jpk"]
+[ext_resource type="PackedScene" uid="uid://oqcy4nvnnbd8" path="res://Scenes/Camera/camera.tscn" id="3_2a143"]
+[ext_resource type="PackedScene" uid="uid://c3exjsipb8037" path="res://Scenes/UI/GameUI.tscn" id="4_xlvfx"]
+[ext_resource type="Script" uid="uid://dqroqn18qtmvr" path="res://Scripts/Board/navigation_setup.gd" id="5_p6jpk"]
+[ext_resource type="PackedScene" uid="uid://bu1o8iehokw1k" path="res://Scenes/env.tscn" id="7_xlvfx"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_2a143"]
+geometry_parsed_geometry_type = 1
+geometry_collision_mask = 4278190084
+cell_size = 0.3
+cell_height = 0.2
+agent_height = 2.0
+agent_radius = 0.4
+agent_max_climb = 0.3
+agent_max_slope = 30.0
+region_min_size = 8.0
+
+[node name="Main" type="Node3D" unique_id=1271191086]
+script = ExtResource("1_5yls4")
+round_transition_seconds = 5.0
+
+[node name="board" parent="." unique_id=424220641 instance=ExtResource("2_p6jpk")]
+
+[node name="Node3D" parent="." unique_id=1732835917 instance=ExtResource("3_2a143")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 0)
+
+[node name="GameUi" parent="." unique_id=1710037490 instance=ExtResource("4_xlvfx")]
+
+[node name="Control" parent="GameUi" index="0" unique_id=130547909]
+offset_right = -1.0
+
+[node name="TopBar" parent="GameUi/Control" index="0" unique_id=2051808828]
+offset_left = 34.0
+offset_top = 31.0
+offset_right = 591.0
+offset_bottom = 91.0
+
+[node name="TimerIcon" parent="GameUi/Control/TopBar/Content/TimerBox" parent_id_path=PackedInt32Array(1710037490, 747864040) index="0" unique_id=924725101]
+texture_filter = 1
+
+[node name="StreakIcon" parent="GameUi/Control/TopBar/Content/StreakBox" parent_id_path=PackedInt32Array(1710037490, 1948201961) index="0" unique_id=1948201962]
+texture_filter = 1
+
+[node name="BenchPanel" parent="GameUi/Control" index="4" unique_id=993275518]
+anchors_preset = -1
+anchor_left = 0.504
+anchor_top = 0.75000006
+anchor_right = 0.504
+anchor_bottom = 0.75000006
+offset_left = -438.17603
+offset_top = -68.00006
+offset_right = 441.82397
+offset_bottom = 21.999939
+
+[node name="BenchContent" parent="GameUi/Control/BenchPanel" index="0" unique_id=231478274]
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 1
+grow_vertical = 1
+
+[node name="ShopContainer" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1906316000) index="4" unique_id=1007177299]
+z_index = 2
+
+[node name="StatsTooltip" parent="GameUi/Control/BottomBar" parent_id_path=PackedInt32Array(1710037490, 1906316000) index="5" unique_id=871767434]
+z_index = 2
+
+[node name="VBoxContainer" parent="GameUi/Control/BottomBar/StatsTooltip" index="0" unique_id=513790708]
+alignment = 1
+
+[node name="Tooltip_name" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="0" unique_id=1095462834]
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Tooltip_hp" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="1" unique_id=2080433627]
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Tooltip_range" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="2" unique_id=1485475993]
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Tooltip_type" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="3" unique_id=76565951]
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PanelFrame" parent="GameUi/Control/RightBar" parent_id_path=PackedInt32Array(1710037490, 967378360) index="0" unique_id=967378361]
+region_rect = Rect2(0, 352, 160, 48)
+patch_margin_left = 16
+patch_margin_top = 32
+patch_margin_right = 16
+patch_margin_bottom = 32
+
+[node name="HUDToggleButton" parent="GameUi" index="1" unique_id=1460861161]
+offset_left = -56.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 34.0
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1224019935]
+navigation_mesh = SubResource("NavigationMesh_2a143")
+script = ExtResource("5_p6jpk")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=432455242]
+
+[node name="Env" parent="." unique_id=32248824 instance=ExtResource("7_xlvfx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -6.0403004, 0)
+visible = false
+
+[connection signal="pressed" from="GameUi/Control/BottomBar/ControlsContainer/BuyXPButton" to="." method="_on_buy_xp_button_pressed"]
+[connection signal="pressed" from="GameUi/Control/BottomBar/ControlsContainer/RerollButton" to="." method="_on_reroll_button_pressed"]
+[connection signal="pressed" from="GameUi/Control/BottomBar/LockButton" to="." method="_on_lock_button_pressed"]
+
+[editable path="board"]
+[editable path="Node3D"]
+[editable path="GameUi"]

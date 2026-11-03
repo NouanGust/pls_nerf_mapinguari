@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://cl43hbcbvtc7"]
+
+[ext_resource type="PackedScene" uid="uid://cs0duuo7mxcdn" path="res://Assets/Models/Board/board_caatinga.glb" id="1_caatinga"]
+
+[node name="BoardEnvironmentCaatinga" type="Node3D"]
+
+[node name="board_caatinga" parent="." instance=ExtResource("1_caatinga")]

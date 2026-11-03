@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Romaozionho.png" id="1_atoww"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_x2ek6"]
+
+[resource]
+script = ExtResource("1_x2ek6")
+unit_name = "Romãozinho"
+unit_id = "romaozinho"
+description = "Espírito zombeteiro e ardiloso; salta pelas sombras com velocidade estonteante para aniquilar as presas enfraquecidas."
+lore = "Pequeno mas poderoso, causa caos com sua magia imprevisível."
+tier = 5
+cost = 5
+combat_role = "Assassino"
+icon = ExtResource("1_atoww")
+max_health = 1200.0
+attack_damage = 125.0
+attack_speed = 1.25
+attack_range = 1
+armor = 30.0
+magic_resist = 55.0
+movement_speed = 280.0
+can_fly = true
+max_mana = 80.0
+starting_mana = 40.0
+mana_per_attack = 8.0
+mana_per_second = 8.0
+origins = Array[String](["Assombro", "Vozes"])
+classes = Array[String]([])
+ability_name = "Travessura Caótica"
+ability_description = "Espírito zombeteiro e ardiloso; salta pelas sombras com velocidade estonteante para aniquilar as presas enfraquecidas."
+ability_damage = 530.0
+ability_heal = 300.0
+ability_targets = 3
+ability_range = 6.0
+is_ranged = false
+stun_resist = 0.8
+
+is_assassin = true
+target_priority = 0
+is_tank = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "assassin"

@@ -1,0 +1,56 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/bebe_diabo.jpg" id="2_icon"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Bebê-Diabo"
+unit_id = "bebe_diabo"
+description = "Figura assustadora dos jornais que emite um berro sobrenatural desconcertante."
+lore = "Figura assustadora dos jornais que emite um berro sobrenatural desconcertante."
+tier = 1
+cost = 1
+combat_role = "Conjurador"
+icon = ExtResource("2_icon")
+max_health = 420.0
+health_regen = 0.0
+attack_damage = 26.0
+attack_speed = 1.0
+attack_range = 3
+critical_chance = 0.0
+critical_damage = 2.0
+armor = 12.0
+magic_resist = 15.0
+movement_speed = 200.0
+is_stationary = false
+can_fly = false
+max_mana = 100.0
+starting_mana = 0.0
+mana_per_attack = 10.0
+mana_per_second = 0.0
+mana_when_hit = 10.0
+origins = Array[String](["Assombro", "Vozes"])
+classes = Array[String]([])
+affinities = Array[String]([])
+biomes = Array[String]([])
+ability_name = "Grito de Aparicao"
+ability_description = "Figura assustadora dos jornais que emite um berro sobrenatural desconcertante."
+ability_damage = 150.0
+ability_heal = 0.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 1
+ability_duration = 0.0
+ability_cooldown = 0.0
+ability_range = 0.0
+ability_damage_type = 1
+ability_kind = "conjure_area"
+target_priority = 0
+is_tank = false
+is_assassin = false
+is_ranged = true
+prefers_backline = true
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0

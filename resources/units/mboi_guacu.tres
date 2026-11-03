@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mboi_guacu.jpg" id="1_0em8i"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_1owcb"]
+
+[resource]
+script = ExtResource("1_1owcb")
+unit_name = "Mboi-Guaçu"
+unit_id = "mboi_guacu"
+description = "A lendária grande cobra de fogo do Pantanal; um titã flamejante cujas mordidas devoram os inimigos com calor escaldante."
+lore = "Grande cobra d'água que protege tesouros submersos."
+tier = 5
+cost = 5
+combat_role = "Porradeiro"
+icon = ExtResource("1_0em8i")
+max_health = 1950.0
+attack_damage = 145.0
+attack_speed = 0.85
+armor = 65.0
+magic_resist = 55.0
+movement_speed = 180.0
+mana_when_hit = 15.0
+origins = Array[String](["Correnteza", "Ferocidade"])
+classes = Array[String]([])
+affinities = Array[String](["Fauna"])
+biomes = Array[String](["Pantanal"])
+ability_name = "Chamas Ancestrais do Pantanal"
+ability_description = "A lendária grande cobra de fogo do Pantanal; um titã flamejante cujas mordidas devoram os inimigos com calor escaldante."
+ability_damage = 280.0
+ability_shield = 0.0
+ability_duration = 4.0
+ability_damage_type = 0
+is_tank = false
+
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "brawler"
+attack_range = 1

@@ -1,0 +1,219 @@
+[gd_scene format=3 uid="uid://gu3h02fq00f5"]
+
+[ext_resource type="Script" uid="uid://dr0egn6bpoh33" path="res://Scripts/UI/unit_card.gd" id="1_4khua"]
+[ext_resource type="Texture2D" uid="uid://3lotu357dqsu" path="res://Assets/Units_teste/Alamoa.png" id="2_denju"]
+[ext_resource type="Texture2D" uid="uid://bhsyhygsnitft" path="res://Assets/UI/GUI_4x.png" id="3_gui_atlas"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_coin"]
+atlas = ExtResource("3_gui_atlas")
+region = Rect2(288, 288, 32, 32)
+filter_clip = true
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_base"]
+bg_color = Color(0.047, 0.078, 0.106, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.608, 0.647, 0.706, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 6
+
+[sub_resource type="Gradient" id="Gradient_overlay"]
+offsets = PackedFloat32Array(0, 0.4, 0.8, 1)
+colors = PackedColorArray(0.04, 0.07, 0.1, 0.05, 0.04, 0.07, 0.1, 0.35, 0.04, 0.07, 0.1, 0.85, 0.04, 0.07, 0.1, 0.98)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_overlay"]
+gradient = SubResource("Gradient_overlay")
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_trait_pill"]
+content_margin_left = 4.0
+content_margin_top = 1.0
+content_margin_right = 4.0
+content_margin_bottom = 1.0
+bg_color = Color(0.03, 0.05, 0.08, 0.75)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.4, 0.48, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[node name="UnitCard" type="PanelContainer" unique_id=1112031932]
+clip_contents = true
+custom_minimum_size = Vector2(136, 172)
+offset_right = 136.0
+offset_bottom = 172.0
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_card_base")
+script = ExtResource("1_4khua")
+
+[node name="IconRect" type="TextureRect" parent="." unique_id=91461975]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("2_denju")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="GradientOverlay" type="TextureRect" parent="." unique_id=2011489527]
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_overlay")
+expand_mode = 1
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=1263494163]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="CardLayout" type="VBoxContainer" parent="Margin" unique_id=1084721408]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="TopRow" type="HBoxContainer" parent="Margin/CardLayout" unique_id=132969879]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TraitsContainer" type="VBoxContainer" parent="Margin/CardLayout/TopRow" unique_id=1368627907]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="OriginLabel" type="Label" parent="Margin/CardLayout/TopRow/TraitsContainer" unique_id=1178711071]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.93, 0.98, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_trait_pill")
+text = "Origem"
+text_overrun_behavior = 3
+
+[node name="ClassLabel" type="Label" parent="Margin/CardLayout/TopRow/TraitsContainer" unique_id=1889454966]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.92, 0.78, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_trait_pill")
+text = "Classe"
+text_overrun_behavior = 3
+
+[node name="TierBadge" type="Label" parent="Margin/CardLayout/TopRow" unique_id=1387942671]
+custom_minimum_size = Vector2(40, 16)
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 10
+text = "T1"
+horizontal_alignment = 2
+
+[node name="Spacer" type="Control" parent="Margin/CardLayout" unique_id=1380769181]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="BottomRow" type="HBoxContainer" parent="Margin/CardLayout" unique_id=534351739]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="NameLabel" type="Label" parent="Margin/CardLayout/BottomRow" unique_id=770024856]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.96, 0.93, 0.86, 1)
+theme_override_colors/font_outline_color = Color(0.04, 0.06, 0.08, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "Nome"
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="CostContainer" type="HBoxContainer" parent="Margin/CardLayout/BottomRow" unique_id=1076929315]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 2
+
+[node name="CoinIcon" type="TextureRect" parent="Margin/CardLayout/BottomRow/CostContainer" unique_id=972151448]
+custom_minimum_size = Vector2(14, 14)
+layout_mode = 2
+texture = SubResource("AtlasTexture_coin")
+expand_mode = 1
+stretch_mode = 5
+texture_filter = 0
+
+[node name="CostLabel" type="Label" parent="Margin/CardLayout/BottomRow/CostContainer" unique_id=1283215624]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 13
+text = "1"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="LegacyCompat" type="Control" parent="." unique_id=1540293863]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="LegacyCompat" unique_id=1035283672]
+layout_mode = 0
+mouse_filter = 2
+
+[node name="StatsContainer" type="HBoxContainer" parent="LegacyCompat/VBox" unique_id=529146577]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="HpIcon" type="Label" parent="LegacyCompat/VBox/StatsContainer" unique_id=1214438657]
+layout_mode = 2
+text = "500"
+
+[node name="AttackIcon" type="Label" parent="LegacyCompat/VBox/StatsContainer" unique_id=622859722]
+layout_mode = 2
+text = "50"
+
+[node name="SoldOutOverlay" type="ColorRect" parent="." unique_id=542622903]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.04, 0.07, 0.1, 0.88)
+
+[node name="SoulOutLabel" type="Label" parent="SoldOutOverlay" unique_id=168981564]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -40.0
+offset_top = -14.0
+offset_right = 40.0
+offset_bottom = 14.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.85, 0.35, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
+text = "VENDIDO"
+horizontal_alignment = 1
+vertical_alignment = 1

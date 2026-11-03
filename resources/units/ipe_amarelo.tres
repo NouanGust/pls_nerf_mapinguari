@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/ipe_amarelo.jpg" id="1_vdawl"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Ipê-amarelo"
+unit_id = "ipe_amarelo"
+description = "Árvore de flores de ouro que resiste a todas as intempéries; floresce sob pressão gerando um sólido escudo."
+tier = 2
+cost = 2
+combat_role = "Conjurador"
+icon = ExtResource("1_vdawl")
+max_health = 520.0
+attack_damage = 40.0
+attack_speed = 0.75
+armor = 32.0
+magic_resist = 30.0
+movement_speed = 0.0
+is_stationary = true
+mana_per_second = 3.0
+mana_when_hit = 8.0
+origins = Array[String](["Seiva", "Fulgor"])
+classes = Array[String]([])
+affinities = Array[String](["Flora"])
+biomes = Array[String](["Cerrado"])
+ability_name = "Casca Dourada"
+ability_description = "Árvore de flores de ouro que resiste a todas as intempéries; floresce sob pressão gerando um sólido escudo."
+ability_shield = 0.0
+is_tank = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+
+is_assassin = false
+is_ranged = true
+prefers_backline = true
+ability_kind = "conjure_area"
+attack_range = 3
+ability_damage = 230.0

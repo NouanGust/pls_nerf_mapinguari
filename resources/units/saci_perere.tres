@@ -1,0 +1,56 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/saci_perere.jpg" id="2_icon"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Saci-Pererê"
+unit_id = "saci_perere"
+description = "Travesso menino de uma perna so que gira redemoinhos desordenando a ofensiva inimiga."
+lore = "Travesso menino de uma perna so que gira redemoinhos desordenando a ofensiva inimiga."
+tier = 2
+cost = 2
+combat_role = "Suporte"
+icon = ExtResource("2_icon")
+max_health = 650.0
+health_regen = 0.0
+attack_damage = 38.0
+attack_speed = 1.0
+attack_range = 1
+critical_chance = 0.0
+critical_damage = 2.0
+armor = 22.0
+magic_resist = 25.0
+movement_speed = 200.0
+is_stationary = false
+can_fly = false
+max_mana = 100.0
+starting_mana = 0.0
+mana_per_attack = 10.0
+mana_per_second = 0.0
+mana_when_hit = 10.0
+origins = Array[String](["Vozes", "Travessia"])
+classes = Array[String]([])
+affinities = Array[String]([])
+biomes = Array[String]([])
+ability_name = "Redemoinho Travesso"
+ability_description = "Travesso menino de uma perna so que gira redemoinhos desordenando a ofensiva inimiga."
+ability_damage = 0.0
+ability_heal = 0.0
+ability_shield = 0.0
+ability_mana = 0.0
+ability_targets = 1
+ability_duration = 0.0
+ability_cooldown = 0.0
+ability_range = 0.0
+ability_damage_type = 1
+ability_kind = "support"
+target_priority = 0
+is_tank = false
+is_assassin = false
+is_ranged = false
+prefers_backline = true
+passive_aura_range = 1
+passive_aura_effect = "enemy_attack_speed_slow"
+passive_aura_power = 0.15

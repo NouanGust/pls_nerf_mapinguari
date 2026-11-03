@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_4nu4d"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mapinguari.webp" id="1_xuf38"]
+
+[resource]
+script = ExtResource("1_4nu4d")
+unit_name = "Mapinguari"
+unit_id = "mapinguari"
+description = "A besta mítica do coração da Amazônia! Uma lenda viva tão temível que todos imploram: por favor nerfem o Mapinguari!"
+tier = 5
+cost = 5
+combat_role = "Porradeiro"
+icon = ExtResource("1_xuf38")
+max_health = 2100.0
+attack_damage = 150.0
+attack_speed = 0.85
+armor = 65.0
+magic_resist = 50.0
+movement_speed = 150.0
+origins = Array[String](["Ferocidade", "Vigília"])
+classes = Array[String]([])
+ability_name = "Rugido da Fúria Lendária"
+ability_description = "A besta mítica do coração da Amazônia! Uma lenda viva tão temível que todos imploram: por favor nerfem o Mapinguari!"
+ability_duration = 4.0
+ability_damage = 350.0
+ability_damage_type = 0
+is_tank = false
+
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "brawler"
+attack_range = 1

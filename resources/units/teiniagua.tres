@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Teiniangua.png" id="1_dxk8w"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_lr5ru"]
+
+[resource]
+script = ExtResource("1_lr5ru")
+unit_name = "Teiniaguá"
+unit_id = "teiniagua"
+description = "Princesa encantada transformada em lagarto de fogo; canaliza chamas arcanas que incineram alvos à distância."
+tier = 3
+cost = 3
+combat_role = "Conjurador"
+icon = ExtResource("1_dxk8w")
+max_health = 650.0
+attack_damage = 45.0
+attack_speed = 0.90
+attack_range = 3
+armor = 20.0
+magic_resist = 35.0
+movement_speed = 220.0
+max_mana = 80.0
+mana_per_attack = 8.0
+origins = Array[String](["Encanto", "Fulgor"])
+classes = Array[String]([])
+ability_name = "Esfera Arcana"
+ability_description = "Princesa encantada transformada em lagarto de fogo; canaliza chamas arcanas que incineram alvos à distância."
+ability_damage = 310.0
+is_ranged = true
+
+is_tank = false
+is_assassin = false
+prefers_backline = true
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "conjure_area"

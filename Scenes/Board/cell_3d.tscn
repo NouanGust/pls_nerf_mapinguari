@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://cv4lqggfgo4ao"]
+
+[ext_resource type="Script" uid="uid://f0emkauu2kol" path="res://Scripts/Board/cell_3d.gd" id="1_5vl73"]
+[ext_resource type="Texture2D" uid="uid://v6elsk3ku4sd" path="res://textures/dirt/Dirt_texture_specular.png" id="1_ttnyc"]
+[ext_resource type="Texture2D" uid="uid://bp8ovwgxmrriu" path="res://textures/dirt/Dirt_texture_normal.png" id="2_5vl73"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rba0l"]
+albedo_texture = ExtResource("1_ttnyc")
+normal_enabled = true
+normal_texture = ExtResource("2_5vl73")
+
+[sub_resource type="BoxMesh" id="BoxMesh_gndme"]
+material = SubResource("StandardMaterial3D_rba0l")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_d0tkt"]
+size = Vector3(2, 0.25, 2)
+
+[node name="Cell3D" type="Area3D" unique_id=965695908]
+script = ExtResource("1_5vl73")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=483676224]
+mesh = SubResource("BoxMesh_gndme")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=510037431]
+shape = SubResource("BoxShape3D_d0tkt")
+
+[node name="ZoneIndicator" type="MeshInstance3D" parent="." unique_id=278409396]

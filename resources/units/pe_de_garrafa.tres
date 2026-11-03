@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_6nwsa"]
+[ext_resource type="Texture2D" path="res://Assets/Units_teste/Pe_garrafa.png" id="1_rh75l"]
+
+[resource]
+script = ExtResource("1_6nwsa")
+unit_name = "Pé-de-Garrafa"
+unit_id = "pe_de_garrafa"
+description = "A temida entidade de uma perna só com casco redondo; emite um assobio horripilante e desaba sobre o inimigo mais vulnerável."
+lore = "Espectro de caçador amaldiçoado a vagar eternamente."
+tier = 5
+cost = 5
+combat_role = "Assassino"
+icon = ExtResource("1_rh75l")
+max_health = 1350.0
+attack_damage = 160.0
+attack_speed = 1.25
+attack_range = 1
+critical_chance = 0.5
+critical_damage = 3.0
+armor = 35.0
+magic_resist = 35.0
+movement_speed = 250.0
+max_mana = 60.0
+mana_per_attack = 5.0
+origins = Array[String](["Travessia", "Assombro"])
+classes = Array[String]([])
+ability_name = "Tiro Certeiro"
+ability_description = "A temida entidade de uma perna só com casco redondo; emite um assobio horripilante e desaba sobre o inimigo mais vulnerável."
+ability_damage = 550.0
+ability_range = 8.0
+ability_damage_type = 0
+is_assassin = true
+is_ranged = false
+prefers_backline = false
+
+target_priority = 0
+is_tank = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "assassin"

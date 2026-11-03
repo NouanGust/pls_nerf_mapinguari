@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/images (12).jpg" id="1_3oecy"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Aguapé"
+unit_id = "aguape"
+description = "Vegetação flutuante dos meandros pantaneiros; filtra as impurezas e cura os aliados adjacentes."
+tier = 2
+cost = 2
+combat_role = "Suporte"
+icon = ExtResource("1_3oecy")
+max_health = 590.0
+attack_damage = 30.0
+attack_speed = 0.80
+attack_range = 4
+armor = 18.0
+magic_resist = 35.0
+movement_speed = 0.0
+is_stationary = true
+starting_mana = 20.0
+mana_per_second = 3.0
+mana_when_hit = 5.0
+origins = Array[String](["Seiva", "Correnteza"])
+classes = Array[String]([])
+affinities = Array[String](["Flora"])
+biomes = Array[String](["Pantanal"])
+ability_name = "Manto Flutuante"
+ability_description = "Vegetação flutuante dos meandros pantaneiros; filtra as impurezas e cura os aliados adjacentes."
+ability_heal = 160.0
+ability_targets = 2
+ability_range = 5.0
+is_ranged = false
+prefers_backline = true
+passive_aura_range = 1
+passive_aura_effect = "regen"
+passive_aura_power = 0.015
+
+is_tank = false
+is_assassin = false

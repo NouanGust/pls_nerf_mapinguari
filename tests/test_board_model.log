@@ -1,0 +1,7 @@
+--- INICIANDO TESTE ---
+SUCESSO: Modelo instanciado com sucesso!
+Nome da raiz: blockbench_export
+Contagem de filhos diretos: 2
+ -> board_arena_root (Node3D) com 6 nos
+ -> board_arena_root2 (Node3D) com 6 nos
+--- TESTE FINALIZADO COM SUCESSO ---

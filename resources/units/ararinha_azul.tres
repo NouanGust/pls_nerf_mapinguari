@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/ararinha_azul.jpg" id="1_fynok"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Ararinha-azul"
+unit_id = "ararinha_azul"
+description = "A mais rara e preciosa ave da Caatinga; seu canto sagrado restaura a vida e abençoa os aliados com aura."
+lore = "Seu voo anuncia a esperança de ver a Caatinga novamente povoada."
+tier = 5
+cost = 5
+combat_role = "Suporte"
+icon = ExtResource("1_fynok")
+max_health = 1100.0
+attack_damage = 55.0
+attack_speed = 1.00
+attack_range = 4
+armor = 35.0
+magic_resist = 55.0
+movement_speed = 245.0
+can_fly = true
+starting_mana = 30.0
+origins = Array[String](["Vozes", "Vigília"])
+classes = Array[String]([])
+affinities = Array[String](["Fauna"])
+biomes = Array[String](["Caatinga"])
+ability_name = "Revoada da Caatinga"
+ability_description = "A mais rara e preciosa ave da Caatinga; seu canto sagrado restaura a vida e abençoa os aliados com aura."
+ability_heal = 250.0
+ability_targets = 4
+ability_range = 5.0
+is_ranged = false
+prefers_backline = true
+
+passive_aura_range = 1
+passive_aura_effect = "control_resist"
+passive_aura_power = 0.2
+is_tank = false
+is_assassin = false
+ability_shield = 250.0

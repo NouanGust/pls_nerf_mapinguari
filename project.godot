@@ -1,0 +1,61 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
+[application]
+
+config/name="Folchess"
+config/version="0.1.0"
+run/main_scene="res://Scenes/UI/SplashScreen.tscn"
+config/features=PackedStringArray("4.6", "Forward Plus")
+boot_splash/show_image=false
+boot_splash/stretch_mode=4
+boot_splash/image="res://Assets/Utils/splash_screen.png"
+config/icon="uid://diqlgs6lyplec"
+boot_splash/minimum_display_time=500
+
+[autoload]
+
+ResponsiveLayout="*res://Scripts/UI/responsive_layout.gd"
+BattleClock="*res://Scripts/Systems/battle_clock.gd"
+GameSettings="*res://Scripts/Systems/game_settings.gd"
+AudioManager="*res://Scripts/Systems/audio_manager.tscn"
+EconomyManager="*res://Scripts/Systems/economy_manager.gd"
+UnitCatalog="*res://Scripts/Systems/unit_catalog.gd"
+
+[debug]
+
+settings/stdout/print_stdout.release=false
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+window/size/mode=3
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[navigation]
+
+3d/default_cell_size=0.3
+3d/default_cell_height=0.2
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_2d=1
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)

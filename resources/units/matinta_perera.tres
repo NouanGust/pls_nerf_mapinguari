@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/matinta_pereira.webp" id="1_jca3h"]
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_mrs1p"]
+
+[resource]
+script = ExtResource("1_mrs1p")
+unit_name = "Matinta Perera"
+unit_id = "matinta_perera"
+description = "Feiticeira misteriosa cujo assobio sinistro persegue e executa as presas mais vulneráveis."
+lore = "De dia é velha, de noite vira ave que assobia tristemente."
+tier = 3
+cost = 3
+combat_role = "Assassino"
+icon = ExtResource("1_jca3h")
+max_health = 680.0
+attack_damage = 72.0
+attack_speed = 1.15
+armor = 20.0
+magic_resist = 30.0
+movement_speed = 250.0
+can_fly = true
+max_mana = 80.0
+starting_mana = 40.0
+origins = Array[String](["Vozes", "Travessia"])
+classes = Array[String]([])
+ability_name = "Forma de Pássaro"
+ability_description = "Feiticeira misteriosa cujo assobio sinistro persegue e executa as presas mais vulneráveis."
+ability_damage = 340.0
+ability_duration = 3.0
+ability_range = 3.0
+is_assassin = true
+prefers_backline = false
+
+target_priority = 0
+is_tank = false
+is_ranged = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "assassin"
+attack_range = 1

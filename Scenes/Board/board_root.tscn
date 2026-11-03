@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://d0fbrkapb473o"]
+
+[node name="BoardRoot" type="Node3D" unique_id=2143589171]
+
+[node name="Cells" type="Node3D" parent="." unique_id=20210324]
+
+[node name="FX" type="Node3D" parent="." unique_id=1049462298]
+
+[node name="Units" type="Node3D" parent="." unique_id=2054072577]
+
+[node name="Markers" type="Node3D" parent="." unique_id=1654421889]

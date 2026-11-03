@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/tamandua_bandeira.png" id="2_splash_art"]
+
+[resource]
+script = ExtResource("1_stats")
+unit_name = "Tamanduá bandeira"
+unit_id = "tamandua_bandeira"
+description = "Habitante solitário da savana; suas garras poderosas quebram defesas e se enfurecem ao atacar."
+lore = "Percorre campos e matas, abrindo espaço para os aliados."
+tier = 2
+cost = 2
+combat_role = "Porradeiro"
+icon = ExtResource("2_splash_art")
+max_health = 840.0
+attack_damage = 74.0
+attack_speed = 0.78
+armor = 32.0
+magic_resist = 25.0
+movement_speed = 175.0
+mana_when_hit = 8.0
+origins = Array[String](["Ferocidade", "Vigília"])
+classes = Array[String]([])
+affinities = Array[String](["Fauna"])
+biomes = Array[String](["Cerrado", "Pantanal"])
+ability_name = "Garras do Cerrado"
+ability_description = "Habitante solitário da savana; suas garras poderosas quebram defesas e se enfurecem ao atacar."
+ability_damage = 110.0
+ability_shield = 0.0
+ability_range = 2.0
+is_tank = false
+
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "brawler"
+attack_range = 1

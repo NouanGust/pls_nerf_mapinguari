@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://c0yvf2atoijg5"]
+
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_41kwa"]
+[ext_resource type="Texture2D" uid="uid://6o4r4mjudnmb" path="res://Assets/Units/SplashArts/minhocao.jpg" id="1_57osp"]
+
+[resource]
+script = ExtResource("1_41kwa")
+unit_name = "Minhocão"
+unit_id = "minhocao"
+description = "Ser gigantesco das galerias subterrâneas; causa tremores e atordoamentos devastadores na vanguarda."
+lore = "Monstro que escava túneis profundos, fazendo a terra tremer."
+tier = 3
+cost = 3
+combat_role = "Tank"
+icon = ExtResource("1_57osp")
+max_health = 1500.0
+attack_damage = 55.0
+attack_speed = 0.60
+armor = 65.0
+magic_resist = 25.0
+movement_speed = 80.0
+max_mana = 120.0
+mana_per_attack = 12.0
+mana_when_hit = 20.0
+origins = Array[String](["Correnteza", "Travessia"])
+classes = Array[String]([])
+ability_name = "Terremoto"
+ability_description = "Ser gigantesco das galerias subterrâneas; causa tremores e atordoamentos devastadores na vanguarda."
+ability_damage = 80.0
+ability_targets = 2
+ability_duration = 1.5
+ability_range = 3.5
+ability_damage_type = 0
+is_tank = true
+stun_resist = 0.5
+
+is_assassin = false
+is_ranged = false
+prefers_backline = false
+passive_aura_range = 0
+passive_aura_effect = ""
+passive_aura_power = 0.0
+ability_kind = "tank_guard"
+attack_range = 1
+ability_shield = 280.0

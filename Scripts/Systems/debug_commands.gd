@@ -10,6 +10,7 @@ unidades [filtro] — lista IDs e nomes disponíveis (units)
 unidade ID [quantidade] [estrelas] — entrega no banco (unit / spawn)
 xp N — adiciona experiência
 vida N — define vida entre 1 e 100 (hp)
+tabuleiro [horror|realista] — alterna estilo do tabuleiro da Caatinga (board)
 status — mostra o estado atual
 limpar — limpa o console (clear)
 fechar — volta ao jogo (exit)
@@ -100,6 +101,24 @@ func execute(command_line: String) -> String:
 			game.player_health = int(args[0])
 			game.update_ui()
 			return "Vida: %d." % game.player_health
+		"tabuleiro", "board":
+			var gs: Node = game.get_node_or_null("/root/GameSettings")
+			var target_style: String = args[0] if not args.is_empty() else ""
+			if target_style.is_empty():
+				var cur: String = str(gs.get("caatinga_board_variant")) if gs else "horror"
+				target_style = "realista" if cur != "realista" else "horror"
+			elif target_style in ["realista", "realistic", "real"]:
+				target_style = "realista"
+			elif target_style in ["horror", "padrao", "padrão", "default"]:
+				target_style = "horror"
+			else:
+				return "Uso: tabuleiro [horror|realista]"
+			if gs and gs.has_method("update_setting"):
+				gs.update_setting("caatinga_board_variant", target_style)
+			if is_instance_valid(game.board):
+				game.board.caatinga_board_style = target_style
+				game.board.apply_region_environment("caatinga_realista" if target_style == "realista" else "caatinga", 0.35)
+			return "Tabuleiro da Caatinga alterado para: %s." % target_style
 	return "Erro: comando desconhecido '%s'. Digite ajuda." % command
 
 func _integer_arg(args: PackedStringArray, minimum: int, maximum: int) -> bool:

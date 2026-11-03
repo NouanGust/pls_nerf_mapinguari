@@ -5,47 +5,57 @@ extends "res://Scripts/Abilities/unit_ability.gd"
 
 func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 	unit._trigger_camera_shake(0.45, 0.55)
-	if unit.model:
-		var tw := unit.create_tween()
-		tw.tween_property(unit.model, "scale", unit.model_base_scale * Vector3(1.25, 0.75, 1.25), 0.15).set_trans(Tween.TRANS_QUAD)
-		tw.tween_property(unit.model, "scale", unit.model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
-
-	CombatFeedback.create_status_indicator(unit, "RAÍZES GUARDIÃS", 1.2)
-	CombatFeedback.create_hit_particles(unit.global_position, Color("#16a34a"))
-	CombatFeedback.create_hit_particles(unit.global_position + Vector3.UP * 0.8, Color("#78350f"))
-
 	var radius: float = unit.stats.ability_range if unit.stats.ability_range > 0.0 else 4.0
 	var duration: float = unit.stats.ability_duration if unit.stats.ability_duration > 0.0 else 3.0
 	var damage: float = unit.stats.ability_damage * unit.stats.get_star_multiplier(unit.star_level)
 	var heal_val: float = unit.stats.ability_heal * unit.stats.get_star_multiplier(unit.star_level)
 	var shield_val: float = (unit.stats.ability_shield if unit.stats.ability_shield > 0.0 else 180.0) * unit.stats.get_star_multiplier(unit.star_level)
 
-	_create_roots_element(unit, unit.global_position, radius, duration)
+	var apply_roots_effects := func() -> void:
+		if not is_instance_valid(unit):
+			return
+		_create_roots_element(unit, unit.global_position, radius, duration)
 
-	var enemy_group := "enemy_units" if unit.team == 0 else "player_units"
-	for enemy_node: Node in unit.get_tree().get_nodes_in_group(enemy_group):
-		var enemy := enemy_node as BaseUnit3D
-		if not is_instance_valid(enemy) or enemy.current_state == BaseUnit3D.State.DEAD or not enemy.visible or enemy.is_on_bench():
-			continue
-		var dist: float = Vector2(unit.global_position.x, unit.global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
-		if dist <= radius:
-			enemy.apply_stun(duration, "ENRAIZADO")
-			enemy.take_damage(damage, unit, UnitStats.DamageType.PHYSICAL)
-			CombatFeedback.create_hit_particles(enemy.global_position, Color("#15803d"))
-			CombatFeedback.create_hit_particles(enemy.global_position + Vector3.UP * 0.4, Color("#78350f"))
+		var tree := unit.get_tree() if unit.is_inside_tree() else Engine.get_main_loop() as SceneTree
+		if not tree:
+			return
 
-	var ally_group := "player_units" if unit.team == 0 else "enemy_units"
-	for ally_node: Node in unit.get_tree().get_nodes_in_group(ally_group):
-		var ally := ally_node as BaseUnit3D
-		if not is_instance_valid(ally) or ally.current_state == BaseUnit3D.State.DEAD or not ally.visible or ally.is_on_bench():
-			continue
-		var dist: float = Vector2(unit.global_position.x, unit.global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
-		if dist <= radius:
-			var healed: float = ally.heal(heal_val, unit)
-			ally.current_shield = maxf(ally.current_shield, shield_val)
-			if healed > 0.0:
-				CombatFeedback.create_status_indicator(ally, "+%d HP" % int(healed), 1.2)
-			CombatFeedback.create_hit_particles(ally.global_position, Color("#22c55e"))
+		var enemy_group := "enemy_units" if unit.team == 0 else "player_units"
+		for enemy_node: Node in tree.get_nodes_in_group(enemy_group):
+			var enemy := enemy_node as BaseUnit3D
+			if not is_instance_valid(enemy) or enemy.current_state == BaseUnit3D.State.DEAD or not enemy.visible or enemy.is_on_bench():
+				continue
+			var dist: float = Vector2(unit.global_position.x, unit.global_position.z).distance_to(Vector2(enemy.global_position.x, enemy.global_position.z))
+			if dist <= radius:
+				enemy.apply_stun(duration, "ENRAIZADO")
+				enemy.take_damage(damage, unit, UnitStats.DamageType.PHYSICAL)
+				CombatFeedback.create_hit_particles(enemy.global_position, Color("#15803d"))
+				CombatFeedback.create_hit_particles(enemy.global_position + Vector3.UP * 0.4, Color("#78350f"))
+
+		var ally_group := "player_units" if unit.team == 0 else "enemy_units"
+		for ally_node: Node in tree.get_nodes_in_group(ally_group):
+			var ally := ally_node as BaseUnit3D
+			if not is_instance_valid(ally) or ally.current_state == BaseUnit3D.State.DEAD or not ally.visible or ally.is_on_bench():
+				continue
+			var dist: float = Vector2(unit.global_position.x, unit.global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
+			if dist <= radius:
+				var healed: float = ally.heal(heal_val, unit)
+				ally.current_shield = maxf(ally.current_shield, shield_val)
+				if healed > 0.0:
+					CombatFeedback.create_status_indicator(ally, "+%d HP" % int(healed), 1.2)
+				CombatFeedback.create_hit_particles(ally.global_position, Color("#22c55e"))
+
+	if unit.model:
+		var tw := unit.create_tween()
+		tw.tween_property(unit.model, "scale", unit.model_base_scale * Vector3(1.25, 0.75, 1.25), 0.15).set_trans(Tween.TRANS_QUAD)
+		tw.tween_callback(apply_roots_effects)
+		tw.tween_property(unit.model, "scale", unit.model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
+	else:
+		apply_roots_effects.call()
+
+	CombatFeedback.create_status_indicator(unit, "RAÍZES GUARDIÃS", 1.2)
+	CombatFeedback.create_hit_particles(unit.global_position, Color("#16a34a"))
+	CombatFeedback.create_hit_particles(unit.global_position + Vector3.UP * 0.8, Color("#78350f"))
 
 	return true
 

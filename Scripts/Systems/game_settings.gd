@@ -10,6 +10,7 @@ var fullscreen: bool = false
 var auto_orbit: bool = false
 var mouse_sensitivity: float = 0.25
 var last_played_region: String = "mata_atlantica"
+var caatinga_board_variant: String = "realista"
 var last_error: Error = OK
 
 func _ready() -> void:
@@ -23,6 +24,7 @@ func _ready() -> void:
 		auto_orbit = bool(config.get_value("camera", "auto_orbit", auto_orbit))
 		mouse_sensitivity = clampf(float(config.get_value("camera", "sensitivity", mouse_sensitivity)), 0.05, 1.0)
 		last_played_region = str(config.get_value("gameplay", "last_played_region", "mata_atlantica"))
+		caatinga_board_variant = str(config.get_value("gameplay", "caatinga_board_variant_v2", "realista"))
 	_apply()
 
 func get_last_played_region() -> String:
@@ -44,6 +46,8 @@ func set_last_played_region(region_id: String) -> void:
 	config.set_value("camera", "auto_orbit", auto_orbit)
 	config.set_value("camera", "sensitivity", mouse_sensitivity)
 	config.set_value("gameplay", "last_played_region", last_played_region)
+	config.set_value("gameplay", "caatinga_board_variant", caatinga_board_variant)
+	config.set_value("gameplay", "caatinga_board_variant_v2", caatinga_board_variant)
 	last_error = config.save(PATH)
 
 func update_setting(key: String, value: Variant) -> void:
@@ -55,6 +59,9 @@ func update_setting(key: String, value: Variant) -> void:
 		"auto_orbit": auto_orbit = bool(value)
 		"mouse_sensitivity": mouse_sensitivity = clampf(float(value), 0.05, 1.0)
 		"last_played_region": last_played_region = str(value)
+		"caatinga_board_variant":
+			var v := str(value).to_lower()
+			caatinga_board_variant = "realista" if v in ["realista", "realistic", "true", "1"] else "horror"
 		_: return
 	_apply()
 	var config := ConfigFile.new()
@@ -65,6 +72,8 @@ func update_setting(key: String, value: Variant) -> void:
 	config.set_value("camera", "auto_orbit", auto_orbit)
 	config.set_value("camera", "sensitivity", mouse_sensitivity)
 	config.set_value("gameplay", "last_played_region", last_played_region)
+	config.set_value("gameplay", "caatinga_board_variant", caatinga_board_variant)
+	config.set_value("gameplay", "caatinga_board_variant_v2", caatinga_board_variant)
 	last_error = config.save(PATH)
 	settings_changed.emit()
 

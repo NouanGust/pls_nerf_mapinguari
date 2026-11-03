@@ -162,11 +162,13 @@ func _render() -> void:
 			var fs: bool = bool(gs.get("fullscreen")) if gs else false
 			var ao: bool = bool(gs.get("auto_orbit")) if gs else false
 			var sens: float = float(gs.get("mouse_sensitivity")) if gs else 0.25
+			var caatinga_real: bool = (str(gs.get("caatinga_board_variant")) == "realista") if gs else false
 			_slider("Volume geral", "volume", vol, 0.0, 1.0, 0.01)
 			_slider("Música", "music_volume", m_vol, 0.0, 1.0, 0.01)
 			_slider("Efeitos sonoros", "sfx_volume", s_vol, 0.0, 1.0, 0.01)
 			_check("Tela cheia", "fullscreen", fs, OS.has_feature("web"))
 			_check("Orbitar automaticamente", "auto_orbit", ao)
+			_check("Tabuleiro da Caatinga: Versão Realista", "caatinga_board_variant", caatinga_real)
 			_slider("Sensibilidade da câmera", "mouse_sensitivity", sens, 0.05, 1.0, 0.05)
 			_content.add_child(button("Voltar", _back))
 		"tutorial":

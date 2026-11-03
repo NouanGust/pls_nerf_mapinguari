@@ -626,6 +626,13 @@ func apply_stun(duration: float, label: String = "ATORDOADO") -> void:
 func _recover_from_stun() -> void:
 	if current_state == State.DEAD or is_on_bench():
 		return
+	if not in_combat:
+		current_state = State.IDLE
+		velocity = Vector3.ZERO
+		current_target = null
+		if attack_timer:
+			attack_timer.stop()
+		return
 	if stats and stats.is_stationary:
 		_wait_rooted()
 		_rooted_target_timer = 0.0
@@ -757,6 +764,17 @@ func _physics_process(delta: float) -> void:
 			if loss > 0.0:
 				current_shield = health_comp.current_shield
 				_update_shield_sphere_visual()
+
+	if not in_combat:
+		if current_state in [State.MOVING, State.ATTACKING, State.ROOTED]:
+			if attack_timer:
+				attack_timer.stop()
+			current_target = null
+			velocity = Vector3.ZERO
+			_detour_timer = 0.0
+			_detour_dir = Vector3.ZERO
+			current_state = State.IDLE
+		return
 
 	if is_stunned():
 		_was_stunned = true
@@ -1001,16 +1019,24 @@ func cast_ability() -> void:
 	
 	ability_cast.emit(stats.ability_name)
 	
-	# FEEDBACK VISUAL DE HABILIDADE
+	# FEEDBACK VISUAL DE HABILIDADE E CANALIZAÇÃO
 	CombatFeedback.create_ability_effect(global_position, stats.ability_name, stats.get_tier_color())
 	CombatFeedback.create_hit_particles(global_position, stats.get_tier_color())
 	
-	print("%s usou %s!" % [stats.unit_name, stats.ability_name])
+	var channel_dur: float = 0.40
+	_play_channel_buildup(channel_dur, stats.get_tier_color())
+	
+	print("%s começou a canalizar %s!" % [stats.unit_name, stats.ability_name])
 	
 	var scale_mult := 1.0
 	if origin_runtime:
 		scale_mult = origin_runtime.on_ability_start()
 	current_ability_scale = scale_mult
+	
+	# Espera o clímax da canalização antes de liberar o efeito/projétil da habilidade
+	await get_tree().create_timer(channel_dur * 0.65, false).timeout
+	if current_state != State.CASTING:
+		return
 	
 	apply_ability_effect(scale_mult)
 	
@@ -1018,12 +1044,27 @@ func cast_ability() -> void:
 		origin_runtime.on_ability_concluded()
 	current_ability_scale = 1.0
 	
-	await get_tree().create_timer(0.5, false).timeout
+	await get_tree().create_timer(0.65, false).timeout
 	# O ataque pode ter retomado (ou a unidade pode ter morrido) enquanto a
 	# habilidade aguardava. Só encerra o estado se ainda for esta conjuração.
 	if current_state == State.CASTING:
 		current_state = State.IDLE
-		find_target()
+		if in_combat:
+			find_target()
+
+func _play_channel_buildup(duration: float = 0.40, color: Color = Color.WHITE) -> void:
+	if not model:
+		return
+	var tw := create_tween()
+	tw.set_parallel(true)
+	# Leve elevação e retração com pulso de carga
+	tw.tween_property(model, "scale", model_base_scale * Vector3(1.28, 1.35, 1.28), duration * 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(model, "position:y", (FLYING_BASE_HEIGHT if is_flying() else 0.0) + 0.35, duration * 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# Liberação e impacto no retorno
+	tw.chain().tween_property(model, "scale", model_base_scale, duration * 0.35).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(model, "position:y", (FLYING_BASE_HEIGHT if is_flying() else 0.0), duration * 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.8, color)
+	_trigger_camera_shake(0.2, 0.15)
 
 func apply_ability_effect(scale_multiplier: float = 1.0) -> void:
 	if name_label:
@@ -1089,8 +1130,10 @@ func _create_mboi_guacu_coil_element(target: BaseUnit3D, duration: float = 2.5) 
 	if ability and ability.has_method("_create_coil_element"):
 		ability._create_coil_element(target, duration)
 
-func _execute_swoop_advance_and_return(target_pos: Vector3, trail_color: Color, _action_label: String) -> void:
+func _execute_swoop_advance_and_return(target_pos: Vector3, trail_color: Color, _action_label: String, on_apex_hit: Callable = Callable()) -> void:
 	if not model:
+		if on_apex_hit.is_valid():
+			on_apex_hit.call()
 		return
 	_is_swooping = true
 	var origin_global: Vector3 = global_position
@@ -1118,6 +1161,8 @@ func _execute_swoop_advance_and_return(target_pos: Vector3, trail_color: Color, 
 				var strike_tw := create_tween()
 				strike_tw.tween_property(model, "rotation:x", 0.4, 0.06)
 				strike_tw.tween_property(model, "rotation:x", 0.0, 0.06)
+		if on_apex_hit.is_valid():
+			on_apex_hit.call()
 	)
 	tw.tween_interval(0.12)
 	
@@ -1208,9 +1253,11 @@ func revive_at_position(world_pos: Vector3) -> void:
 	use_navigation = false
 	_detour_dir = Vector3.ZERO
 	_detour_timer = 0.0
-	in_combat = true
+	in_combat = false
 	_was_stunned = false
 	current_state = State.IDLE
+	if attack_timer:
+		attack_timer.stop()
 	current_health = get_max_health()
 	current_mana = stats.starting_mana
 	clear_shield()
@@ -1232,7 +1279,8 @@ func revive_at_position(world_pos: Vector3) -> void:
 	combat_ground_height = world_pos.y
 	if ui_sprite:
 		ui_sprite.show()
-	unit_visual.reset_pose()
+	if unit_visual:
+		unit_visual.reset_pose()
 	
 	if model:
 		model.scale = model_base_scale

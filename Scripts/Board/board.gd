@@ -16,6 +16,8 @@ const RegionEnvironment = preload("res://Scripts/Environment/region_environment.
 @export var show_default_floor_mesh: bool = false
 @export var environment_scene: PackedScene = preload("res://Scenes/Board/board_environment.tscn")
 @export var caatinga_environment_scene: PackedScene = preload("res://Scenes/Board/board_environment_caatinga.tscn")
+@export var caatinga_realistic_environment_scene: PackedScene = preload("res://Scenes/Board/board_environment_caatinga_realista.tscn")
+@export_enum("default", "horror", "realista") var caatinga_board_style: String = "default"
 
 var current_region_id: String = ""
 
@@ -38,7 +40,18 @@ signal cell_clicked(position: Vector2i)
 
 
 func _ready() -> void:
+	var gs: Node = get_node_or_null("/root/GameSettings")
+	if gs and gs.has_signal("settings_changed") and not gs.settings_changed.is_connected(_on_game_settings_changed):
+		gs.settings_changed.connect(_on_game_settings_changed)
 	generate_board()
+
+
+func _on_game_settings_changed() -> void:
+	if current_region_id in ["caatinga", "caatinga_realista"]:
+		var gs: Node = get_node_or_null("/root/GameSettings")
+		var variant: String = str(gs.get("caatinga_board_variant")) if gs else "horror"
+		var target_id := "caatinga_realista" if variant == "realista" else "caatinga"
+		apply_region_environment(target_id, 0.35)
 
 
 func get_hex_radius() -> float:
@@ -72,9 +85,7 @@ func generate_board() -> void:
 	cell_base_colors.clear()
 
 	if not environment_instance or not is_instance_valid(environment_instance):
-		var target_scene: PackedScene = environment_scene
-		if current_region_id.to_lower() == "caatinga" and caatinga_environment_scene:
-			target_scene = caatinga_environment_scene
+		var target_scene: PackedScene = _resolve_environment_scene(current_region_id.to_lower())
 		if target_scene:
 			environment_instance = target_scene.instantiate()
 			environment_instance.name = "BoardEnvironmentInstance"
@@ -117,6 +128,9 @@ func generate_board() -> void:
 	for row in rows:
 		for col in columns:
 			_create_hex_cell(Vector2i(col, row))
+
+	if not current_region_id.is_empty():
+		_update_cells_for_region(current_region_id)
 
 	create_navigation_geometry()
 
@@ -496,15 +510,37 @@ func get_bench_slot_from_world_position(world_pos: Vector3) -> int:
 	return slot
 
 
-func set_region_environment_scene(new_region_id: String) -> void:
+func _resolve_caatinga_region_key(new_region_id: String) -> String:
 	var region_key := new_region_id.to_lower()
+	if region_key == "caatinga_realista":
+		return "caatinga_realista"
+	if region_key == "caatinga":
+		if caatinga_board_style == "realista":
+			return "caatinga_realista"
+		if caatinga_board_style == "horror":
+			return "caatinga"
+		var gs: Node = get_node_or_null("/root/GameSettings")
+		if gs and str(gs.get("caatinga_board_variant")) == "realista":
+			return "caatinga_realista"
+	return region_key
+
+
+func _resolve_environment_scene(region_key: String) -> PackedScene:
+	if region_key == "caatinga_realista" and caatinga_realistic_environment_scene:
+		return caatinga_realistic_environment_scene
+	if region_key == "caatinga" and caatinga_environment_scene:
+		return caatinga_environment_scene
+	return environment_scene
+
+
+func set_region_environment_scene(new_region_id: String) -> void:
+	var region_key := _resolve_caatinga_region_key(new_region_id)
 	if current_region_id == region_key and environment_instance and is_instance_valid(environment_instance):
+		_update_cells_for_region(region_key)
 		return
 	current_region_id = region_key
 	
-	var target_scene: PackedScene = environment_scene
-	if region_key == "caatinga" and caatinga_environment_scene:
-		target_scene = caatinga_environment_scene
+	var target_scene: PackedScene = _resolve_environment_scene(region_key)
 		
 	if environment_instance and is_instance_valid(environment_instance):
 		environment_instance.queue_free()
@@ -514,18 +550,71 @@ func set_region_environment_scene(new_region_id: String) -> void:
 		environment_instance = target_scene.instantiate()
 		environment_instance.name = "BoardEnvironmentInstance"
 		add_child(environment_instance)
+	_update_cells_for_region(region_key)
+
+
+func _update_cells_for_region(region_key: String) -> void:
+	var is_caatinga_sculpted := region_key in ["caatinga", "caatinga_realista"]
+	var is_realista := region_key == "caatinga_realista"
+	for grid_pos in cell_meshes.keys():
+		var inset: MeshInstance3D = cell_meshes[grid_pos]
+		if not is_instance_valid(inset):
+			continue
+		var is_player := is_player_zone(grid_pos)
+		var base_color: Color
+		if is_realista:
+			# Na versão realista, deixa as casas de barro batido e sulcos escavados 100% visíveis sem película plástica;
+			# o cilindro procedural só aparece ao destacar/arrastar unidades (highlight_cell).
+			base_color = Color(0.45, 0.23, 0.14, 0.0) if is_player else Color(0.38, 0.18, 0.11, 0.0)
+		elif is_caatinga_sculpted:
+			# Revela os ladrilhos esculpidos no modelo 3D da Caatinga mantendo leitura clara das zonas
+			base_color = Color(0.32, 0.50, 0.54, 0.34) if is_player else Color(0.52, 0.32, 0.22, 0.28)
+		else:
+			base_color = Color("#4b777b") if is_player else Color("#74614f")
+		cell_base_colors[grid_pos] = base_color
+		var mat := inset.material_override as StandardMaterial3D
+		if mat:
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if is_caatinga_sculpted else BaseMaterial3D.TRANSPARENCY_DISABLED
+			mat.albedo_color = base_color
+		var cell_node := inset.get_parent()
+		if cell_node and cell_node.get_child_count() > 0:
+			var outline := cell_node.get_child(0) as MeshInstance3D
+			if outline and outline != inset and outline.material_override is StandardMaterial3D:
+				var omat := outline.material_override as StandardMaterial3D
+				if is_realista:
+					omat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+					omat.albedo_color = Color(0.13, 0.055, 0.032, 0.0)
+				elif is_caatinga_sculpted:
+					omat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+					omat.albedo_color = Color(0.11, 0.07, 0.05, 0.52)
+				else:
+					omat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+					omat.albedo_color = Color("#251f1c")
 
 
 func apply_region_environment(new_region_id: String, duration: float = 0.0) -> void:
-	set_region_environment_scene(new_region_id)
+	var resolved_id := _resolve_caatinga_region_key(new_region_id)
+	set_region_environment_scene(resolved_id)
 	
-	var target_env: WorldEnvironment = get_node_or_null("WorldEnvironment")
-	if not target_env and get_parent():
-		target_env = get_parent().get_node_or_null("WorldEnvironment")
-	if not target_env:
-		target_env = find_child("WorldEnvironment", true, false)
+	var envs: Array[WorldEnvironment] = []
+	var local_env: WorldEnvironment = get_node_or_null("WorldEnvironment")
+	if local_env:
+		envs.append(local_env)
+	if get_parent():
+		var parent_env: WorldEnvironment = get_parent().get_node_or_null("WorldEnvironment")
+		if parent_env and not envs.has(parent_env):
+			envs.append(parent_env)
+	if envs.is_empty():
+		var found_env: WorldEnvironment = find_child("WorldEnvironment", true, false)
+		if found_env:
+			envs.append(found_env)
+
 	var target_sun: DirectionalLight3D = get_node_or_null("DirectionalLight3D")
 	if not target_sun and get_parent():
 		target_sun = get_parent().find_child("DirectionalLight3D", true, false)
 	
-	RegionEnvironment.apply_to(target_env, target_sun, new_region_id, duration)
+	if envs.is_empty():
+		RegionEnvironment.apply_to(null, target_sun, resolved_id, duration)
+	else:
+		for env_node in envs:
+			RegionEnvironment.apply_to(env_node, target_sun, resolved_id, duration)

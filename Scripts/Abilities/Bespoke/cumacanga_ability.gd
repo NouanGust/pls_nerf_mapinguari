@@ -49,22 +49,22 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 	projectile.name = "CumacangaFireball"
 	var fireball := MeshInstance3D.new()
 	var fireball_mesh := SphereMesh.new()
-	fireball_mesh.radius = 0.24
-	fireball_mesh.height = 0.48
+	fireball_mesh.radius = 0.32
+	fireball_mesh.height = 0.64
 	fireball.mesh = fireball_mesh
 	var fire_material := StandardMaterial3D.new()
 	fire_material.albedo_color = Color(1.0, 0.28, 0.035)
 	fire_material.emission_enabled = true
 	fire_material.emission = Color(1.0, 0.12, 0.015)
-	fire_material.emission_energy_multiplier = 2.4
+	fire_material.emission_energy_multiplier = 3.0
 	fire_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	fireball.material_override = fire_material
 	projectile.add_child(fireball)
 
 	var glow := OmniLight3D.new()
 	glow.light_color = Color(1.0, 0.23, 0.035)
-	glow.light_energy = 1.6
-	glow.omni_range = 3.0
+	glow.light_energy = 2.4
+	glow.omni_range = 4.2
 	projectile.add_child(glow)
 
 	var scene_root: Node = unit.get_tree().current_scene if unit.get_tree() else null
@@ -81,8 +81,8 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 			var current_impact_position := impact_position
 			if is_instance_valid(target):
 				current_impact_position = target.global_position + Vector3.UP * 0.8
-			projectile.global_position = start_position.lerp(current_impact_position, progress) + Vector3.UP * sin(progress * PI) * 2.0
-	, 0.0, 1.0, 0.58).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+			projectile.global_position = start_position.lerp(current_impact_position, progress) + Vector3.UP * sin(progress * PI) * 2.5
+	, 0.0, 1.0, 0.75).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 
 	flight.tween_callback(func() -> void:
 		if is_instance_valid(projectile):
@@ -124,6 +124,8 @@ func _resolve_impact(unit: BaseUnit3D, target: BaseUnit3D, impact_cell: Vector2i
 			target.apply_burn(burn_duration, unit, damage * 0.15)
 
 	CombatFeedback.create_hit_particles(impact_position, Color(1.0, 0.28, 0.035))
+	CombatFeedback.create_hit_particles(impact_position + Vector3.UP * 0.5, Color(1.0, 0.6, 0.1))
+	unit._trigger_camera_shake(0.35, 0.25)
 
 func _create_burning_hex(unit: BaseUnit3D, board: Board3D, cell: Vector2i, duration: float) -> void:
 	var fire_effect := Node3D.new()

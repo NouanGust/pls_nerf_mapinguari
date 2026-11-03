@@ -366,4 +366,3 @@ func get_mechanics_description(current_star: int = 1) -> String:
 			return "Aura de redemoinho reduz velocidade de ataque adversaria; a habilidade fortalece a mobilidade da equipe."
 		_:
 			return ability_description if ability_description != "" else description
-

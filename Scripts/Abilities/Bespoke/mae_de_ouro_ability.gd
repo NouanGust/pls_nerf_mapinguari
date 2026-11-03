@@ -36,7 +36,7 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 	if hit_count > 0:
 		for i in hit_count:
 			var enemy: BaseUnit3D = enemies[i]
-			var delay: float = 0.08 * float(i)
+			var delay: float = 0.16 * float(i)
 			_strike_enemy_with_lightning(unit, enemy, damage, delay)
 	else:
 		# Se não houver inimigos ativos (modo treino/teste solo), faz cair um raio à frente
@@ -107,6 +107,8 @@ func _strike_enemy_with_lightning(caster: BaseUnit3D, target: BaseUnit3D, damage
 	# 4. Partículas extras de faíscas áureas no inimigo
 	CombatFeedback.create_hit_particles(impact_pos + Vector3.UP * 0.5, Color("#f59e0b"))
 	CombatFeedback.create_hit_particles(impact_pos + Vector3.UP * 0.8, Color("#fef08a"))
+	if is_instance_valid(caster):
+		caster._trigger_camera_shake(0.35, 0.22)
 
 func _bless_ally_with_celestial_beam(caster: BaseUnit3D, target: BaseUnit3D, heal_val: float, delay: float) -> void:
 	if delay > 0.0 and is_instance_valid(caster):

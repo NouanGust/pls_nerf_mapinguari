@@ -21,18 +21,14 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 	if not is_instance_valid(target) or target.current_state == BaseUnit3D.State.DEAD or target.is_on_bench():
 		return false
 
-	if unit.model:
-		var tw := unit.create_tween()
-		tw.tween_property(unit.model, "position:y", 0.6, 0.15).set_trans(Tween.TRANS_QUAD)
-		tw.tween_property(unit.model, "position:y", 0.0, 0.2).set_trans(Tween.TRANS_BOUNCE)
-
 	CombatFeedback.create_status_indicator(unit, "ARRASTO AMALDIÇOADO", 1.2)
 	CombatFeedback.create_hit_particles(unit.global_position, Color("#0284c7"))
 
 	var damage := unit.stats.ability_damage * unit.stats.get_star_multiplier(unit.star_level)
-	target.take_damage(damage, unit, UnitStats.DamageType.MAGICAL)
 
-	if is_instance_valid(target) and target.current_state != BaseUnit3D.State.DEAD:
+	var apply_pull_and_impact := func() -> void:
+		if not is_instance_valid(unit) or not is_instance_valid(target) or target.current_state == BaseUnit3D.State.DEAD:
+			return
 		var shred := 15.0 * unit.stats.get_star_multiplier(unit.star_level)
 		target.apply_armor_shred(unit.stats.ability_duration if unit.stats.ability_duration > 0.0 else 4.0, shred)
 
@@ -42,9 +38,24 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 			var pull_dest := unit.global_position - pull_dir.normalized() * 1.3
 			pull_dest.y = target.global_position.y
 			var ptw := target.create_tween()
-			ptw.tween_property(target, "global_position", pull_dest, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			ptw.tween_property(target, "global_position", pull_dest, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			ptw.tween_callback(func() -> void:
+				if is_instance_valid(target) and target.current_state != BaseUnit3D.State.DEAD:
+					target.take_damage(damage, unit if is_instance_valid(unit) else null, UnitStats.DamageType.MAGICAL)
+					CombatFeedback.create_hit_particles(target.global_position, Color("#0284c7"))
+					CombatFeedback.create_hit_particles(target.global_position + Vector3.UP * 0.5, Color("#0f172a"))
+			)
+		else:
+			target.take_damage(damage, unit, UnitStats.DamageType.MAGICAL)
+			CombatFeedback.create_hit_particles(target.global_position, Color("#0284c7"))
+			CombatFeedback.create_hit_particles(target.global_position + Vector3.UP * 0.5, Color("#0f172a"))
 
-		CombatFeedback.create_hit_particles(target.global_position, Color("#0284c7"))
-		CombatFeedback.create_hit_particles(target.global_position + Vector3.UP * 0.5, Color("#0f172a"))
+	if unit.model:
+		var tw := unit.create_tween()
+		tw.tween_property(unit.model, "position:y", 0.6, 0.15).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(unit.model, "position:y", 0.0, 0.2).set_trans(Tween.TRANS_BOUNCE)
+		tw.tween_callback(apply_pull_and_impact)
+	else:
+		apply_pull_and_impact.call()
 
 	return true

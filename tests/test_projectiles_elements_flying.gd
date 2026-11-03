@@ -6,7 +6,10 @@ func _process(_delta: float) -> bool:
 	if _executed:
 		return false
 	_executed = true
-	
+	call_deferred("_run_async_tests")
+	return false
+
+func _run_async_tests() -> void:
 	print("\n==========================================")
 	print("INICIANDO TESTES: PROJÉTEIS, ELEMENTOS VISUAIS, VOO E AVANÇO")
 	print("==========================================\n")
@@ -15,8 +18,8 @@ func _process(_delta: float) -> bool:
 	UnitSpawner.load_all_units()
 	
 	test_flying_units_elevation()
-	test_matinta_swoop_confusion()
-	test_sabia_swoop_speed_buff()
+	await test_matinta_swoop_confusion()
+	await test_sabia_swoop_speed_buff()
 	test_ballistic_projectiles()
 	test_battlefield_visual_elements()
 	
@@ -24,7 +27,6 @@ func _process(_delta: float) -> bool:
 	print("TODOS OS TESTES DE PROJÉTEIS, ELEMENTOS E VOO PASSARAM COM SUCESSO!")
 	print("==========================================\n")
 	quit(0)
-	return true
 
 func _spawn(unit_id: String, star_level: int = 1, team: int = 0) -> BaseUnit3D:
 	var unit: BaseUnit3D = UnitSpawner.spawn_unit(unit_id, star_level, team)
@@ -76,6 +78,7 @@ func test_matinta_swoop_confusion() -> void:
 	
 	var initial_hp := enemy.current_health
 	matinta.cast_ability()
+	await create_timer(0.55, false).timeout
 	
 	assert(enemy.current_health < initial_hp, "Inimigo deveria sofrer dano da investida da Matinta")
 	assert(enemy.is_stunned(), "Inimigo deveria estar atordoado/confuso pela Matinta")
@@ -100,6 +103,7 @@ func test_sabia_swoop_speed_buff() -> void:
 	var initial_hp := enemy.current_health
 	
 	sabia.cast_ability()
+	await create_timer(0.55, false).timeout
 	
 	assert(enemy.current_health < initial_hp, "Inimigo deveria sofrer dano da bicada do Sabiá")
 	assert(sabia.speed_buff_multiplier > 1.0, "Sabiá deveria ter speed_buff_multiplier > 1.0")

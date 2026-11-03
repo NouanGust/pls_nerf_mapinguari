@@ -23,9 +23,12 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 
 	if is_instance_valid(target):
 		var target_pos := target.global_position
-		target.take_damage(damage, unit, UnitStats.DamageType.PHYSICAL)
-		CombatFeedback.create_hit_particles(target_pos, Color("#fb923c"))
-		CombatFeedback.create_hit_particles(target_pos + Vector3.UP * 0.5, Color("#ea580c"))
-		unit._execute_swoop_advance_and_return(target_pos, Color("#fb923c"), "BICADA")
+		var on_apex_hit := func() -> void:
+			if is_instance_valid(target) and target.current_state != BaseUnit3D.State.DEAD:
+				target.take_damage(damage, unit if is_instance_valid(unit) else null, UnitStats.DamageType.PHYSICAL)
+				CombatFeedback.create_hit_particles(target.global_position, Color("#fb923c"))
+				CombatFeedback.create_hit_particles(target.global_position + Vector3.UP * 0.5, Color("#ea580c"))
+
+		unit._execute_swoop_advance_and_return(target_pos, Color("#fb923c"), "BICADA", on_apex_hit)
 
 	return true

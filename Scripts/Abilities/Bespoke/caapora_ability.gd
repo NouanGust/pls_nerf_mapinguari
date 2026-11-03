@@ -26,14 +26,18 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 	var shred := 20.0 * unit.stats.get_star_multiplier(unit.star_level)
 	var duration: float = unit.stats.ability_duration if unit.stats.ability_duration > 0.0 else 4.0
 
-	_spawn_piercing_arrow_visual(unit, unit.global_position + Vector3.UP * 0.6, aim_dir, max_range)
+	var arrow_duration: float = 0.42
+	var start_spawn_pos := unit.global_position + Vector3.UP * 0.6
+	_spawn_piercing_arrow_visual(unit, start_spawn_pos, aim_dir, max_range, arrow_duration)
 
 	var enemy_group := "enemy_units" if unit.team == 0 else "player_units"
-	var enemies: Array = unit.get_tree().get_nodes_in_group(enemy_group).filter(func(u):
-		return is_instance_valid(u) and u is BaseUnit3D and u.current_state != BaseUnit3D.State.DEAD and u.visible and not u.is_on_bench()
-	)
+	var tree := unit.get_tree() if unit.is_inside_tree() else Engine.get_main_loop() as SceneTree
+	var enemies: Array = []
+	if tree:
+		enemies = tree.get_nodes_in_group(enemy_group).filter(func(u):
+			return is_instance_valid(u) and u is BaseUnit3D and u.current_state != BaseUnit3D.State.DEAD and u.visible and not u.is_on_bench()
+		)
 
-	var hit_count := 0
 	var max_targets: int = unit.stats.ability_targets if unit.stats.ability_targets > 0 else 5
 	enemies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
 		var da := (a.global_position - unit.global_position).dot(aim_dir)
@@ -41,6 +45,7 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 		return da < db
 	)
 
+	var hit_count := 0
 	for enemy: BaseUnit3D in enemies:
 		if hit_count >= max_targets:
 			break
@@ -50,23 +55,36 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 		if proj_dist >= 0.0 and proj_dist <= max_range:
 			var lateral_offset: float = (to_enemy - aim_dir * proj_dist).length()
 			if lateral_offset <= 1.35:
-				enemy.take_damage(damage, unit, unit.stats.ability_damage_type)
-				if hit_count == 0:
-					enemy.apply_armor_shred(duration, shred)
-				CombatFeedback.create_hit_particles(enemy.global_position, Color("#10b981"))
-				CombatFeedback.create_hit_particles(enemy.global_position + Vector3.UP * 0.5, Color("#34d399"))
+				var travel_time: float = clampf((proj_dist / maxf(max_range, 0.01)) * arrow_duration, 0.0, arrow_duration)
+				var is_first_hit: bool = (hit_count == 0)
+				_schedule_arrow_hit(unit, enemy, damage, duration, shred, is_first_hit, travel_time)
 				hit_count += 1
 
 	return true
 
-func _spawn_piercing_arrow_visual(unit: BaseUnit3D, start_pos: Vector3, dir: Vector3, distance: float) -> void:
+func _schedule_arrow_hit(unit: BaseUnit3D, enemy: BaseUnit3D, damage: float, duration: float, shred: float, is_first: bool, delay: float) -> void:
+	if delay > 0.0 and is_instance_valid(unit):
+		var tree := unit.get_tree() if unit.is_inside_tree() else Engine.get_main_loop() as SceneTree
+		if tree:
+			await tree.create_timer(delay, false).timeout
+
+	if is_instance_valid(enemy) and enemy.current_state != BaseUnit3D.State.DEAD:
+		enemy.take_damage(damage, unit if is_instance_valid(unit) else null, unit.stats.ability_damage_type if is_instance_valid(unit) and unit.stats else UnitStats.DamageType.PHYSICAL)
+		if is_first and is_instance_valid(enemy) and enemy.current_state != BaseUnit3D.State.DEAD:
+			enemy.apply_armor_shred(duration, shred)
+		CombatFeedback.create_hit_particles(enemy.global_position, Color("#10b981"))
+		CombatFeedback.create_hit_particles(enemy.global_position + Vector3.UP * 0.5, Color("#34d399"))
+		if is_instance_valid(unit):
+			unit._trigger_camera_shake(0.2, 0.15)
+
+func _spawn_piercing_arrow_visual(unit: BaseUnit3D, start_pos: Vector3, dir: Vector3, distance: float, flight_time: float = 0.28) -> void:
 	var arrow := Node3D.new()
 	arrow.name = "CaaporaArrow"
 	var mesh_inst := MeshInstance3D.new()
 	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.04
-	cyl.bottom_radius = 0.08
-	cyl.height = 0.9
+	cyl.top_radius = 0.06
+	cyl.bottom_radius = 0.12
+	cyl.height = 1.2
 	mesh_inst.mesh = cyl
 	mesh_inst.rotation.x = PI * 0.5
 	var mat := StandardMaterial3D.new()
@@ -78,10 +96,10 @@ func _spawn_piercing_arrow_visual(unit: BaseUnit3D, start_pos: Vector3, dir: Vec
 	mesh_inst.material_override = mat
 	arrow.add_child(mesh_inst)
 
-	var scene_root: Node = unit.get_tree().current_scene if unit.get_tree() else null
+	var scene_root: Node = unit.get_tree().current_scene if (unit and unit.get_tree()) else null
 	if scene_root:
 		scene_root.add_child(arrow)
-	else:
+	elif unit and unit.get_parent():
 		unit.get_parent().add_child(arrow)
 
 	arrow.global_position = start_pos
@@ -89,5 +107,5 @@ func _spawn_piercing_arrow_visual(unit: BaseUnit3D, start_pos: Vector3, dir: Vec
 		arrow.look_at(start_pos + dir, Vector3.UP)
 	var end_pos := start_pos + dir * distance
 	var tw := arrow.create_tween()
-	tw.tween_property(arrow, "global_position", end_pos, 0.28).set_trans(Tween.TRANS_LINEAR)
+	tw.tween_property(arrow, "global_position", end_pos, flight_time).set_trans(Tween.TRANS_LINEAR)
 	tw.tween_callback(arrow.queue_free)

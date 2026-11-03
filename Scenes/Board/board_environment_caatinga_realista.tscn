@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://Assets/Models/Board/board_caatinga_realista.glb" id="1_realista"]
+[ext_resource type="Script" path="res://Scripts/Environment/caatinga_board_realista.gd" id="2_realista_ctrl"]
+
+[node name="BoardEnvironmentCaatingaRealista" type="Node3D"]
+script = ExtResource("2_realista_ctrl")
+
+[node name="board_caatinga_realista" parent="." instance=ExtResource("1_realista")]
+

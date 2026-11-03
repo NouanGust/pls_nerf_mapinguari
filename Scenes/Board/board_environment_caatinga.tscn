@@ -1,7 +1,9 @@
 [gd_scene format=3 uid="uid://cl43hbcbvtc7"]
 
 [ext_resource type="PackedScene" uid="uid://cs0duuo7mxcdn" path="res://Assets/Models/Board/board_caatinga.glb" id="1_caatinga"]
+[ext_resource type="Script" path="res://Scripts/Environment/caatinga_board_horror.gd" id="2_horror"]
 
 [node name="BoardEnvironmentCaatinga" type="Node3D"]
+script = ExtResource("2_horror")
 
 [node name="board_caatinga" parent="." instance=ExtResource("1_caatinga")]

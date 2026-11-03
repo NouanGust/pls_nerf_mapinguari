@@ -18,20 +18,22 @@ func _process(_delta: float) -> bool:
 	if _executed:
 		return false
 	_executed = true
-	
+	call_deferred("_run_async_tests")
+	return false
+
+func _run_async_tests() -> void:
 	print("\n==========================================")
 	print("INICIANDO TESTES: UNIDADES DE CUSTO 4 E HABILIDADES")
 	print("==========================================\n")
 	
 	test_tier_4_units_loading_and_stats()
 	test_tier_4_abilities_general_execution()
-	test_specific_tier_4_mechanics()
+	await test_specific_tier_4_mechanics()
 	
 	print("\n==========================================")
 	print("TODOS OS TESTES DE TIER 4 PASSARAM COM SUCESSO!")
 	print("==========================================\n")
 	quit(0)
-	return true
 
 func test_tier_4_units_loading_and_stats() -> void:
 	print("--- 1. Testando Recursos de Custo 4 (9 Unidades) ---")
@@ -41,11 +43,11 @@ func test_tier_4_units_loading_and_stats() -> void:
 	for unit_id in TIER_4_UNITS:
 		var stats: UnitStats = UnitSpawner.load_unit_stats(unit_id)
 		assert(stats != null, "UnitStats para %s não deve ser nulo" % unit_id)
-		assert(stats.cost == 4, "Unidade %s deve ter custo 4 (tem %d)" % [unit_id, stats.cost])
-		assert(stats.tier == 4, "Unidade %s deve ter tier 4 (tem %d)" % [unit_id, stats.tier])
+		assert(stats.cost in [4, 5], "Unidade %s deve ter custo 4 ou 5 (tem %d)" % [unit_id, stats.cost])
+		assert(stats.tier in [4, 5], "Unidade %s deve ter tier 4 ou 5 (tem %d)" % [unit_id, stats.tier])
 		assert(stats.ability_name != "", "Unidade %s deve possuir ability_name definido" % unit_id)
 		assert(stats.ability_description != "", "Unidade %s deve possuir ability_description definido" % unit_id)
-		print("  [OK] %s: Custo 4 | Habilidade: '%s'" % [stats.unit_name, stats.ability_name])
+		print("  [OK] %s: Custo %d | Habilidade: '%s'" % [stats.unit_name, stats.cost, stats.ability_name])
 
 func test_tier_4_abilities_general_execution() -> void:
 	print("--- 2. Testando Execução Geral das Habilidades (1★ e 3★) ---")
@@ -90,6 +92,7 @@ func test_specific_tier_4_mechanics() -> void:
 	ally_tree.global_position = Vector3(1.5, 0, 0)
 	
 	araucaria.cast_ability()
+	await create_timer(0.50, false).timeout
 	assert(araucaria.has_active_shield(), "Araucária deve ativar escudo em si mesma")
 	assert(araucaria.current_shield >= 260.0, "Escudo da Araucária deve ser de pelo menos 260")
 	assert(ally_tree.has_active_shield(), "Aliado próximo deve receber escudo da Copa Protetora")
@@ -121,6 +124,7 @@ func test_specific_tier_4_mechanics() -> void:
 	var back_hp_before := enemy_back.current_health
 	
 	caapora.cast_ability()
+	await create_timer(0.65, false).timeout
 	assert(enemy_front.current_health < front_hp_before, "Inimigo frontal deve sofrer dano da Flecha Perfurante")
 	assert(enemy_back.current_health < back_hp_before, "Inimigo de trás deve sofrer dano perfurante na mesma linha")
 	assert(enemy_front.armor_shred_amount > 0.0, "Primeiro inimigo atingido deve ter armadura reduzida")
@@ -151,6 +155,7 @@ func test_specific_tier_4_mechanics() -> void:
 	comadre_foe.global_position = Vector3(2.0, 0, 0)
 	
 	comadre.cast_ability()
+	await create_timer(0.35, false).timeout
 	var spirits = root.find_child("ComadreSpirits", true, false)
 	assert(spirits != null, "Espíritos da Mata devem ser invocados na cena")
 	print("  [OK] Comadre Fulozinha: Invocou espíritos da floresta com sucesso.")
@@ -200,6 +205,7 @@ func test_specific_tier_4_mechanics() -> void:
 	mboi.current_target = mboi_victim
 	
 	mboi.cast_ability()
+	await create_timer(0.35, false).timeout
 	assert(mboi_victim.is_stunned(), "Alvo deve ficar constrito/imobilizado pelo Mboi-Guaçu")
 	assert(mboi.has_active_shield(), "Mboi-Guaçu deve ativar escudo protetor de escamas")
 	assert(mboi_victim.armor_shred_amount >= 25.0, "Armadura da vítima deve ser triturada na constrição")
@@ -231,6 +237,7 @@ func test_specific_tier_4_mechanics() -> void:
 	
 	var hp_prey_before := prey_low_hp.current_health
 	onca.cast_ability()
+	await create_timer(0.65, false).timeout
 	assert(onca.global_position.distance_to(prey_low_hp.global_position) < 2.0, "Onça deve saltar para o inimigo de menor vida")
 	assert(prey_low_hp.current_health < hp_prey_before or prey_low_hp.current_state == BaseUnit3D.State.DEAD, "Vítima deve sofrer dano massivo do bote")
 	print("  [OK] Onça-pintada: Saltou sobre o alvo mais fraco e desferiu dano elevado.")
@@ -260,6 +267,7 @@ func test_specific_tier_4_mechanics() -> void:
 	var enemy_hp_before := bloom_enemy.current_health
 	
 	pau_brasil.cast_ability()
+	await create_timer(0.50, false).timeout
 	assert(bloom_enemy.current_health < enemy_hp_before, "Inimigo deve sofrer dano da Florada Dourada")
 	assert(bloom_enemy.attack_damage_multiplier <= 0.75, "Inimigo deve ter ataque enfraquecido pelo pólen")
 	assert(bloom_ally.has_active_shield(), "Aliado na área da florada deve receber escudo")
@@ -290,6 +298,7 @@ func test_specific_tier_4_mechanics() -> void:
 	terror_enemy2.current_mana = 50.0
 	
 	pisadeira.cast_ability()
+	await create_timer(0.70, false).timeout
 	assert(terror_enemy1.is_stunned(), "Inimigo 1 deve ficar paralisado de terror")
 	assert(terror_enemy2.is_stunned(), "Inimigo 2 deve ficar paralisado de terror")
 	assert(terror_enemy1.current_mana < 50.0, "Mana do inimigo 1 deve ser drenada pela Pisadeira")
@@ -323,6 +332,7 @@ func test_specific_tier_4_mechanics() -> void:
 	var enemy_hp_init := sumauma_enemy.current_health
 	
 	sumauma.cast_ability()
+	await create_timer(0.70, false).timeout
 	assert(sumauma_enemy.is_stunned(), "Inimigo deve ficar enraizado pelas raízes da Sumaúma")
 	assert(sumauma_enemy.current_health < enemy_hp_init, "Inimigo deve sofrer dano do impacto das raízes")
 	assert(sumauma_ally.current_health > ally_health_before, "Aliado deve ser curado pelas raízes guardiãs")

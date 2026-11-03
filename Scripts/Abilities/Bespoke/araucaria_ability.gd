@@ -4,34 +4,40 @@ extends "res://Scripts/Abilities/unit_ability.gd"
 ## Habilidade Bespoke: Copa Protetora (Araucária)
 
 func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
-	if unit.model:
-		var tw := unit.create_tween()
-		tw.tween_property(unit.model, "scale", unit.model_base_scale * Vector3(1.22, 1.3, 1.22), 0.16).set_trans(Tween.TRANS_QUAD)
-		tw.tween_property(unit.model, "scale", unit.model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
-
-	CombatFeedback.create_status_indicator(unit, "COPA PROTETORA", 1.2)
-	CombatFeedback.create_hit_particles(unit.global_position, Color("#15803d"))
-	CombatFeedback.create_hit_particles(unit.global_position + Vector3.UP * 0.8, Color("#854d0e"))
-
 	var shield_amount := (unit.stats.ability_shield if unit.stats.ability_shield > 0.0 else 260.0) * unit.stats.get_star_multiplier(unit.star_level)
 	shield_amount *= 1.0 + float(unit.synergy_bonuses.get("shield_power_pct", 0.0))
 	unit.set_shield_with_source(maxf(unit.current_shield, shield_amount), BaseUnit3D.ShieldSource.SELF)
 
 	var radius: float = unit.stats.ability_range if unit.stats.ability_range > 0.0 else 3.0
-	_create_canopy_element(unit, unit.global_position, radius, 4.0)
 
-	var ally_group := "player_units" if unit.team == 0 else "enemy_units"
-	for ally_node: Node in unit.get_tree().get_nodes_in_group(ally_group):
-		var ally := ally_node as BaseUnit3D
-		if not is_instance_valid(ally) or ally == unit or ally.current_state == BaseUnit3D.State.DEAD or not ally.visible or ally.is_on_bench():
-			continue
-		var dist: float = Vector2(unit.global_position.x, unit.global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
-		if dist <= radius:
-			var ally_shield := shield_amount * 0.85
-			var source = BaseUnit3D.ShieldSource.PLAYER if unit.team == 0 else BaseUnit3D.ShieldSource.ENEMY
-			ally.set_shield_with_source(maxf(ally.current_shield, ally_shield), source)
-			CombatFeedback.create_hit_particles(ally.global_position, Color("#15803d"))
-			CombatFeedback.create_status_indicator(ally, "COPA PROTETORA", 1.2)
+	var apply_canopy := func() -> void:
+		if not is_instance_valid(unit):
+			return
+		_create_canopy_element(unit, unit.global_position, radius, 4.0)
+		var ally_group := "player_units" if unit.team == 0 else "enemy_units"
+		var tree := unit.get_tree() if unit.is_inside_tree() else Engine.get_main_loop() as SceneTree
+		if tree:
+			for ally_node: Node in tree.get_nodes_in_group(ally_group):
+				var ally := ally_node as BaseUnit3D
+				if not is_instance_valid(ally) or ally == unit or ally.current_state == BaseUnit3D.State.DEAD or not ally.visible or ally.is_on_bench():
+					continue
+				var dist: float = Vector2(unit.global_position.x, unit.global_position.z).distance_to(Vector2(ally.global_position.x, ally.global_position.z))
+				if dist <= radius:
+					var ally_shield := shield_amount * 0.85
+					var source = BaseUnit3D.ShieldSource.PLAYER if unit.team == 0 else BaseUnit3D.ShieldSource.ENEMY
+					ally.set_shield_with_source(maxf(ally.current_shield, ally_shield), source)
+					CombatFeedback.create_hit_particles(ally.global_position, Color("#15803d"))
+					CombatFeedback.create_status_indicator(ally, "COPA PROTETORA", 1.2)
+		if is_instance_valid(unit):
+			unit._trigger_camera_shake(0.2, 0.15)
+
+	if unit.model:
+		var tw := unit.create_tween()
+		tw.tween_property(unit.model, "scale", unit.model_base_scale * Vector3(1.22, 1.3, 1.22), 0.16).set_trans(Tween.TRANS_QUAD)
+		tw.tween_callback(apply_canopy)
+		tw.tween_property(unit.model, "scale", unit.model_base_scale, 0.22).set_trans(Tween.TRANS_BOUNCE)
+	else:
+		apply_canopy.call()
 
 	return true
 

@@ -47,23 +47,43 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 		landing_pos = target.global_position + offset.normalized() * 1.3
 
 	landing_pos.y = unit.combat_ground_height
-	unit.global_position = landing_pos
 
-	unit._face_target()
-	CombatFeedback.create_status_indicator(unit, "BOTE DE EMBOSCADA", 1.2)
-	CombatFeedback.create_hit_particles(unit.global_position, Color("#f59e0b"))
-	CombatFeedback.create_hit_particles(unit.global_position + Vector3.UP * 0.6, Color("#dc2626"))
+	var start_leap_pos := unit.global_position
+	var leap_tw := unit.create_tween()
+	leap_tw.tween_method(func(prog: float) -> void:
+		if is_instance_valid(unit) and unit.current_state != BaseUnit3D.State.DEAD:
+			unit.global_position = start_leap_pos.lerp(landing_pos, prog)
+			if unit.model:
+				unit.model.position.y = sin(prog * PI) * 0.7
+	, 0.0, 1.0, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-	var damage: float = unit.stats.ability_damage * unit.stats.get_star_multiplier(unit.star_level)
-	CombatFeedback.create_damage_number(target.global_position, damage, CombatFeedback.DamageType.CRITICAL)
-	target.take_damage(damage, unit, UnitStats.DamageType.PHYSICAL)
+	leap_tw.tween_callback(func() -> void:
+		if not is_instance_valid(unit) or unit.current_state == BaseUnit3D.State.DEAD:
+			return
+		unit.global_position = landing_pos
+		if unit.model:
+			unit.model.position.y = 0.0
+		unit._face_target()
 
-	if is_instance_valid(target) and target.current_state != BaseUnit3D.State.DEAD:
-		target.apply_burn(3.0, unit, damage * 0.12)
-		target.apply_stun(1.0, "ATORDOADO")
-		unit.current_target = target
-	else:
-		unit.current_target = null
-		unit.find_target()
+		CombatFeedback.create_status_indicator(unit, "BOTE DE EMBOSCADA", 1.2)
+		CombatFeedback.create_hit_particles(unit.global_position, Color("#f59e0b"))
+		CombatFeedback.create_hit_particles(unit.global_position + Vector3.UP * 0.6, Color("#dc2626"))
+
+		if is_instance_valid(target) and target.current_state != BaseUnit3D.State.DEAD:
+			var damage: float = unit.stats.ability_damage * unit.stats.get_star_multiplier(unit.star_level)
+			CombatFeedback.create_damage_number(target.global_position, damage, CombatFeedback.DamageType.CRITICAL)
+			target.take_damage(damage, unit, UnitStats.DamageType.PHYSICAL)
+
+			if is_instance_valid(target) and target.current_state != BaseUnit3D.State.DEAD:
+				target.apply_burn(3.0, unit, damage * 0.12)
+				target.apply_stun(1.0, "ATORDOADO")
+				unit.current_target = target
+			else:
+				unit.current_target = null
+				unit.find_target()
+		else:
+			unit.current_target = null
+			unit.find_target()
+	)
 
 	return true

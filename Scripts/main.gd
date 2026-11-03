@@ -966,7 +966,15 @@ func end_combat(player_won: bool, is_draw: bool = false, draw_reason: String = "
 	var region_completed := player_won and not is_draw and enemy_level >= Progression.MAX_LEVEL
 	# Congela todos os sobreviventes no resultado para que ninguém continue
 	# atacando durante a tela do relatório ou enquanto o próximo round é preparado.
-	for unit in board.get_all_units():
+	var all_units_to_freeze: Array = []
+	for u in board.get_all_units():
+		if is_instance_valid(u) and not all_units_to_freeze.has(u):
+			all_units_to_freeze.append(u)
+	if is_inside_tree():
+		for u in get_tree().get_nodes_in_group("units"):
+			if is_instance_valid(u) and not all_units_to_freeze.has(u):
+				all_units_to_freeze.append(u)
+	for unit in all_units_to_freeze:
 		if not (unit is BaseUnit3D) or unit.current_state == BaseUnit3D.State.DEAD:
 			continue
 		if unit.attack_timer:
@@ -1453,6 +1461,9 @@ func revive_dead_player_units() -> void:
 		if unit is BaseUnit3D and unit not in bench_units and unit.current_state == BaseUnit3D.State.DEAD:
 			var home_pos = board.get_cell_world_position(unit.board_position)
 			unit.revive_at_position(home_pos)
+			unit.in_combat = false
+			if unit.attack_timer:
+				unit.attack_timer.stop()
 			board.place_unit(unit, unit.board_position, false)
 	
 

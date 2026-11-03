@@ -31,6 +31,13 @@ func start_attacking() -> void:
 func on_attack_timer_timeout() -> void:
 	if not unit:
 		return
+	if not unit.in_combat:
+		if unit.attack_timer:
+			unit.attack_timer.stop()
+		unit.current_target = null
+		if unit.current_state != unit.State.DEAD:
+			unit.current_state = unit.State.IDLE
+		return
 	if unit.current_state == unit.State.DEAD or unit.is_on_bench() or unit.is_stunned():
 		if unit.attack_timer:
 			unit.attack_timer.stop()
@@ -42,7 +49,7 @@ func on_attack_timer_timeout() -> void:
 	if unit.current_state != unit.State.ATTACKING:
 		if unit.attack_timer:
 			unit.attack_timer.stop()
-		if unit.current_state == unit.State.IDLE:
+		if unit.current_state == unit.State.IDLE and unit.in_combat:
 			unit.find_target()
 		return
 	if not is_instance_valid(unit.current_target) or unit.current_target.current_state == unit.State.DEAD or unit.current_target.is_on_bench():
@@ -50,7 +57,8 @@ func on_attack_timer_timeout() -> void:
 			unit.attack_timer.stop()
 		unit.current_target = null
 		unit.current_state = unit.State.IDLE
-		unit.find_target()
+		if unit.in_combat:
+			unit.find_target()
 		return
 	
 	perform_attack()
@@ -82,38 +90,51 @@ func perform_attack() -> void:
 	var ranged_attack := unit.stats.get_attack_range_hexes() > 1
 	if unit.unit_visual:
 		unit.unit_visual.play_attack(ranged_attack, 1.0 / unit.get_effective_attack_speed())
-	if ranged_attack:
-		var p_color: Color = get_projectile_color()
-		var is_dart: bool = unit.stats.unit_id in ["caapora", "arara_azul_lear", "ararinha_azul", "mutum_de_alagoas", "mandacaru"]
-		var start_p: Vector3 = unit.global_position + Vector3.UP * (1.1 if unit.is_flying() else 0.75)
-		spawn_ballistic_projectile(
-			start_p,
-			unit.current_target,
-			unit.current_target.global_position + Vector3.UP * 0.7,
-			p_color,
-			0.55,
-			0.20,
-			Callable(),
-			"%sAttackProj" % unit.stats.unit_id,
-			0.14,
-			is_dart
-		)
-	
+
 	var damage: float = unit.get_attack_damage()
 	if not unit.first_attack_used:
 		damage *= 1.0 + float(unit.synergy_bonuses.get("first_attack_bonus_pct", 0.0))
 		unit.first_attack_used = true
-	
+
 	var crit_chance := unit.stats.critical_chance + float(unit.synergy_bonuses.get("crit_chance", 0.0))
 	crit_chance += float(unit.synergy_bonuses.get("crit_after_kill", 0.0)) * mini(unit.enemies_defeated, unit.MAX_CERRADO_STACKS)
 	var is_crit: bool = randf() < clampf(crit_chance, 0.0, 0.75)
 	if is_crit:
 		damage *= unit.stats.critical_damage * (1.0 + float(unit.synergy_bonuses.get("crit_damage_pct", 0.0)))
-		CombatFeedback.create_damage_number(unit.current_target.global_position, damage, CombatFeedback.DamageType.CRITICAL)
-	
-	unit.current_target.take_damage(damage, unit, UnitStats.DamageType.PHYSICAL)
-	if unit.origin_runtime and is_instance_valid(unit.current_target):
-		unit.origin_runtime.on_basic_attack_hit(unit.current_target)
+
+	var target := unit.current_target
+
+	var apply_attack_damage := func() -> void:
+		if not is_instance_valid(target) or target.current_state == target.State.DEAD or target.is_on_bench():
+			return
+		if is_crit:
+			CombatFeedback.create_damage_number(target.global_position, damage, CombatFeedback.DamageType.CRITICAL)
+		target.take_damage(damage, unit if is_instance_valid(unit) else null, UnitStats.DamageType.PHYSICAL)
+		if is_instance_valid(unit) and unit.origin_runtime and is_instance_valid(target):
+			unit.origin_runtime.on_basic_attack_hit(target)
+
+	if ranged_attack:
+		var p_color: Color = get_projectile_color()
+		var is_dart: bool = unit.stats.unit_id in ["caapora", "arara_azul_lear", "ararinha_azul", "mutum_de_alagoas", "mandacaru"]
+		var start_p: Vector3 = unit.global_position + Vector3.UP * (1.1 if unit.is_flying() else 0.75)
+		var proj_speed: float = 0.32 if is_dart else 0.45
+		var proj_radius: float = 0.16 if is_dart else 0.22
+		var proj_arc: float = 0.45 if is_dart else 0.75
+		spawn_ballistic_projectile(
+			start_p,
+			target,
+			target.global_position + Vector3.UP * 0.7,
+			p_color,
+			proj_arc,
+			proj_speed,
+			apply_attack_damage,
+			"%sAttackProj" % unit.stats.unit_id,
+			proj_radius,
+			is_dart
+		)
+	else:
+		apply_attack_damage.call()
+
 	if unit.stats and unit.stats.is_atacante_role():
 		unit.consecutive_attacks = mini(unit.consecutive_attacks + 1, 10)
 	var am: Node = unit.get_node_or_null("/root/AudioManager")
@@ -208,8 +229,8 @@ func spawn_ballistic_projectile(
 	var glow := OmniLight3D.new()
 	glow.name = "OmniLight3D"
 	glow.light_color = color
-	glow.light_energy = 1.5
-	glow.omni_range = 2.8
+	glow.light_energy = 2.0
+	glow.omni_range = 3.6
 	projectile.add_child(glow)
 	
 	var scene_root: Node = unit.get_tree().current_scene if (unit and unit.get_tree()) else null

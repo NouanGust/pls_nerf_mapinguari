@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://vq47sp6ny3pu"]
+
+[ext_resource type="PackedScene" uid="uid://tp6cya8flhut" path="res://output/caatinga_autochess/caatinga_autochess.blend" id="1_rhwl3"]
+
+[node name="Caatinga_Autochess" unique_id=1952907943 instance=ExtResource("1_rhwl3")]
+
+[node name="Light" parent="." index="94" unique_id=1742982367]
+light_color = Color(0.2964936, 0.28930214, 0, 1)
+light_energy = 0.863
+
+[node name="Light_Sunset_Key" parent="." index="96" unique_id=290013392]
+light_color = Color(0.27823257, 0.15386152, 1.0829419e-06, 1)
+light_energy = 0.071

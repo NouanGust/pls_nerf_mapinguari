@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dmmjbajl2qcnn"]
+
+[ext_resource type="PackedScene" uid="uid://y8yanbr2kqmf" path="res://Assets/Models/Board/board_pantanal.glb" id="1_lch0r"]
+
+[node name="board_pantanal" unique_id=264055163 instance=ExtResource("1_lch0r")]

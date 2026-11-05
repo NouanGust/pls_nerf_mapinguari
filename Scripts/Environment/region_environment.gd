@@ -87,27 +87,27 @@ const PROFILES: Dictionary = {
 	},
 	"pantanal": {
 		"name": "Pantanal",
-		"sky_top": Color("#0a1930"),
-		"sky_horizon": Color("#f47832"),
-		"ground_bottom": Color("#040810"),
-		"ground_horizon": Color("#1c141e"),
-		"ambient_color": Color("#243854"),
-		"ambient_energy": 0.55,
+		"sky_top": Color("#0a1c30"),
+		"sky_horizon": Color("#18344e"),
+		"ground_bottom": Color("#081420"),
+		"ground_horizon": Color("#122536"),
+		"ambient_color": Color("#28445e"),
+		"ambient_energy": 0.68,
 		"ambient_sky_contribution": 0.70,
-		"sun_color": Color("#ffa65e"),
+		"sun_color": Color("#d6e8fa"),
 		"sun_energy": 1.15,
-		"sun_rotation": Vector3(-22.0, -50.0, 0.0),
-		"fog_color": Color("#121e30"),
-		"fog_density": 0.003,
+		"sun_rotation": Vector3(-55.0, 175.0, 0.0),
+		"fog_color": Color("#0e2030"),
+		"fog_density": 0.0035,
 		"volumetric_fog": true,
-		"volumetric_fog_density": 0.004,
-		"volumetric_fog_albedo": Color("#1c2e46"),
-		"volumetric_fog_emission": Color("#040812"),
+		"volumetric_fog_density": 0.006,
+		"volumetric_fog_albedo": Color("#1c344a"),
+		"volumetric_fog_emission": Color("#05121c"),
 		"glow_bloom": 0.18,
-		"tonemap_exposure": 1.08,
+		"tonemap_exposure": 1.06,
 		"adjustment_brightness": 1.02,
-		"adjustment_contrast": 1.16,
-		"adjustment_saturation": 1.20
+		"adjustment_contrast": 1.14,
+		"adjustment_saturation": 1.08
 	},
 	"mata_atlantica": {
 		"name": "Mata Atlântica",
@@ -200,6 +200,13 @@ static func apply_to(world_env: WorldEnvironment, sun: DirectionalLight3D, regio
 	env.ssil_radius = 3.5
 	env.ssil_intensity = 0.85
 	env.ssil_sharpness = 0.9
+
+	# Reflexos de tela (SSR) para água espelhada e superfícies molhadas
+	env.ssr_enabled = true
+	env.ssr_max_steps = 64
+	env.ssr_fade_in = 0.15
+	env.ssr_fade_out = 1.8
+	env.ssr_depth_tolerance = 0.35
 
 	# Glow & Brilho sutil
 	env.glow_enabled = true

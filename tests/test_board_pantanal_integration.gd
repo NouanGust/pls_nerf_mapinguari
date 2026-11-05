@@ -31,14 +31,15 @@ func _init() -> void:
 	assert(env_inst is PantanalBoard, "Environment instance must be PantanalBoard")
 	print("   PantanalBoard instance verified: ", env_inst.name)
 
-	# 2. Verify sunset lights
-	var lights: Node3D = env_inst.get_node_or_null("PantanalSunsetLights")
-	assert(lights != null, "PantanalSunsetLights must be created")
-	assert(lights.get_node_or_null("PantanalSunsetSpot") != null, "PantanalSunsetSpot must exist")
-	assert(lights.get_node_or_null("PantanalSkyFill") != null, "PantanalSkyFill must exist")
-	assert(lights.get_node_or_null("PantanalBenchFill") != null, "PantanalBenchFill must exist")
-	assert(lights.get_node_or_null("WaterChannelRimLight") != null, "WaterChannelRimLight must exist")
-	print("   PantanalSunsetLights verified (SunsetSpot, SkyFill, BenchFill, WaterRim)")
+	# 2. Verify nocturnal moon lights
+	var lights: Node3D = env_inst.get_node_or_null("PantanalMoonLights")
+	assert(lights != null, "PantanalMoonLights must be created")
+	assert(lights.get_node_or_null("PantanalArenaMoonSpot") != null, "PantanalArenaMoonSpot must exist")
+	assert(lights.get_node_or_null("PantanalNightSkyFill") != null, "PantanalNightSkyFill must exist")
+	assert(lights.get_node_or_null("PantanalBenchMoonFill") != null, "PantanalBenchMoonFill must exist")
+	assert(lights.get_node_or_null("WaterChannelMoonRim") != null, "WaterChannelMoonRim must exist")
+	assert(lights.get_node_or_null("NorthLagoonMoonRim") != null, "NorthLagoonMoonRim must exist")
+	print("   PantanalMoonLights verified (ArenaMoonSpot, NightSkyFill, BenchMoonFill, ChannelMoonRim, NorthLagoonMoonRim)")
 
 	# 3. Verify water material and shader
 	var water_mat: ShaderMaterial = env_inst.get("_water_material")

@@ -191,14 +191,31 @@ func _build_canyon_horror_lighting() -> void:
 	east_skull_light.omni_range = 5.2
 	lights_root.add_child(east_skull_light)
 
-	# Luz quente terrosa bem baixa sobre o centro do barro rachado (contraste xilogravura com o luar frio)
+	# Luz difusa de meia lua sobre o centro do barro rachado (sem foco estourado)
 	var clay_warm_fill := OmniLight3D.new()
 	clay_warm_fill.name = "CrackedClayWarmFill"
-	clay_warm_fill.position = Vector3(0.0, 4.2, 0.5)
-	clay_warm_fill.light_color = Color("#d97746")
-	clay_warm_fill.light_energy = 0.42
-	clay_warm_fill.omni_range = 14.5
+	clay_warm_fill.position = Vector3(0.0, 12.5, 1.0)
+	clay_warm_fill.light_color = Color("#b8cde6")
+	clay_warm_fill.light_energy = 0.65
+	clay_warm_fill.light_volumetric_fog_energy = 0.0
+	clay_warm_fill.omni_range = 24.0
+	clay_warm_fill.omni_attenuation = 1.25
 	lights_root.add_child(clay_warm_fill)
+
+	# Banho amplo e suave de meia lua sobre o tabuleiro
+	var horror_board_spot := SpotLight3D.new()
+	horror_board_spot.name = "HorrorBoardTacticalSpot"
+	horror_board_spot.position = Vector3(-1.5, 24.0, -2.5)
+	horror_board_spot.rotation_degrees = Vector3(-76.0, -14.0, 0.0)
+	horror_board_spot.light_color = Color("#c8daf0")
+	horror_board_spot.light_energy = 1.65
+	horror_board_spot.light_volumetric_fog_energy = 0.15
+	horror_board_spot.spot_range = 46.0
+	horror_board_spot.spot_attenuation = 0.85
+	horror_board_spot.spot_angle = 60.0
+	horror_board_spot.spot_angle_attenuation = 2.2
+	horror_board_spot.shadow_enabled = true
+	lights_root.add_child(horror_board_spot)
 
 
 func _build_arid_sand_wind_particles() -> void:
@@ -336,4 +353,3 @@ func _build_mata_branca_watcher_glints() -> void:
 			eye.position = Vector3(side * 0.14, 0.0, 0.0)
 			eye.material_override = eye_mat
 			pair_node.add_child(eye)
-

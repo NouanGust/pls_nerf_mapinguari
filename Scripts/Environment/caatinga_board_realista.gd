@@ -1,10 +1,12 @@
 class_name CaatingaBoardRealista
 extends Node3D
 
-## Controlador de atmosfera, materiais e iluminação noturna do Tabuleiro da Caatinga (Versão Realista / Caatinga_Autochess).
-## Mantém a versão anterior intacta como opção separada e entrega:
+## Controlador de atmosfera, materiais e iluminação noturna sombria do Tabuleiro da Caatinga (Versão Realista / Caatinga_Autochess).
+## Aplicando as técnicas de direção visual 3D e atmosfera de horror no Godot 4:
 ## - Refinamento de materiais em runtime (alta rugosidade, specular controlado, zero brilho plástico).
-## - Atmosfera noturna árida do sertão (sem objeto de lua no céu), com luz fria prateada/azulada destacando a Floresta Branca.
+## - Iluminação teatral em piscina de luz (`SpotLight3D` zenital com neblina volumétrica):
+##   mantém as 56 casas hexagonais e os 9 slots da reserva extremamente nítidos e legíveis no centro,
+##   enquanto a Floresta Branca ao redor mergulha na escuridão sombria com feixes volumétricos de contraluz.
 ## - Brisa seca realista nas copas caducifólias da Floresta Branca e poeira noturna tangencial sobre o barro.
 
 var _time: float = 0.0
@@ -57,7 +59,8 @@ func _remove_any_moon_nodes() -> void:
 
 func _polish_imported_materials() -> void:
 	## Garante que todos os materiais importados do GLB tenham rugosidade alta e especularidade baixa,
-	## eliminando qualquer aspecto plástico no renderizador Forward+ do Godot.
+	## eliminando qualquer aspecto plástico no renderizador Forward+ do Godot, e realça o contraste
+	## dos ladrilhos e chanfros do tabuleiro contra o solo externo escuro.
 	var stack: Array[Node] = [self]
 	var polished_mats: Dictionary = {}
 	while not stack.is_empty():
@@ -74,7 +77,40 @@ func _polish_imported_materials() -> void:
 					polished_mats[mat] = true
 					var bmat := mat as BaseMaterial3D
 					var mname := bmat.resource_name.to_lower()
-					if not mname.contains("wire"):
+					if mname.contains("rim"):
+						bmat.albedo_color = Color(0.72, 0.58, 0.45, 1.0)
+						bmat.metallic = 0.0
+						bmat.metallic_specular = 0.18
+						bmat.roughness = 0.84
+						bmat.emission_enabled = true
+						bmat.emission = Color(0.16, 0.13, 0.10)
+						bmat.emission_energy_multiplier = 0.14
+					elif mname.contains("hexclay_player"):
+						bmat.albedo_color = Color(0.58, 0.38, 0.27, 1.0)
+						bmat.metallic = 0.0
+						bmat.metallic_specular = 0.12
+						bmat.roughness = 0.90
+					elif mname.contains("hexclay_enemy"):
+						bmat.albedo_color = Color(0.47, 0.30, 0.21, 1.0)
+						bmat.metallic = 0.0
+						bmat.metallic_specular = 0.12
+						bmat.roughness = 0.91
+					elif mname.contains("reserve_earth"):
+						bmat.albedo_color = Color(0.55, 0.36, 0.25, 1.0)
+						bmat.metallic = 0.0
+						bmat.metallic_specular = 0.12
+						bmat.roughness = 0.90
+					elif mname.contains("groove"):
+						bmat.albedo_color = Color(0.06, 0.025, 0.018, 1.0)
+						bmat.metallic = 0.0
+						bmat.metallic_specular = 0.05
+						bmat.roughness = 0.96
+					elif mname.contains("whiteforest_bark"):
+						bmat.albedo_color = Color(0.60, 0.59, 0.57, 1.0)
+						bmat.metallic = 0.0
+						bmat.metallic_specular = 0.08
+						bmat.roughness = 0.94
+					elif not mname.contains("wire"):
 						bmat.metallic = 0.0
 						bmat.metallic_specular = 0.12
 						bmat.roughness = maxf(bmat.roughness, 0.89)
@@ -119,34 +155,74 @@ func _build_realistic_sertao_lighting() -> void:
 	lights.name = "RealisticSertaoLights"
 	add_child(lights)
 
-	# 1. Luz lateral noturna fria realçando o relevo dos troncos pálidos, caveira bovina e rochas
-	var night_key := OmniLight3D.new()
-	night_key.name = "GrazingDuskWarmLight"
-	night_key.position = Vector3(-13.5, 7.2, -3.0)
-	night_key.light_color = Color("#8fb3db")
-	night_key.light_energy = 0.74
-	night_key.omni_range = 30.0
-	night_key.omni_attenuation = 1.15
-	lights.add_child(night_key)
+	# 1. Luz Difusa de Meia Lua (SpotLight3D amplo, alto e suave)
+	# Sem foco concentrado/estourado: banha toda a clareira com luar prateado-azulado uniforme
+	var arena_spot := SpotLight3D.new()
+	arena_spot.name = "ArenaTacticalMoonSpot"
+	arena_spot.position = Vector3(-2.0, 24.0, -2.5)
+	arena_spot.rotation_degrees = Vector3(-76.0, -16.0, 0.0)
+	arena_spot.light_color = Color("#d2e2f5")
+	arena_spot.light_energy = 3.2
+	arena_spot.light_volumetric_fog_energy = 0.15
+	arena_spot.spot_range = 52.0
+	arena_spot.spot_attenuation = 0.65
+	arena_spot.spot_angle = 65.0
+	arena_spot.spot_angle_attenuation = 2.2
+	arena_spot.shadow_enabled = true
+	arena_spot.shadow_bias = 0.03
+	arena_spot.shadow_blur = 1.4
+	lights.add_child(arena_spot)
 
-	# 2. Preenchimento zenital noturno suave mantendo as 56 casas de barro e sulcos nítidos à noite
+	# 2. Preenchimento Atmosférico de Meia Lua (muito amplo e posicionado bem alto para iluminar por igual
+	#    sem criar círculo de luz concentrado no chão)
 	var sky_fill := OmniLight3D.new()
 	sky_fill.name = "OverheadSkyFill"
-	sky_fill.position = Vector3(0.0, 14.0, 1.0)
-	sky_fill.light_color = Color("#6b84a6")
-	sky_fill.light_energy = 0.56
-	sky_fill.omni_range = 34.0
-	sky_fill.omni_attenuation = 1.25
+	sky_fill.position = Vector3(0.0, 16.0, 1.5)
+	sky_fill.light_color = Color("#c8daf0")
+	sky_fill.light_energy = 1.15
+	sky_fill.light_volumetric_fog_energy = 0.0
+	sky_fill.omni_range = 32.0
+	sky_fill.omni_attenuation = 1.05
 	lights.add_child(sky_fill)
 
-	# 3. Contraluz fria noturna ao fundo da Floresta Branca e trilha sinuosa
-	var sky_rim := OmniLight3D.new()
+	# 3. Preenchimento Secundário Difuso sobre a Zona do Jogador e Banco de Reservas
+	var bench_fill := OmniLight3D.new()
+	bench_fill.name = "HalfMoonBenchSoftFill"
+	bench_fill.position = Vector3(0.0, 13.5, 7.0)
+	bench_fill.light_color = Color("#cdddf2")
+	bench_fill.light_energy = 0.72
+	bench_fill.light_volumetric_fog_energy = 0.0
+	bench_fill.omni_range = 26.0
+	bench_fill.omni_attenuation = 1.15
+	lights.add_child(bench_fill)
+
+	# 4. Contraluz de horizonte lunar suave vinda do norte através da Floresta Branca
+	var sky_rim := SpotLight3D.new()
 	sky_rim.name = "NorthHorizonSkyRim"
-	sky_rim.position = Vector3(-0.5, 7.5, -17.5)
-	sky_rim.light_color = Color("#7ea3cc")
-	sky_rim.light_energy = 0.66
-	sky_rim.omni_range = 26.0
+	sky_rim.position = Vector3(-0.4, 7.5, -21.0)
+	sky_rim.rotation_degrees = Vector3(-24.0, 180.0, 0.0)
+	sky_rim.light_color = Color("#6b8fbd")
+	sky_rim.light_energy = 1.35
+	sky_rim.light_volumetric_fog_energy = 1.65
+	sky_rim.spot_range = 28.0
+	sky_rim.spot_attenuation = 1.15
+	sky_rim.spot_angle = 48.0
+	sky_rim.spot_angle_attenuation = 1.8
+	sky_rim.shadow_enabled = true
 	lights.add_child(sky_rim)
+
+	# 5. Toque sutil de luar rasante na Caveira Bovina
+	var skull_accent := SpotLight3D.new()
+	skull_accent.name = "GrazingDuskWarmLight"
+	skull_accent.position = Vector3(-5.5, 4.2, 1.0)
+	skull_accent.rotation_degrees = Vector3(-28.0, 52.0, 0.0)
+	skull_accent.light_color = Color("#adc4e0")
+	skull_accent.light_energy = 0.75
+	skull_accent.light_volumetric_fog_energy = 0.8
+	skull_accent.spot_range = 12.0
+	skull_accent.spot_angle = 32.0
+	skull_accent.spot_angle_attenuation = 1.8
+	lights.add_child(skull_accent)
 
 
 func _build_dry_dust_breeze() -> void:
@@ -166,8 +242,8 @@ func _build_dry_dust_breeze() -> void:
 		var p := GPUParticles3D.new()
 		p.name = z["name"]
 		p.position = z["pos"]
-		p.amount = 22
-		p.lifetime = 4.8
+		p.amount = 20
+		p.lifetime = 5.0
 		p.preprocess = 2.0
 
 		var proc := ParticleProcessMaterial.new()
@@ -175,21 +251,21 @@ func _build_dry_dust_breeze() -> void:
 		proc.emission_box_extents = z["box"]
 		proc.direction = Vector3(1.0, 0.02, 0.16).normalized()
 		proc.spread = 14.0
-		proc.initial_velocity_min = 0.8
-		proc.initial_velocity_max = 1.6
+		proc.initial_velocity_min = 0.7
+		proc.initial_velocity_max = 1.4
 		proc.gravity = Vector3(0.0, -0.02, 0.0)
 		proc.scale_min = 0.06
-		proc.scale_max = 0.13
-		proc.color = Color(0.52, 0.57, 0.64, 0.14)
+		proc.scale_max = 0.12
+		proc.color = Color(0.45, 0.52, 0.60, 0.12)
 		p.process_material = proc
 
 		var q := QuadMesh.new()
-		q.size = Vector2(0.38, 0.12)
+		q.size = Vector2(0.36, 0.11)
 		var qmat := StandardMaterial3D.new()
 		qmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		qmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		qmat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-		qmat.albedo_color = Color(0.52, 0.57, 0.64, 0.13)
+		qmat.albedo_color = Color(0.45, 0.52, 0.60, 0.11)
 		q.material = qmat
 		p.draw_pass_1 = q
 

@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://Assets/Models/Board/board_pantanal.glb" id="1_pantanal_glb"]
+[ext_resource type="Script" path="res://Scripts/Environment/pantanal_board.gd" id="2_pantanal_ctrl"]
+
+[node name="BoardEnvironmentPantanal" type="Node3D"]
+script = ExtResource("2_pantanal_ctrl")
+
+[node name="board_pantanal" parent="." instance=ExtResource("1_pantanal_glb")]
+

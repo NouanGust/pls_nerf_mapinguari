@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://Assets/Models/Board/board_mata_atlantica.glb" id="1_mata_glb"]
+[ext_resource type="Script" path="res://Scripts/Environment/mata_atlantica_board.gd" id="2_mata_ctrl"]
+
+[node name="BoardEnvironmentMataAtlantica" type="Node3D"]
+script = ExtResource("2_mata_ctrl")
+
+[node name="board_mata_atlantica" parent="." instance=ExtResource("1_mata_glb")]
+

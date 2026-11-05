@@ -39,71 +39,99 @@ const PROFILES: Dictionary = {
 	},
 	"caatinga": {
 		"name": "Caatinga",
-		"sky_top": Color("#0b1528"),
-		"sky_horizon": Color("#2a3446"),
-		"ground_bottom": Color("#140805"),
-		"ground_horizon": Color("#381c14"),
-		"ambient_color": Color("#635969"),
-		"ambient_energy": 0.64,
-		"sun_color": Color("#dce8fa"),
-		"sun_energy": 1.04,
-		"sun_rotation": Vector3(-56.0, -18.0, 0.0),
-		"fog_color": Color("#232433"),
-		"fog_density": 0.015,
-		"glow_bloom": 0.30,
-		"adjustment_contrast": 1.22,
-		"adjustment_saturation": 1.08
+		"sky_top": Color("#040812"),
+		"sky_horizon": Color("#0e1726"),
+		"ground_bottom": Color("#040303"),
+		"ground_horizon": Color("#0d0908"),
+		"ambient_color": Color("#283448"),
+		"ambient_energy": 0.28,
+		"ambient_sky_contribution": 0.30,
+		"sun_color": Color("#b4cae6"),
+		"sun_energy": 0.55,
+		"sun_rotation": Vector3(-50.0, -24.0, 0.0),
+		"fog_color": Color("#080d17"),
+		"fog_density": 0.0045,
+		"volumetric_fog": true,
+		"volumetric_fog_density": 0.010,
+		"volumetric_fog_albedo": Color("#1c273a"),
+		"volumetric_fog_emission": Color("#04070e"),
+		"glow_bloom": 0.12,
+		"tonemap_exposure": 1.0,
+		"adjustment_brightness": 0.98,
+		"adjustment_contrast": 1.12,
+		"adjustment_saturation": 0.90
 	},
 	"caatinga_realista": {
 		"name": "Caatinga (Realista)",
-		"sky_top": Color("#04070f"),
-		"sky_horizon": Color("#0d1524"),
-		"ground_bottom": Color("#050404"),
-		"ground_horizon": Color("#0a090d"),
-		"ambient_color": Color("#364860"),
-		"ambient_energy": 0.52,
-		"sun_color": Color("#8db4de"),
-		"sun_energy": 0.82,
-		"sun_rotation": Vector3(-48.0, -32.0, 0.0),
-		"fog_color": Color("#090f1a"),
-		"fog_density": 0.008,
-		"glow_bloom": 0.15,
-		"adjustment_contrast": 1.18,
-		"adjustment_saturation": 0.95
+		"sky_top": Color("#03060f"),
+		"sky_horizon": Color("#0b1322"),
+		"ground_bottom": Color("#020204"),
+		"ground_horizon": Color("#070910"),
+		"ambient_color": Color("#253347"),
+		"ambient_energy": 0.27,
+		"ambient_sky_contribution": 0.30,
+		"sun_color": Color("#b8cde6"),
+		"sun_energy": 0.56,
+		"sun_rotation": Vector3(-48.0, -28.0, 0.0),
+		"fog_color": Color("#060b14"),
+		"fog_density": 0.004,
+		"volumetric_fog": true,
+		"volumetric_fog_density": 0.010,
+		"volumetric_fog_albedo": Color("#1a2638"),
+		"volumetric_fog_emission": Color("#03060c"),
+		"glow_bloom": 0.10,
+		"tonemap_exposure": 0.98,
+		"adjustment_brightness": 0.98,
+		"adjustment_contrast": 1.12,
+		"adjustment_saturation": 0.88
 	},
 	"pantanal": {
 		"name": "Pantanal",
-		"sky_top": Color("#0e2433"),
-		"sky_horizon": Color("#204d57"),
-		"ground_bottom": Color("#0a1518"),
-		"ground_horizon": Color("#173138"),
-		"ambient_color": Color("#406c75"),
-		"ambient_energy": 0.60,
-		"sun_color": Color("#d8f1f5"),
-		"sun_energy": 0.98,
-		"sun_rotation": Vector3(-48.0, 50.0, 0.0),
-		"fog_color": Color("#1c3d45"),
-		"fog_density": 0.018,
-		"glow_bloom": 0.30,
-		"adjustment_contrast": 1.12,
+		"sky_top": Color("#0a1930"),
+		"sky_horizon": Color("#f47832"),
+		"ground_bottom": Color("#040810"),
+		"ground_horizon": Color("#1c141e"),
+		"ambient_color": Color("#243854"),
+		"ambient_energy": 0.55,
+		"ambient_sky_contribution": 0.70,
+		"sun_color": Color("#ffa65e"),
+		"sun_energy": 1.15,
+		"sun_rotation": Vector3(-22.0, -50.0, 0.0),
+		"fog_color": Color("#121e30"),
+		"fog_density": 0.003,
+		"volumetric_fog": true,
+		"volumetric_fog_density": 0.004,
+		"volumetric_fog_albedo": Color("#1c2e46"),
+		"volumetric_fog_emission": Color("#040812"),
+		"glow_bloom": 0.18,
+		"tonemap_exposure": 1.08,
+		"adjustment_brightness": 1.02,
+		"adjustment_contrast": 1.16,
 		"adjustment_saturation": 1.20
 	},
 	"mata_atlantica": {
 		"name": "Mata Atlântica",
-		"sky_top": Color("#0c2024"),
-		"sky_horizon": Color("#2b4d36"),
-		"ground_bottom": Color("#0a130e"),
-		"ground_horizon": Color("#1a2e21"),
-		"ambient_color": Color("#466b53"),
-		"ambient_energy": 0.62,
-		"sun_color": Color("#fbf2be"),
-		"sun_energy": 0.95,
-		"sun_rotation": Vector3(-52.0, 25.0, 0.0),
-		"fog_color": Color("#1c3626"),
-		"fog_density": 0.017,
-		"glow_bloom": 0.28,
-		"adjustment_contrast": 1.14,
-		"adjustment_saturation": 1.18
+		"sky_top": Color("#040c10"),
+		"sky_horizon": Color("#0e242e"),
+		"ground_bottom": Color("#051014"),
+		"ground_horizon": Color("#0c2229"),
+		"ambient_color": Color("#28424d"),
+		"ambient_energy": 0.36,
+		"ambient_sky_contribution": 0.35,
+		"sun_color": Color("#b5d4e8"),
+		"sun_energy": 0.54,
+		"sun_rotation": Vector3(-68.0, 0.0, 0.0),
+		"fog_color": Color("#0c2028"),
+		"fog_density": 0.011,
+		"volumetric_fog": true,
+		"volumetric_fog_density": 0.019,
+		"volumetric_fog_albedo": Color("#20404a"),
+		"volumetric_fog_emission": Color("#061217"),
+		"glow_bloom": 0.13,
+		"tonemap_exposure": 1.02,
+		"adjustment_brightness": 1.00,
+		"adjustment_contrast": 1.12,
+		"adjustment_saturation": 0.96
 	},
 	"litoral": {
 		"name": "Litoral",
@@ -153,26 +181,65 @@ static func apply_to(world_env: WorldEnvironment, sun: DirectionalLight3D, regio
 		sky.sky_material = sky_mat
 
 	env.background_mode = Environment.BG_SKY
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_sky_contribution = float(profile.get("ambient_sky_contribution", 0.55))
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 1.06
-	
+	env.tonemap_exposure = float(profile.get("tonemap_exposure", 1.04))
+
+	# Oclusão de Ambiente (SSAO) e Iluminação Indireta (SSIL) para profundidade 3D realista
+	# (baseado nas boas práticas de iluminação 3D no Godot 4)
+	env.ssao_enabled = true
+	env.ssao_radius = 1.15
+	env.ssao_intensity = 2.35
+	env.ssao_power = 1.55
+	env.ssao_detail = 0.5
+	env.ssao_sharpness = 0.92
+	env.ssao_light_affect = 0.35
+
+	env.ssil_enabled = true
+	env.ssil_radius = 3.5
+	env.ssil_intensity = 0.85
+	env.ssil_sharpness = 0.9
+
 	# Glow & Brilho sutil
 	env.glow_enabled = true
 	env.glow_normalized = true
-	env.glow_intensity = 0.45
+	env.glow_intensity = 0.50
+	env.glow_hdr_threshold = 0.95
 	env.glow_bloom = float(profile["glow_bloom"])
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 
-	# Ajustes de cor e contraste
+	# Ajustes de cor, brilho e contraste
 	env.adjustment_enabled = true
+	env.adjustment_brightness = float(profile.get("adjustment_brightness", 1.0))
 	env.adjustment_contrast = float(profile["adjustment_contrast"])
 	env.adjustment_saturation = float(profile["adjustment_saturation"])
 
-	# Neblina atmosférica
+	# Neblina de profundidade + Neblina Volumétrica (para atmosfera sombria e feixes de luz)
 	env.fog_enabled = true
-	env.fog_aerial_perspective = 0.5
-	env.fog_sky_affect = 0.4
+	env.fog_aerial_perspective = 0.65
+	env.fog_sky_affect = 0.45
+
+	var use_vol_fog: bool = bool(profile.get("volumetric_fog", false))
+	env.volumetric_fog_enabled = use_vol_fog
+	if use_vol_fog:
+		env.volumetric_fog_density = float(profile.get("volumetric_fog_density", 0.024))
+		env.volumetric_fog_albedo = profile.get("volumetric_fog_albedo", Color("#141e2e"))
+		env.volumetric_fog_emission = profile.get("volumetric_fog_emission", Color("#020408"))
+		env.volumetric_fog_emission_energy = 0.25
+		env.volumetric_fog_anisotropy = 0.62
+		env.volumetric_fog_length = 56.0
+		env.volumetric_fog_ambient_inject = 0.18
+
+	if sun:
+		sun.light_indirect_energy = 1.15
+		sun.light_volumetric_fog_energy = 1.25 if use_vol_fog else 1.0
+		sun.shadow_enabled = true
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+		sun.directional_shadow_max_distance = 64.0
+		sun.shadow_bias = 0.03
+		sun.shadow_normal_bias = 1.2
+		sun.shadow_blur = 0.85
 
 	if duration <= 0.0 or not world_env.is_inside_tree():
 		# Aplicação direta instantânea
@@ -180,7 +247,7 @@ static func apply_to(world_env: WorldEnvironment, sun: DirectionalLight3D, regio
 		sky_mat.sky_horizon_color = profile["sky_horizon"]
 		sky_mat.ground_bottom_color = profile["ground_bottom"]
 		sky_mat.ground_horizon_color = profile["ground_horizon"]
-		sky_mat.sun_angle_max = 25.0
+		sky_mat.sun_angle_max = 18.0
 
 		env.ambient_light_color = profile["ambient_color"]
 		env.ambient_light_energy = float(profile["ambient_energy"])
@@ -190,9 +257,6 @@ static func apply_to(world_env: WorldEnvironment, sun: DirectionalLight3D, regio
 		if sun:
 			sun.light_color = profile["sun_color"]
 			sun.light_energy = float(profile["sun_energy"])
-			sun.light_indirect_energy = 1.2
-			sun.shadow_enabled = true
-			sun.shadow_blur = 1.4
 			var rot: Vector3 = profile["sun_rotation"]
 			sun.rotation_degrees = rot
 	else:

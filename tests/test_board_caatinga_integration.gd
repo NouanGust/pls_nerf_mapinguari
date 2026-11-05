@@ -44,11 +44,12 @@ func _run_tests() -> void:
 	assert(board.environment_instance is CaatingaBoardRealista, "caatinga_realista must instantiate CaatingaBoardRealista!")
 	var realista := board.environment_instance as CaatingaBoardRealista
 	assert(realista.get_node_or_null("RealisticHorizonMoon") == null, "RealisticHorizonMoon must NOT exist (moon removed as requested)")
+	assert(realista.get_node_or_null("RealisticSertaoLights/ArenaTacticalMoonSpot") != null, "ArenaTacticalMoonSpot must exist in RealisticSertaoLights")
 	assert(realista.get_node_or_null("RealisticSertaoLights/OverheadSkyFill") != null, "OverheadSkyFill must exist in RealisticSertaoLights")
 	assert(realista.get_node_or_null("RealisticDryDustBreeze") != null, "RealisticDryDustBreeze must exist in realistic Caatinga scene")
-	assert(realista._swaying_trees.size() >= 120, "Realistic Caatinga must contain ultra-dense White Forest (>=120 trees, found %d)" % realista._swaying_trees.size())
+	assert(realista._swaying_trees.size() >= 115, "Realistic Caatinga must contain dense amphitheater White Forest (>=115 trees, found %d)" % realista._swaying_trees.size())
 	assert(realista._breathing_nodes.size() >= 15, "Realistic Caatinga must contain lajeiros and horror anomaly nodes (found %d)" % realista._breathing_nodes.size())
-	assert(is_zero_approx(board.cell_base_colors[Vector2i(0, 0)].a), "Realistic Caatinga base cell overlay must be transparent when unhighlighted so clay hexes show cleanly")
+	assert(board.cell_base_colors[Vector2i(0, 0)].a <= 0.16, "Realistic Caatinga base cell overlay must remain subtle so chiseled clay hexes show cleanly")
 	print("   Realistic Caatinga verified: trees=%d, lajeiros/anomalies=%d" % [realista._swaying_trees.size(), realista._breathing_nodes.size()])
 
 	# Switch back to standard horror Caatinga to confirm both coexist cleanly

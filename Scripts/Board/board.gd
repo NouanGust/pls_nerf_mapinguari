@@ -17,6 +17,8 @@ const RegionEnvironment = preload("res://Scripts/Environment/region_environment.
 @export var environment_scene: PackedScene = preload("res://Scenes/Board/board_environment.tscn")
 @export var caatinga_environment_scene: PackedScene = preload("res://Scenes/Board/board_environment_caatinga.tscn")
 @export var caatinga_realistic_environment_scene: PackedScene = preload("res://Scenes/Board/board_environment_caatinga_realista.tscn")
+@export var mata_atlantica_environment_scene: PackedScene = preload("res://Scenes/Board/board_environment_mata_atlantica.tscn")
+@export var pantanal_environment_scene: PackedScene = preload("res://Scenes/Board/board_environment_pantanal.tscn")
 @export_enum("default", "horror", "realista") var caatinga_board_style: String = "default"
 
 var current_region_id: String = ""
@@ -526,6 +528,10 @@ func _resolve_caatinga_region_key(new_region_id: String) -> String:
 
 
 func _resolve_environment_scene(region_key: String) -> PackedScene:
+	if region_key == "pantanal" and pantanal_environment_scene:
+		return pantanal_environment_scene
+	if region_key == "mata_atlantica" and mata_atlantica_environment_scene:
+		return mata_atlantica_environment_scene
 	if region_key == "caatinga_realista" and caatinga_realistic_environment_scene:
 		return caatinga_realistic_environment_scene
 	if region_key == "caatinga" and caatinga_environment_scene:
@@ -554,8 +560,8 @@ func set_region_environment_scene(new_region_id: String) -> void:
 
 
 func _update_cells_for_region(region_key: String) -> void:
-	var is_caatinga_sculpted := region_key in ["caatinga", "caatinga_realista"]
-	var is_realista := region_key == "caatinga_realista"
+	var is_caatinga_sculpted := region_key in ["caatinga", "caatinga_realista", "mata_atlantica", "pantanal"]
+	var is_realista := region_key in ["caatinga_realista", "mata_atlantica", "pantanal"]
 	for grid_pos in cell_meshes.keys():
 		var inset: MeshInstance3D = cell_meshes[grid_pos]
 		if not is_instance_valid(inset):
@@ -563,9 +569,9 @@ func _update_cells_for_region(region_key: String) -> void:
 		var is_player := is_player_zone(grid_pos)
 		var base_color: Color
 		if is_realista:
-			# Na versão realista, deixa as casas de barro batido e sulcos escavados 100% visíveis sem película plástica;
-			# o cilindro procedural só aparece ao destacar/arrastar unidades (highlight_cell).
-			base_color = Color(0.45, 0.23, 0.14, 0.0) if is_player else Color(0.38, 0.18, 0.11, 0.0)
+			# Na versão realista, deixa os ladrilhos 3D esculpidos (chanfro claro + barro + sulco)
+			# 100% visíveis e iluminados, sem véu escuro por cima (o highlight aparece ao arrastar/passar o mouse).
+			base_color = Color(0.76, 0.56, 0.38, 0.0) if is_player else Color(0.64, 0.42, 0.28, 0.0)
 		elif is_caatinga_sculpted:
 			# Revela os ladrilhos esculpidos no modelo 3D da Caatinga mantendo leitura clara das zonas
 			base_color = Color(0.32, 0.50, 0.54, 0.34) if is_player else Color(0.52, 0.32, 0.22, 0.28)
@@ -583,7 +589,7 @@ func _update_cells_for_region(region_key: String) -> void:
 				var omat := outline.material_override as StandardMaterial3D
 				if is_realista:
 					omat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-					omat.albedo_color = Color(0.13, 0.055, 0.032, 0.0)
+					omat.albedo_color = Color(0.11, 0.07, 0.05, 0.0)
 				elif is_caatinga_sculpted:
 					omat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 					omat.albedo_color = Color(0.11, 0.07, 0.05, 0.52)

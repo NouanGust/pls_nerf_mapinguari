@@ -977,6 +977,46 @@ func heal(amount: float, healer: BaseUnit3D = null) -> float:
 
 	return healed_amount
 
+func _apply_ability_healing(scale_multiplier: float = 1.0) -> void:
+	if not stats or stats.ability_heal <= 0.0 or current_state == State.DEAD or is_on_bench():
+		return
+	var eff_scale := scale_multiplier if not is_equal_approx(scale_multiplier, 1.0) else current_ability_scale
+	var heal_amount := stats.ability_heal * stats.get_star_multiplier(star_level) * maxf(eff_scale, 0.01)
+	if heal_amount <= 0.0:
+		return
+
+	var targets_count := maxi(stats.ability_targets, 1)
+	var wounded_allies: Array[BaseUnit3D] = []
+	if is_inside_tree() and get_tree():
+		var ally_group := "player_units" if team == 0 else "enemy_units"
+		for node in get_tree().get_nodes_in_group(ally_group):
+			var ally := node as BaseUnit3D
+			if is_instance_valid(ally) and ally.current_state != State.DEAD and not ally.is_on_bench() and ally.current_health < ally.get_max_health():
+				wounded_allies.append(ally)
+
+	if wounded_allies.is_empty():
+		var self_healed := heal(heal_amount, self)
+		if self_healed > 0.0 and is_inside_tree():
+			CombatFeedback.create_damage_number(global_position, self_healed, CombatFeedback.DamageType.HEAL)
+			CombatFeedback.create_hit_particles(global_position + Vector3.UP * 0.5, Color("#4ade80"))
+		return
+
+	wounded_allies.sort_custom(func(a: BaseUnit3D, b: BaseUnit3D) -> bool:
+		var ratio_a := a.current_health / maxf(a.get_max_health(), 1.0)
+		var ratio_b := b.current_health / maxf(b.get_max_health(), 1.0)
+		if not is_equal_approx(ratio_a, ratio_b):
+			return ratio_a < ratio_b
+		return global_position.distance_to(a.global_position) < global_position.distance_to(b.global_position)
+	)
+
+	var count := mini(targets_count, wounded_allies.size())
+	for i in range(count):
+		var ally := wounded_allies[i]
+		var healed := ally.heal(heal_amount, self)
+		if healed > 0.0 and is_inside_tree():
+			CombatFeedback.create_damage_number(ally.global_position, healed, CombatFeedback.DamageType.HEAL)
+			CombatFeedback.create_hit_particles(ally.global_position + Vector3.UP * 0.5, Color("#4ade80"))
+
 func flash_damage() -> void:
 	if unit_visual:
 		unit_visual.flash_damage()

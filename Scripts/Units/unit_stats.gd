@@ -46,6 +46,7 @@ const ROLE_PORRADEIRO: String = "Porradeiro"
 ## ============================================
 @export_group("Visuals")
 @export var icon: Texture2D
+@export var model_scene: PackedScene
 
 ## ============================================
 ## STATS DE COMBATE

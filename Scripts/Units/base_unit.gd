@@ -617,6 +617,7 @@ func apply_stun(duration: float, label: String = "ATORDOADO") -> void:
 		navigation_agent.velocity = Vector3.ZERO
 	if unit_visual:
 		unit_visual.update_locomotion(false, 0.0, true)
+		unit_visual.play_stun()
 	if current_state in [State.ATTACKING, State.MOVING]:
 		current_state = State.IDLE
 	if is_inside_tree():

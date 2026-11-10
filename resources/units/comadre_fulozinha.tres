@@ -2,6 +2,8 @@
 
 [ext_resource type="Texture2D" uid="uid://21r6hawu4hyw" path="res://Assets/Units/SplashArts/comadre_fulozimha.jpg" id="1_tlm31"]
 [ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_v6ogt"]
+[ext_resource type="PackedScene" uid="uid://7tvjqe5pubwo" path="res://models/comadre_fulozinha/comadre_fulozinha.glb" id="2_model"]
+[ext_resource type="PackedScene" path="res://models/comadre_fulozinha/comadre_fulozinha.glb" id="2_model"]
 
 [resource]
 script = ExtResource("1_v6ogt")
@@ -13,6 +15,7 @@ tier = 4
 cost = 4
 combat_role = "Conjurador"
 icon = ExtResource("1_tlm31")
+model_scene = ExtResource("2_model")
 max_health = 750.0
 health_regen = 8.0
 attack_damage = 45.0

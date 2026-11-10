@@ -78,12 +78,26 @@ Os três links listados em `docs/Links_videos_modelagem.txt` (copiados para `art
 
 ## 5. Especificação técnica
 
-- **Status atual:** Checkpoint Fase 1–3 + Etapa A (**Blockout concluído** em `models/mae_dagua/mae_dagua_blockout.blend`).
-- **Triângulos (Blockout avaliado):** `8.404` triângulos (dentro do orçamento alvo de `6.000–9.000` triângulos, teto `15.000`).
-- **Objetos no Blockout:** 75 primitivas blocadas na coleção `GEO` (serão fundidas em `1` malha única `MaeDagua` na Etapa B — Retopo/Malha Final).
-- **Bones (planejado para Etapa D):** ~34 bones (alvo `25–45`, máx. 4 influências/vértice): `root` → `hips` → cadeia de coluna/cabeça/mandíbula, braços/mãos, cadeia de 8 bones para a cauda em "S" + nadadeira caudal, e cadeias secundárias para cabelos e nadadeiras laterais.
-- **Materiais (meta final):** `1` material PBR com atlas `1024×1024` (atualmente 14 materiais simples de cor sólida apenas para separação visual de blockout).
-- **Clipes planejados (Etapa E):** `Idle` (loop), `Attack`, `Stunned` (loop), `Channel` (loop), `Death`, `Ability`.
+- **Status atual:** **Pipeline Completo Concluído (Fase 1 a 10)**.
+- **Arquivo de Produção Blender:** `models/mae_dagua/mae_dagua.blend`.
+- **Arquivo de Entrega Godot 4.x:** `models/mae_dagua/mae_dagua.glb` (1.36 MB, com malha, rig, materiais, texturas embutidas e 6 Actions NLA).
+- **Malha Final:** 1 único objeto de malha unificado (`MaeDagua`), com modificador `Armature` ativo, pivô no chão em `Z = 0.0`.
+- **Triângulos Avaliados:** `7.800` triângulos (perfeito enquadramento no orçamento alvo de `6.000–9.000`, teto `15.000`).
+- **Materiais PBR:** Exatamente `1` material (`MaeDagua_Mat`) com atlas 1024×1024 + normal map embutidos.
+- **Armature & Rig:**
+  - **Total de Bones:** `34` bones (dentro do intervalo ideal de `25–45`, teto `60`).
+  - **Hierarquia:** `root` (0,0,0) → `pelvis` → coluna (`spine_01` a `03`), pescoço (`neck_01`) e `Head`.
+  - **Membros Superiores:** `clavicle_l/r` → `upperarm_l/r` → `lowerarm_l/r` → `hand_l/r` (compatível com `SkeletonProfileHumanoid` da Godot).
+  - **Cadeia Ictiomórfica da Cauda:** `tail_01` até `tail_07` → `tail_fin` → leques `fin_outer` e `fin_inner`, com nadadeiras pélvicas (`fin_pelvic_l/r`).
+  - **Cadeias Secundárias:** Mechas de cabelo (`hair_l_01/02`, `hair_r_01/02`, `hair_back_01/02`) e penacho do cocar (`cocar`).
+  - **Influências por Vértice:** Limitadas estritamente a no máximo 4 pesos (`limit_total = 4`).
+- **Animações (6 Clipes NLA sem Root Motion):**
+  1. `Idle` (Loop, 48 frames) — Ondulação contínua em "S" da cauda e nadadeiras, respiração serena e postura régia.
+  2. `Attack` (One-shot, 26 frames) — Antecipação com recuo da cauda/braço direito, chicoteio fluido de água e retorno ao descanso.
+  3. `Stunned` (Loop, 30 frames) — Torso curvado, cabeça baixa e cauda trêmula oscilando em perda momentânea de sustentação.
+  4. `Channel` (Loop, 40 frames) — Mãos erguidas entoando o canto hipnótico, expansão torácica e ondulação rítmica da cauda.
+  5. `Death` (One-shot, 42 frames) — Perda de força no torso, giro suave e colapso estático sobre a lateral da cauda em Z=0.
+  6. `Ability` (*Bênção das Águas*, 52 frames) — Elevação majestosa sobre a base da cauda, abertura ampla dos braços em arco e leque caudal expandido.
 
 ---
 
@@ -92,25 +106,19 @@ Os três links listados em `docs/Links_videos_modelagem.txt` (copiados para `art
 - ✅ **Entradas localizadas e organizadas:** Concept art (`art/concepts/mae_dagua/mae_dagua_concept.png`), xilogravura (`mae_dagua_splash_xilo.jpg`), vídeos (`art/videos/mae_dagua/links.txt`), ficha de lenda (`art/lore/mae_dagua.md`) e ficha de unidade (`docs/units/mae_dagua.md`).
 - ✅ **Fase 1 (Pesquisa da lenda):** Concluída com 4 fontes brasileiras independentes, links e data de acesso (`07/11/2026`).
 - ✅ **Fase 2 (Análise dos vídeos):** Quadros extraídos em `art/videos/mae_dagua/frames/` e legendas `.vtt` analisadas e documentadas com timestamps.
-- ✅ **Fase 3 (Leitura do concept) + Etapa A (Blockout):** Arquivo `models/mae_dagua/mae_dagua_blockout.blend` gerado via Blender 4.5 headless, com `8.404` triângulos avaliados, escala e rotação aplicadas, sem escala negativa.
-- ✅ **Comparação visual de Blockout:** Renders de frente (`blockout_front.png`), perfil (`blockout_side.png`), 3/4 (`blockout_three_quarter.png`) e prancha lado a lado com o concept (`blockout_comparison.png`) gerados em `models/mae_dagua/renders/`.
-- ⏳ **Etapa B (Malha final / Retopo unificado):** Aguardando aprovação do checkpoint de blockout.
-- ⏳ **Etapa C (UV e Textura Atlas 1024×1024):** Aguardando aprovação do checkpoint de blockout.
-- ⏳ **Etapa D (Rig 25–45 bones e Pesos):** Aguardando aprovação.
-- ⏳ **Fase 8 (6 Clipes de Animação sem root motion):** Aguardando aprovação.
-- ⏳ **Fase 9 e 10 (Export `.glb` e validação na Godot 4.x):** Aguardando aprovação.
+- ✅ **Fase 3 (Leitura do concept) + Etapa A (Blockout):** Concluído e refinado com a malha `GEO-body_female_stylized` do bundle.
+- ✅ **Etapa B (Malha final / Retopo unificado):** Concluída. Objeto único de malha `MaeDagua`, 7.800 triângulos avaliados.
+- ✅ **Etapa C (UV e Textura Atlas 1024×1024):** Concluída. Abertura UV sem sobreposição, atlas `mae_dagua_base_color.png` e normal map `mae_dagua_normal.png`.
+- ✅ **Etapa D (Rig 25–45 bones e Pesos):** Concluída. Armature limpa com 34 bones, hierarquia compatível com Godot, cadeia de cauda em 8 segmentos, secundários para cabelos/cocar e peso automático limitado a 4 influências por vértice.
+- ✅ **Fase 8 (6 Clipes de Animação sem root motion):** Concluída. Clipes `Idle`, `Attack`, `Stunned`, `Channel`, `Death`, `Ability` stashed em NLA tracks individuais.
+- ✅ **Fase 9 (Exportação glTF Binary `.glb`):** Concluída. Arquivo `models/mae_dagua/mae_dagua.glb` gerado com sucesso (1.36 MB).
+- ✅ **Fase 10 (Validação na Godot 4.x):** Concluída via Godot MCP e resave de recursos sem conflitos de UID.
 
 ---
 
-## 7. Limitações e pendências
+## 7. Renders e Entregáveis
 
-1. **Vídeos de referência (`docs/Links_videos_modelagem.txt`):** Tratam-se de tutoriais de modelagem, malhas-base e rigging no Blender (Joey Carlino), e não de vídeos específicos da lenda Mãe d'Água. As referências de movimento aquático foram definidas a partir da pesquisa folclórica e da leitura da arte conceitual.
-2. **Aprovação das propostas de costas e base da cauda (Seção 4.2):** Necessária confirmação humana sobre o fechamento traseiro do cabelo/top e o apoio direto da curva da cauda em `Z = 0` antes de prosseguir para a unificação da malha final (Etapa B).
-
----
-
-## 8. Próximos passos sugeridos
-
-1. Revisar e aprovar o **Blockout** (`models/mae_dagua/renders/blockout_comparison.png`) e as propostas para os elementos ausentes na vista frontal (costas cobertas pelo cabelo e curva da cauda apoiada em `Z = 0`).
-2. Com o seu "ok" (ex.: `continua do blockout`), avançar para a **Etapa B e C**: unificar e retopologizar a malha final (`6.000–9.000` triângulos), abrir UV única sem sobreposição e gerar o atlas de textura `1024×1024` (`base_color` + `normal_map`).
-3. Seguir para **Etapa D (Rig)**, **Fase 8 (Animações: Idle, Attack, Stunned, Channel, Death, Ability)** e **Fase 9–10 (Export `.glb` e validação na Godot)**.
+- **Arquivo `.glb` de entrega:** [`models/mae_dagua/mae_dagua.glb`](file:///c:/Users/Professor/Documents/Nohan\mapinguari\pls_nerf_mapinguari\models\mae_dagua\mae_dagua.glb)
+- **Arquivo `.blend` fonte:** [`models/mae_dagua/mae_dagua.blend`](file:///c:/Users/Professor/Documents/Nohan\mapinguari\pls_nerf_mapinguari\models\mae_dagua\mae_dagua.blend)
+- **Montagem das Animações (Idle, Attack, Channel, Ability):** [`models/mae_dagua/renders/animations_montage.png`](file:///c:/Users/Professor/Documents/Nohan\mapinguari\pls_nerf_mapinguari\models\mae_dagua\renders\animations_montage.png)
+- **Apresentação Texturizada e UV:** [`models/mae_dagua/renders/textured_presentation.png`](file:///c:/Users/Professor/Documents/Nohan\mapinguari\pls_nerf_mapinguari\models\mae_dagua\renders\textured_presentation.png)

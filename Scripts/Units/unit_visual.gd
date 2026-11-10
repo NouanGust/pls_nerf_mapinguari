@@ -21,6 +21,7 @@ var _flash_tween: Tween
 var _upgrade_tween: Tween
 var _configured := false
 var _species_model: Node3D
+var _is_custom_model := false
 var _stationary := false
 var _pose_tween: Tween
 var _walk_phase := 0.0
@@ -30,12 +31,36 @@ var _original_colors: Array[Color] = []
 func configure(color: Color, stats: UnitStats = null) -> void:
 	_configured = true
 	_team_color = color
+	_is_custom_model = false
 	if stats:
 		_stationary = stats.is_stationary
-		_species_model = BiodiversityModels.create_model(stats)
-		if _species_model:
-			get_node("Character").free()
-			add_child(_species_model)
+		if stats.model_scene:
+			var custom_inst := stats.model_scene.instantiate() as Node3D
+			if custom_inst:
+				var char_node := get_node_or_null("Character")
+				if char_node:
+					char_node.free()
+				custom_inst.name = "Character"
+				add_child(custom_inst)
+				_is_custom_model = true
+		elif ResourceLoader.exists("res://models/%s/%s.glb" % [stats.unit_id, stats.unit_id]):
+			var scene_res := load("res://models/%s/%s.glb" % [stats.unit_id, stats.unit_id]) as PackedScene
+			if scene_res:
+				var custom_inst := scene_res.instantiate() as Node3D
+				if custom_inst:
+					var char_node := get_node_or_null("Character")
+					if char_node:
+						char_node.free()
+					custom_inst.name = "Character"
+					add_child(custom_inst)
+					_is_custom_model = true
+		if not _is_custom_model:
+			_species_model = BiodiversityModels.create_model(stats)
+			if _species_model:
+				var char_node := get_node_or_null("Character")
+				if char_node:
+					char_node.free()
+				add_child(_species_model)
 	animation_player = find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if animation_player:
 		animation_player.animation_finished.connect(_on_animation_finished)
@@ -46,9 +71,9 @@ func configure(color: Color, stats: UnitStats = null) -> void:
 		_meshes.append(mesh)
 		for surface in mesh.mesh.get_surface_count():
 			var original := mesh.get_active_material(surface) as StandardMaterial3D
-			if original and (_species_model or original.resource_name == "M_Main"):
+			if original and (_species_model or _is_custom_model or original.resource_name == "M_Main"):
 				var material := original.duplicate() as StandardMaterial3D
-				if not _species_model:
+				if not _species_model and not _is_custom_model:
 					material.albedo_color = color
 				mesh.set_surface_override_material(surface, material)
 				_body_materials.append(material)
@@ -85,7 +110,13 @@ func update_locomotion(moving: bool, movement_speed: float, interrupt_action: bo
 	if interrupt_action or moving:
 		_action = &""
 	if _action == &"":
-		_play(WALK if moving else IDLE, _movement_speed if moving else 1.0)
+		var anim_name: StringName = IDLE
+		if moving:
+			if animation_player and animation_player.has_animation(WALK):
+				anim_name = WALK
+			else:
+				anim_name = IDLE
+		_play(anim_name, _movement_speed if moving else 1.0)
 
 
 func play_attack(ranged: bool, interval: float) -> void:
@@ -94,10 +125,13 @@ func play_attack(ranged: bool, interval: float) -> void:
 	if not animation_player:
 		_pulse(minf(interval * 0.7, 0.35))
 		return
-	_action = RANGED_ATTACK if ranged else ATTACK
-	# Completa o gesto dentro do intervalo, sem alterar o dano ou o timer.
-	var duration := animation_player.get_animation(_action).length
-	_play(_action, duration / maxf(minf(interval * 0.85, duration), 0.05), true)
+	var anim_name: StringName = RANGED_ATTACK if ranged else ATTACK
+	if animation_player.has_animation(&"Attack"):
+		anim_name = &"Attack"
+	_action = anim_name
+	var anim_res := animation_player.get_animation(anim_name)
+	var duration := anim_res.length if anim_res else 0.5
+	_play(anim_name, duration / maxf(minf(interval * 0.85, duration), 0.05), true)
 
 
 func play_cast() -> void:
@@ -106,8 +140,15 @@ func play_cast() -> void:
 	if not animation_player:
 		_pulse(0.5)
 		return
-	_action = CAST
-	_play(CAST, animation_player.get_animation(CAST).length / 0.5, true)
+	var anim_name: StringName = CAST
+	if animation_player.has_animation(&"Ability"):
+		anim_name = &"Ability"
+	elif animation_player.has_animation(&"Channel"):
+		anim_name = &"Channel"
+	_action = anim_name
+	var anim_res := animation_player.get_animation(anim_name)
+	var duration := anim_res.length if anim_res else 0.5
+	_play(anim_name, duration / 0.5, true)
 
 
 func play_death() -> float:
@@ -118,9 +159,21 @@ func play_death() -> float:
 		_pose_tween = create_tween()
 		_pose_tween.tween_property(self, "scale", Vector3(1.0, 0.08, 1.0), 0.45)
 		return 0.5
-	_action = DEATH
-	_play(DEATH, 1.0, true)
-	return animation_player.get_animation(DEATH).length
+	var anim_name: StringName = DEATH
+	if animation_player.has_animation(&"Death"):
+		anim_name = &"Death"
+	_action = anim_name
+	_play(anim_name, 1.0, true)
+	var anim_res := animation_player.get_animation(anim_name)
+	return anim_res.length if anim_res else 0.5
+
+
+func play_stun() -> void:
+	if _dead:
+		return
+	if animation_player and animation_player.has_animation(&"Stunned"):
+		_action = &"Stunned"
+		_play(&"Stunned", 1.0, true)
 
 
 func _play(animation: StringName, speed: float = 1.0, restart: bool = false) -> void:

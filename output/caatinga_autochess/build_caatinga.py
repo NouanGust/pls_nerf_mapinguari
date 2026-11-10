@@ -242,71 +242,38 @@ def create_materials():
             m.use_nodes = True
         return m
 
-    # 1. Solo Principal: Terra vermelha compactada, ocre queimado, erosão e manchas LOCALIZADAS de solo rachado
+    # 1. Solo Principal: Terra vermelha compactada, ocre queimado e manchas secas
     m_soil = _new_mat("Mat_Terrain_RedEarth")
     nt = m_soil.node_tree
     nodes, links = nt.nodes, nt.links
     bsdf = nodes.get("Principled BSDF")
-    bsdf.inputs["Roughness"].default_value = 0.94
+    bsdf.inputs["Roughness"].default_value = 0.92
     if "Specular IOR Level" in bsdf.inputs:
-        bsdf.inputs["Specular IOR Level"].default_value = 0.14
+        bsdf.inputs["Specular IOR Level"].default_value = 0.18
 
     tex_coord = nodes.new("ShaderNodeTexCoord")
     noise_macro = nodes.new("ShaderNodeTexNoise")
-    noise_macro.inputs["Scale"].default_value = 0.42
-    noise_macro.inputs["Detail"].default_value = 6.0
-    noise_macro.inputs["Roughness"].default_value = 0.68
+    noise_macro.inputs["Scale"].default_value = 0.38
+    noise_macro.inputs["Detail"].default_value = 5.0
+    noise_macro.inputs["Roughness"].default_value = 0.65
     links.new(tex_coord.outputs["Object"], noise_macro.inputs["Vector"])
-
-    # Máscara de manchas localizadas (apenas ~25% do solo externo exibe rachaduras visíveis)
-    noise_patch = nodes.new("ShaderNodeTexNoise")
-    noise_patch.inputs["Scale"].default_value = 0.22
-    noise_patch.inputs["Detail"].default_value = 3.0
-    links.new(tex_coord.outputs["Object"], noise_patch.inputs["Vector"])
-
-    ramp_patch = nodes.new("ShaderNodeValToRGB")
-    ramp_patch.color_ramp.elements[0].position = 0.56
-    ramp_patch.color_ramp.elements[0].color = (1.0, 1.0, 1.0, 1.0)  # Sem rachadura (terra compactada)
-    ramp_patch.color_ramp.elements[1].position = 0.72
-    ramp_patch.color_ramp.elements[1].color = (0.0, 0.0, 0.0, 1.0)  # Mancha localizada de solo rachado
-    links.new(noise_patch.outputs["Fac"], ramp_patch.inputs["Fac"])
 
     vor_cracks = nodes.new("ShaderNodeTexVoronoi")
     vor_cracks.feature = 'DISTANCE_TO_EDGE'
-    vor_cracks.inputs["Scale"].default_value = 4.2
+    vor_cracks.inputs["Scale"].default_value = 2.8
     links.new(tex_coord.outputs["Object"], vor_cracks.inputs["Vector"])
 
-    ramp_cracks = nodes.new("ShaderNodeValToRGB")
-    ramp_cracks.color_ramp.elements[0].position = 0.012
-    ramp_cracks.color_ramp.elements[0].color = (0.45, 0.45, 0.45, 1.0)  # Fissura discreta
-    ramp_cracks.color_ramp.elements[1].position = 0.055
-    ramp_cracks.color_ramp.elements[1].color = (1.0, 1.0, 1.0, 1.0)
-    links.new(vor_cracks.outputs["Distance"], ramp_cracks.inputs["Fac"])
-
-    # Combina a máscara localizada com as rachaduras
-    mix_crack_mask = nodes.new("ShaderNodeMath")
-    mix_crack_mask.operation = 'MAXIMUM'
-    links.new(ramp_cracks.outputs["Color"], mix_crack_mask.inputs[0])
-    links.new(ramp_patch.outputs["Color"], mix_crack_mask.inputs[1])
-
-    mix_tex = nodes.new("ShaderNodeMath")
-    mix_tex.operation = 'MULTIPLY'
-    links.new(noise_macro.outputs["Fac"], mix_tex.inputs[0])
-    links.new(mix_crack_mask.outputs["Value"], mix_tex.inputs[1])
-
     ramp_soil = nodes.new("ShaderNodeValToRGB")
-    ramp_soil.color_ramp.elements[0].position = 0.16
-    ramp_soil.color_ramp.elements[0].color = (0.26, 0.11, 0.065, 1.0)   # Terra vermelha escura / fissura
-    e_s1 = ramp_soil.color_ramp.elements.new(0.48)
-    e_s1.color = (0.40, 0.18, 0.10, 1.0)                                # Terra vermelha compactada
-    ramp_soil.color_ramp.elements[2].position = 0.85
-    ramp_soil.color_ramp.elements[2].color = (0.52, 0.26, 0.15, 1.0)    # Poeira ocre queimada
-    links.new(mix_tex.outputs["Value"], ramp_soil.inputs["Fac"])
+    ramp_soil.color_ramp.elements[0].position = 0.18
+    ramp_soil.color_ramp.elements[0].color = (0.28, 0.12, 0.07, 1.0)  # Terra vermelha escura
+    ramp_soil.color_ramp.elements[1].position = 0.82
+    ramp_soil.color_ramp.elements[1].color = (0.48, 0.23, 0.12, 1.0)  # Ocre queimado / barro seco
+    links.new(noise_macro.outputs["Fac"], ramp_soil.inputs["Fac"])
 
     bump_soil = nodes.new("ShaderNodeBump")
-    bump_soil.inputs["Strength"].default_value = 0.22
-    bump_soil.inputs["Distance"].default_value = 0.035
-    links.new(mix_tex.outputs["Value"], bump_soil.inputs["Height"])
+    bump_soil.inputs["Strength"].default_value = 0.18
+    bump_soil.inputs["Distance"].default_value = 0.04
+    links.new(noise_macro.outputs["Fac"], bump_soil.inputs["Height"])
     links.new(bump_soil.outputs["Normal"], bsdf.inputs["Normal"])
     links.new(ramp_soil.outputs["Color"], bsdf.inputs["Base Color"])
     mats["terrain"] = m_soil
@@ -855,63 +822,57 @@ def build_white_forest(sub_cols, layout, mats):
 
     # Posições em múltiplas camadas: grupos densos no fundo (+Y), árvores médias nas laterais,
     # intervalos orgânicos entre grupos e árvores maiores nas extremidades externas.
-    # Nenhuma árvore bloqueia a frente (-Y) ou invade a máscara de exclusão.
+    # Nenhuma árvore bloqueia a frente (-Y) ou invade a máscara de exclusão (considerando copa de ~2.0m).
     tree_placements = [
-        # Camada lateral esquerda próxima (Oeste)
-        ("A", -6.5, -2.0, 0.35, 0.90),
-        ("C", -6.8,  0.4, 1.20, 0.88),
-        ("B", -6.4,  2.8, -0.45, 0.94),
-        ("E", -7.2,  4.5, 2.10, 0.98),
-        # Camada lateral esquerda externa
-        ("D", -8.8, -3.5, 0.65, 1.05),
-        ("B", -9.2, -0.5, 0.80, 1.08),
-        ("A", -9.5,  2.4, -1.10, 1.04),
-        ("D", -10.8, 4.8, 0.50, 1.15),
+        # Camada lateral esquerda (Oeste) - Terço médio/traseiro
+        ("A", -7.8, -1.8, 0.35, 0.95),
+        ("C", -8.6,  0.4, 1.20, 0.90),
+        ("B", -7.5,  2.6, -0.45, 1.00),
+        ("E", -9.2,  4.2, 2.10, 1.05),
+        ("D", -11.4, -0.6, 0.80, 1.18),
+        ("A", -11.8,  3.2, -1.10, 1.12),
+        ("B", -10.5, -4.2, 0.50, 0.98),
 
-        # Camada lateral direita próxima (Leste)
-        ("C",  6.5, -1.8, -0.60, 0.88),
-        ("A",  6.8,  0.7, 2.40, 0.92),
-        ("E",  6.4,  3.1, -1.35, 0.95),
-        ("B",  7.3,  4.7, 0.90, 1.00),
-        # Camada lateral direita externa
-        ("D",  8.9, -3.3, -0.55, 1.06),
-        ("B",  9.3, -0.2, -0.75, 1.08),
-        ("A",  9.6,  2.6, 1.55, 1.05),
-        ("D", 10.9,  5.0, -2.10, 1.16),
+        # Camada lateral direita (Leste) - Terço médio/traseiro
+        ("C",  7.7, -1.5, -0.60, 0.92),
+        ("A",  8.5,  0.9, 2.40, 0.96),
+        ("E",  7.6,  3.1, -1.35, 1.02),
+        ("B",  9.3,  4.6, 0.90, 1.06),
+        ("D", 11.5,  0.2, -0.75, 1.20),
+        ("A", 11.9,  3.8, 1.55, 1.14),
+        ("C", 10.4, -3.9, -2.10, 0.95),
 
-        # Camada de fundo imediata (Borda Norte do campo, Y = 4.6 a 5.6, abrindo passagem para a trilha central)
-        ("C", -4.6,  4.7, 0.30, 0.86),
-        ("A", -2.7,  4.9, 1.65, 0.88),
-        ("E",  2.6,  4.8, -0.85, 0.88),
-        ("B",  4.7,  4.7, 2.15, 0.90),
-        ("D", -6.2,  5.5, -0.40, 1.00),
-        ("B",  6.3,  5.6, 1.15, 0.98),
+        # Camada de fundo próxima (Borda Norte do campo, deixando abertura para a trilha central)
+        ("B", -5.8,  6.2, 0.25, 1.02),
+        ("C", -3.9,  6.5, 1.75, 0.92),
+        ("A",  3.8,  6.4, -0.85, 0.95),
+        ("E",  5.9,  6.3, 2.20, 1.04),
+        ("D", -8.2,  6.8, -0.40, 1.12),
+        ("B",  8.4,  7.0, 1.15, 1.10),
 
-        # Camada de fundo intermediária (Mata Branca densa, Y = 6.6 a 8.2)
-        ("B", -5.2,  6.8, 0.95, 1.02),
-        ("E", -3.2,  7.1, -1.40, 0.98),
-        ("C", -1.6,  6.7, 0.45, 0.85),
-        ("A",  1.7,  6.8, -0.60, 0.86),
-        ("D",  3.5,  7.2, 0.65, 1.04),
-        ("B",  5.5,  6.9, -2.05, 1.02),
-        ("E", -8.0,  7.5, 1.80, 1.10),
-        ("D",  8.2,  7.6, -0.50, 1.12),
+        # Camada de fundo intermediária (Mata Branca densa)
+        ("E", -6.8,  9.5, 0.95, 1.10),
+        ("A", -4.4,  9.8, -1.40, 1.04),
+        ("D",  4.6, 10.0, 0.65, 1.12),
+        ("B",  7.0,  9.6, -2.05, 1.08),
+        ("C", -9.8, 10.2, 1.80, 1.15),
+        ("E", 10.2, 10.5, -0.50, 1.16),
 
-        # Camada de horizonte ao fundo (Silhuetas altas, Y = 9.2 a 12.0)
-        ("D", -6.8,  9.6, 0.30, 1.18),
-        ("B", -4.2, 10.0, 2.15, 1.12),
-        ("A", -2.0, 10.4, -0.90, 1.06),
-        ("E",  2.1, 10.5, 1.40, 1.08),
-        ("D",  4.4, 10.1, -1.70, 1.15),
-        ("B",  7.0,  9.7, 0.85, 1.18),
-        ("D", -9.8, 10.8, -0.40, 1.24),
-        ("D", 10.0, 11.0, 1.10, 1.24),
+        # Camada de horizonte profundo (Silhuetas altas ao fundo)
+        ("D", -8.5, 14.2, 0.30, 1.25),
+        ("B", -5.2, 14.8, 2.15, 1.18),
+        ("A", -2.4, 15.5, -0.90, 1.12),
+        ("E",  2.6, 15.6, 1.40, 1.14),
+        ("D",  5.5, 14.9, -1.70, 1.22),
+        ("B",  8.8, 14.4, 0.85, 1.24),
+        ("D", -12.5, 12.8, -0.40, 1.30),
+        ("D",  12.8, 13.0, 1.10, 1.30),
     ]
 
     counts = {k: 0 for k in variant_keys}
     for v_key, tx, ty, rot_z, scale_f in tree_placements:
-        # Verifica máscara de exclusão considerando raio seguro de 0.95 m
-        if is_in_exclusion_zone(tx, ty, layout, extra_radius=0.95):
+        # Verifica máscara de exclusão considerando raio da copa (1.85 m)
+        if is_in_exclusion_zone(tx, ty, layout, extra_radius=1.85):
             continue
         counts[v_key] += 1
         idx = counts[v_key]
@@ -1245,35 +1206,11 @@ def build_horror_anomalies(sub_cols, layout, mats):
     C. Marcas rasas de passagem na poeira próximas ao mourão da caveira que cessam abruptamente.
     """
     # --- ANOMALIA A: Caminho que parece retornar ---
-    # Leito de trilha erodida atrás do campo + repetição parcial de dois troncos e uma pedra em camada mais distante
-    bm_path = bmesh.new()
-    segs_p = 18
-    for s in range(segs_p):
-        t0 = s / float(segs_p)
-        t1 = (s + 1) / float(segs_p)
-        y0 = 4.3 + t0 * 8.5
-        y1 = 4.3 + t1 * 8.5
-        x0 = 0.65 * math.sin((y0 - 4.3) * 0.52) - 0.15
-        x1 = 0.65 * math.sin((y1 - 4.3) * 0.52) - 0.15
-        w0 = 0.58 * (1.0 - 0.35 * t0)
-        w1 = 0.58 * (1.0 - 0.35 * t1)
-        z0 = terrain_height_at(x0, y0, layout) + 0.004
-        z1 = terrain_height_at(x1, y1, layout) + 0.004
-        v00 = bm_path.verts.new((x0 - w0, y0, z0))
-        v01 = bm_path.verts.new((x0 + w0, y0, z0))
-        v11 = bm_path.verts.new((x1 + w1, y1, z1))
-        v10 = bm_path.verts.new((x1 - w1, y1, z1))
-        bm_path.faces.new((v00, v01, v11, v10))
-    m_path = bpy.data.meshes.new("Horror_ReturningTrail_Mesh")
-    bm_path.to_mesh(m_path)
-    bm_path.free()
-    m_path.materials.append(mats["dust_tracks"])
-    path_obj = bpy.data.objects.new("Horror_ReturningTrail", m_path)
-    link_to_collection(path_obj, sub_cols["08_HORROR_DETAILS"])
-
+    # Par 1 de troncos inclinados + pedra de marco na entrada da trilha ao fundo (+Y)
+    # Par 2 repetindo sutilmente a mesma configuração espacial mais longe na curva da trilha
     loop_pairs = [
-        ("Horror_LoopPath_Near", (-0.85, 5.4, 0.0), 0.95, 0.18),
-        ("Horror_LoopPath_Far",  (-0.52, 8.6, 0.0), 0.90, 0.22),
+        ("Horror_LoopPath_Near", (-0.95, 7.6, 0.0), 1.00, 0.15),
+        ("Horror_LoopPath_Far",  (-0.55, 12.4, 0.0), 0.94, 0.18),
     ]
     for prefix, (bx, by, _), sc, yaw_off in loop_pairs:
         bz = terrain_height_at(bx, by, layout)
@@ -1318,30 +1255,27 @@ def build_horror_anomalies(sub_cols, layout, mats):
         link_to_collection(st_obj, sub_cols["08_HORROR_DETAILS"])
 
     # --- ANOMALIA B: Galhos presos em nós improváveis (Lateral direita, orgânico, sem símbolos) ---
-    knot_loc = (6.25, 0.65)
-    knot_z = terrain_height_at(knot_loc[0], knot_loc[1], layout)
+    knot_loc = (6.35, 0.85)
+    knot_z = terrain_height_at(knot_loc[0], knot_loc[1], layout) + 0.85
     curve_knot = bpy.data.curves.new("Horror_ImpossibleKnot_Curve", type='CURVE')
     curve_knot.dimensions = '3D'
     curve_knot.bevel_depth = 1.0
     curve_knot.bevel_resolution = 3
 
-    # Três hastes secas que brotam do solo, entrelaçam-se num nó apertado a ~1.1m de altura e separam-se nas pontas
-    for b_idx in range(3):
+    for b_idx in range(4):
         sp_k = curve_knot.splines.new('POLY')
-        phase = (b_idx / 3.0) * math.pi * 2.0
-        n_pts = 12
+        phase = b_idx * 1.57
+        n_pts = 14
         sp_k.points.add(n_pts - 1)
         for i in range(n_pts):
             t = i / float(n_pts - 1)
-            # Base no chão (t=0), nó apertado no meio (t=0.45..0.75), pontas secas (t=1.0)
-            pinch = 1.0 - 0.68 * math.exp(-((t - 0.60) / 0.18) ** 2)
-            ang = phase + t * math.pi * 2.4
-            rad = 0.34 * pinch
-            kx = math.cos(ang) * rad + (t ** 1.4) * 0.25
-            ky = math.sin(ang) * rad
-            kz = -0.08 + t * 1.75
+            ang = t * math.pi * 2.8 + phase
+            rad = 0.38 * math.sin(t * math.pi) + 0.08
+            kx = math.cos(ang) * rad + (t - 0.5) * 0.55
+            ky = math.sin(ang * 1.3) * rad * 0.85
+            kz = math.cos(ang * 0.7 + phase) * 0.28 + (t - 0.5) * 0.65
             sp_k.points[i].co = (kx, ky, kz, 1.0)
-            sp_k.points[i].radius = 0.048 * (1.0 - 0.78 * t)
+            sp_k.points[i].radius = 0.042 * (1.0 - 0.65 * abs(t - 0.5))
 
     knot_obj = bpy.data.objects.new("Horror_KnottedBranches", curve_knot)
     knot_obj.location = Vector((knot_loc[0], knot_loc[1], knot_z))
@@ -1440,11 +1374,11 @@ def setup_camera_and_controls(scene, sub_cols, layout):
     cam_data.dof.use_dof = False  # Todas as casas nítidas
 
     cam_obj = bpy.data.objects.new("Camera_Game", cam_data)
-    # Posicionada no lado Y negativo olhando para o conjunto jogável com inclinação ~44° abaixo da horizontal
-    # Tabuleiro inteiro + Reserva frontal inteira visíveis com folga na margem inferior,
-    # ocupação horizontal de ~56% (dentro da meta de 55% a 65%) e Floresta Branca visível atrás e nas laterais.
-    cam_obj.location = Vector((0.0, -16.8, 14.2))
-    look_target = Vector((0.0, -0.35, 0.55))
+    # Posicionada no lado Y negativo olhando para o conjunto jogável com inclinação ~48°-52° abaixo da horizontal
+    # A largura do tabuleiro é ~9.4 m; a ~19.8 m de distância com lente 48mm, a largura visível no plano central
+    # é ~14.8 m -> ocupação horizontal de ~63% (dentro da meta obrigatória de 55% a 65%).
+    cam_obj.location = Vector((0.0, -14.2, 13.2))
+    look_target = Vector((0.0, -0.15, 0.0))
     look_vec = (look_target - cam_obj.location).normalized()
     cam_obj.rotation_euler = look_vec.to_track_quat('-Z', 'Y').to_euler()
 

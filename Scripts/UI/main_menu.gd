@@ -199,6 +199,9 @@ func _on_restart_region_pressed() -> void:
 		return
 	_pending_restart_confirm = false
 	Store.reset_slot(id)
+	var econ = get_node_or_null("/root/EconomyManager")
+	if econ and econ.has_method("reset_game"):
+		econ.reset_game(econ.starting_gold)
 	AudioManager.play_ui_click()
 	_select_region(0)
 

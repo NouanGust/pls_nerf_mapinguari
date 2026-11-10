@@ -95,17 +95,19 @@ func move_direct_to_target(delta: float = 0.0166) -> void:
 	
 	if detour_timer > 0.0:
 		detour_timer -= delta
-		if detour_timer <= 0.0 or not unit.test_move(unit.global_transform, direct_dir * 0.6):
-			detour_timer = 0.0
+		if detour_timer <= 0.0:
 			detour_dir = Vector3.ZERO
 
 	var separation: Vector3 = _calculate_separation()
+	var obstacle_avoidance: Vector3 = _calculate_obstacle_avoidance(direct_dir)
 
 	var move_dir := direct_dir
 	if detour_timer > 0.0 and detour_dir != Vector3.ZERO:
 		move_dir = (direct_dir * 0.35 + detour_dir * 0.85).normalized()
-	elif separation.length_squared() > 0.01:
-		move_dir = (direct_dir + separation * 0.45).normalized()
+	else:
+		var steer := separation * 0.5 + obstacle_avoidance * 0.8
+		if steer.length_squared() > 0.01:
+			move_dir = (direct_dir + steer).normalized()
 
 	if unit.debug_movement:
 		print("%s movendo DIRETO para %s (dist: %.2f)" % [
@@ -146,21 +148,55 @@ func move_direct_to_target(delta: float = 0.0166) -> void:
 
 func _calculate_separation() -> Vector3:
 	var separation := Vector3.ZERO
-	var ally_group: String = "player_units" if unit.team == 0 else "enemy_units"
-	for ally_node: Node in unit.get_tree().get_nodes_in_group(ally_group):
-		if ally_node == unit or not is_instance_valid(ally_node) or not (ally_node is Node3D):
+	if not unit.is_inside_tree():
+		return separation
+	for other_node in unit.get_tree().get_nodes_in_group("units"):
+		if other_node == unit or not is_instance_valid(other_node) or not (other_node is BaseUnit3D):
 			continue
-		var ally3d := ally_node as Node3D
-		if ally3d is BaseUnit3D:
-			var ally_unit := ally3d as BaseUnit3D
-			if ally_unit.is_on_bench() or ally_unit.current_state == BaseUnit3D.State.DEAD:
-				continue
-		var to_self: Vector3 = unit.global_position - ally3d.global_position
+		var other := other_node as BaseUnit3D
+		if other.is_on_bench() or other.current_state == BaseUnit3D.State.DEAD or not other.visible:
+			continue
+		if other == unit.current_target:
+			continue
+		var to_self := unit.global_position - other.global_position
 		to_self.y = 0.0
-		var dist: float = to_self.length()
-		if dist < 0.85 and dist > 0.001:
-			separation += (to_self / dist) * (1.0 - dist / 0.85)
+		var dist := to_self.length()
+		if dist < 0.95 and dist > 0.001:
+			separation += (to_self / dist) * (1.0 - dist / 0.95)
 	return separation
+
+func _calculate_obstacle_avoidance(direct_dir: Vector3) -> Vector3:
+	var avoidance := Vector3.ZERO
+	if direct_dir.length_squared() < 0.001 or not unit.is_inside_tree():
+		return avoidance
+	
+	var perp_left := Vector3(-direct_dir.z, 0.0, direct_dir.x).normalized()
+	var perp_right := Vector3(direct_dir.z, 0.0, -direct_dir.x).normalized()
+	
+	for other_node in unit.get_tree().get_nodes_in_group("units"):
+		if other_node == unit or not is_instance_valid(other_node) or not (other_node is BaseUnit3D):
+			continue
+		var other := other_node as BaseUnit3D
+		if other.is_on_bench() or other.current_state == BaseUnit3D.State.DEAD or not other.visible:
+			continue
+		if other == unit.current_target:
+			continue
+		
+		var to_other := other.global_position - unit.global_position
+		to_other.y = 0.0
+		var forward_proj := to_other.dot(direct_dir)
+		if forward_proj > 0.15 and forward_proj < 1.8:
+			var lateral_vec := to_other - direct_dir * forward_proj
+			var lateral_dist := lateral_vec.length()
+			var clearance_needed := 0.95
+			if lateral_dist < clearance_needed:
+				var closeness := (1.8 - forward_proj) / 1.8
+				var lateral_penetration := (clearance_needed - lateral_dist) / clearance_needed
+				var weight := closeness * lateral_penetration
+				var side_dot := to_other.dot(perp_left)
+				var steer_side := perp_right if side_dot > 0.0 else perp_left
+				avoidance += steer_side * (weight * 1.5)
+	return avoidance
 
 func _handle_post_collision_detour(direct_dir: Vector3) -> void:
 	var collision_count := unit.get_slide_collision_count()
@@ -188,7 +224,7 @@ func _handle_post_collision_detour(direct_dir: Vector3) -> void:
 				else:
 					chosen_dir = perp_left if randf() < 0.5 else perp_right
 				detour_dir = chosen_dir
-				detour_timer = 0.4
+				detour_timer = 0.45
 				break
 
 func move_towards_target() -> void:

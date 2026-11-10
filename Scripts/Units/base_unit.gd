@@ -469,12 +469,23 @@ func get_support_aura_value(effect_name: String, check_enemies: bool = false) ->
 		if not source.stats or source.stats.passive_aura_effect != effect_name or source.stats.passive_aura_range <= 0:
 			continue
 		var source_cell := board.get_grid_position(board.to_local(source.global_position))
-		if board.get_cell(source_cell) and board.get_hex_distance(source_cell, target_cell) <= source.stats.passive_aura_range:
-			var power := source.stats.passive_aura_power
-			for buff in source.active_buffs:
-				if buff.has("support_aura_boost"):
-					power *= float(buff.support_aura_boost)
-			max_val = maxf(max_val, power)
+		if not board.get_cell(source_cell):
+			continue
+		
+		var is_melee: bool = source.stats.get_attack_range_hexes() <= 1 or not source.stats.is_ranged
+		if is_melee:
+			var is_lateral: bool = (target_cell == source_cell + Vector2i(-1, 0)) or (target_cell == source_cell + Vector2i(1, 0))
+			if not is_lateral:
+				continue
+		else:
+			if board.get_hex_distance(source_cell, target_cell) > source.stats.passive_aura_range:
+				continue
+		
+		var power := source.stats.passive_aura_power
+		for buff in source.active_buffs:
+			if buff.has("support_aura_boost"):
+				power *= float(buff.support_aura_boost)
+		max_val = maxf(max_val, power)
 	return max_val
 
 func get_attack_damage() -> float:
@@ -688,8 +699,22 @@ func start_combat() -> void:
 	first_hit_checked = false
 	enemies_defeated = 0
 	current_state = State.IDLE
+	if attack_timer:
+		attack_timer.stop()
+		attack_timer.wait_time = 1.0 / get_effective_attack_speed()
 	print("%s iniciando combate (Team %d)" % [stats.unit_name, team])
-	find_target()
+	current_target = TargetingComponent.find_target_for(self)
+	if current_target:
+		_face_target()
+		var distance := Vector2(global_position.x, global_position.z).distance_to(
+			Vector2(current_target.global_position.x, current_target.global_position.z)
+		)
+		if distance <= get_attack_range_meters():
+			current_state = State.ATTACKING
+			if attack_timer:
+				attack_timer.start()
+		else:
+			current_state = State.MOVING
 
 func find_target() -> void:
 	current_target = TargetingComponent.find_target_for(self)
@@ -1348,6 +1373,8 @@ func _process(delta: float) -> void:
 	if is_flying() and model and current_state != State.DEAD and not _is_swooping:
 		var hover: float = sin(float(Time.get_ticks_msec()) * 0.003 + float(get_instance_id() % 100)) * 0.07
 		model.position.y = FLYING_BASE_HEIGHT + hover
+		if has_active_shield() and hud_comp:
+			hud_comp.update_shield_sphere_visual()
 	if current_state == State.DEAD or current_state == State.IDLE:
 		_health_regen_accumulator = 0.0
 		return

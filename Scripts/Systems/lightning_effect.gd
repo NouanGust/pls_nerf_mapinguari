@@ -222,7 +222,12 @@ static func _create_ground_shockwave(
 	torus.rings = 16
 	torus.ring_segments = 6
 	ring.mesh = torus
-	ring.position = pos + Vector3(0, 0.06, 0)
+	ring.rotation_degrees.x = 90.0
+	
+	if parent is Node3D and parent.global_position != Vector3.ZERO:
+		ring.position = Vector3(0.0, 0.05, 0.0)
+	else:
+		ring.position = Vector3(pos.x, 0.05, pos.z)
 	ring.scale = Vector3(0.25, 0.25, 0.25)
 
 	var mat := StandardMaterial3D.new()

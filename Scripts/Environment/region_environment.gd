@@ -156,7 +156,7 @@ static func get_profile(region_id: String) -> Dictionary:
 	return PROFILES.get(region_id.to_lower(), PROFILES["cerrado"])
 
 
-static func apply_to(world_env: WorldEnvironment, sun: DirectionalLight3D, region_id: String, duration: float = 0.0) -> void:
+static func apply_to(world_env: WorldEnvironment, sun: DirectionalLight3D, region_id: String, duration: float = 0.0, cycle_progress: float = 0.0) -> void:
 	var profile: Dictionary = get_profile(region_id)
 	
 	if not world_env:
@@ -248,45 +248,74 @@ static func apply_to(world_env: WorldEnvironment, sun: DirectionalLight3D, regio
 		sun.shadow_normal_bias = 1.2
 		sun.shadow_blur = 0.85
 
+	var p_prog := clampf(cycle_progress, 0.0, 1.0)
+	
+	var target_sky_top: Color = profile["sky_top"]
+	var target_sky_horizon: Color = profile["sky_horizon"]
+	var target_ground_bottom: Color = profile["ground_bottom"]
+	var target_ground_horizon: Color = profile["ground_horizon"]
+	var target_ambient_col: Color = profile["ambient_color"]
+	var target_ambient_energy: float = float(profile["ambient_energy"])
+	var target_fog_col: Color = profile["fog_color"]
+	var target_fog_density: float = float(profile["fog_density"])
+	var target_sun_col: Color = profile["sun_color"]
+	var target_sun_energy: float = float(profile["sun_energy"])
+	var target_sun_rot: Vector3 = profile["sun_rotation"]
+
+	if p_prog > 0.0:
+		# Iluminação dinâmica cíclica:
+		# Começa mais clara no início do ciclo e gradativamente escurece e se aproxima do vermelho/rubro até o Boss
+		target_sky_top = target_sky_top.lerp(Color("#130e18"), p_prog * 0.72)
+		target_sky_horizon = target_sky_horizon.lerp(Color("#5a1f24"), p_prog * 0.85)
+		target_ground_bottom = target_ground_bottom.lerp(Color("#0d080b"), p_prog * 0.68)
+		target_ground_horizon = target_ground_horizon.lerp(Color("#2c1318"), p_prog * 0.75)
+		
+		target_ambient_col = target_ambient_col.lerp(Color("#742e37"), p_prog * 0.80)
+		target_ambient_energy *= lerpf(1.05, 0.65, p_prog)
+		
+		target_fog_col = target_fog_col.lerp(Color("#3a1016"), p_prog * 0.82)
+		target_fog_density = target_fog_density * lerpf(1.0, 1.45, p_prog)
+		
+		target_sun_col = target_sun_col.lerp(Color("#ff5542"), p_prog * 0.72)
+		target_sun_energy *= lerpf(1.05, 0.60, p_prog)
+
 	if duration <= 0.0 or not world_env.is_inside_tree():
 		# Aplicação direta instantânea
-		sky_mat.sky_top_color = profile["sky_top"]
-		sky_mat.sky_horizon_color = profile["sky_horizon"]
-		sky_mat.ground_bottom_color = profile["ground_bottom"]
-		sky_mat.ground_horizon_color = profile["ground_horizon"]
+		sky_mat.sky_top_color = target_sky_top
+		sky_mat.sky_horizon_color = target_sky_horizon
+		sky_mat.ground_bottom_color = target_ground_bottom
+		sky_mat.ground_horizon_color = target_ground_horizon
 		sky_mat.sun_angle_max = 18.0
 
-		env.ambient_light_color = profile["ambient_color"]
-		env.ambient_light_energy = float(profile["ambient_energy"])
-		env.fog_light_color = profile["fog_color"]
-		env.fog_density = float(profile["fog_density"])
+		env.ambient_light_color = target_ambient_col
+		env.ambient_light_energy = target_ambient_energy
+		env.fog_light_color = target_fog_col
+		env.fog_density = target_fog_density
 
 		if sun:
-			sun.light_color = profile["sun_color"]
-			sun.light_energy = float(profile["sun_energy"])
-			var rot: Vector3 = profile["sun_rotation"]
-			sun.rotation_degrees = rot
+			sun.light_color = target_sun_col
+			sun.light_energy = target_sun_energy
+			sun.rotation_degrees = target_sun_rot
 	else:
 		# Transição suave via Tween
 		var tween: Tween = world_env.create_tween().set_parallel(true)
 		tween.set_ease(Tween.EASE_OUT)
 		tween.set_trans(Tween.TRANS_QUAD)
 
-		tween.tween_property(sky_mat, "sky_top_color", profile["sky_top"], duration)
-		tween.tween_property(sky_mat, "sky_horizon_color", profile["sky_horizon"], duration)
-		tween.tween_property(sky_mat, "ground_bottom_color", profile["ground_bottom"], duration)
-		tween.tween_property(sky_mat, "ground_horizon_color", profile["ground_horizon"], duration)
+		tween.tween_property(sky_mat, "sky_top_color", target_sky_top, duration)
+		tween.tween_property(sky_mat, "sky_horizon_color", target_sky_horizon, duration)
+		tween.tween_property(sky_mat, "ground_bottom_color", target_ground_bottom, duration)
+		tween.tween_property(sky_mat, "ground_horizon_color", target_ground_horizon, duration)
 
-		tween.tween_property(env, "ambient_light_color", profile["ambient_color"], duration)
-		tween.tween_property(env, "ambient_light_energy", float(profile["ambient_energy"]), duration)
-		tween.tween_property(env, "fog_light_color", profile["fog_color"], duration)
-		tween.tween_property(env, "fog_density", float(profile["fog_density"]), duration)
+		tween.tween_property(env, "ambient_light_color", target_ambient_col, duration)
+		tween.tween_property(env, "ambient_light_energy", target_ambient_energy, duration)
+		tween.tween_property(env, "fog_light_color", target_fog_col, duration)
+		tween.tween_property(env, "fog_density", target_fog_density, duration)
 
 		if sun:
-			tween.tween_property(sun, "light_color", profile["sun_color"], duration)
-			tween.tween_property(sun, "light_energy", float(profile["sun_energy"]), duration)
-			var rot: Vector3 = profile["sun_rotation"]
-			tween.tween_property(sun, "rotation_degrees", rot, duration)
+			tween.tween_property(sun, "light_color", target_sun_col, duration)
+			tween.tween_property(sun, "light_energy", target_sun_energy, duration)
+			tween.tween_property(sun, "rotation_degrees", target_sun_rot, duration)
 
 
 static func apply_boss_atmosphere(world_env: WorldEnvironment, sun: DirectionalLight3D, region_id: String, duration: float = 1.2) -> void:

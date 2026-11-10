@@ -227,6 +227,19 @@ func _ready() -> void:
 			await _dismiss_entry_on_error()
 			return
 	else:
+		if is_instance_valid(economy):
+			economy.reset_game(economy.starting_gold)
+		else:
+			_player_gold_fallback = 3
+			_win_streak_fallback = 0
+			_loss_streak_fallback = 0
+		player_gold = economy.starting_gold if is_instance_valid(economy) else 3
+		win_streak = 0
+		loss_streak = 0
+		current_round = 1
+		player_health = 100
+		player_level = 1
+		player_xp = 0
 		spawn_enemy_team()
 	_update_round_atmosphere(0.0)
 	_run_ready = true
@@ -795,10 +808,16 @@ func _update_round_atmosphere(duration: float = 1.2) -> void:
 	if not target_sun and board.get_parent():
 		target_sun = board.get_parent().find_child("DirectionalLight3D", true, false)
 
+	# Ciclo de 5 rounds: (round 1 = 0.0 mais claro -> escurece e aproxima do rubro/vermelho até round 5 = 1.0 boss -> reinicia no round 6)
+	var cycle_step: int = posmod(current_round - 1, 5)
+	var cycle_prog: float = float(cycle_step) / 4.0
+	if is_boss_round():
+		cycle_prog = 1.0
+
 	if is_boss_round():
 		RegionEnvironment.apply_boss_atmosphere(target_env, target_sun, region_id, duration)
 	else:
-		board.apply_region_environment(region_id, duration)
+		board.apply_region_environment(region_id, duration, cycle_prog)
 
 func _find_strongest_enemy() -> BaseUnit3D:
 	if not is_inside_tree() or not get_tree():

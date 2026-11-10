@@ -165,15 +165,15 @@ func setup_stats_display() -> void:
 
 	bars_container = Control.new()
 	bars_container.name = "BarsContainer"
-	bars_container.custom_minimum_size = Vector2(380, 68)
-	bars_container.size = Vector2(380, 68)
+	bars_container.custom_minimum_size = Vector2(280, 50)
+	bars_container.size = Vector2(280, 50)
 	bars_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bars_center.add_child(bars_container)
 
 	health_bar_3d = ProgressBar.new()
 	health_bar_3d.name = "HealthBar"
 	health_bar_3d.position = Vector2(0, 0)
-	health_bar_3d.size = Vector2(380, 30)
+	health_bar_3d.size = Vector2(280, 22)
 	health_bar_3d.show_percentage = false
 	health_bar_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -200,7 +200,7 @@ func setup_stats_display() -> void:
 	shield_bar_3d = ProgressBar.new()
 	shield_bar_3d.name = "ShieldBar"
 	shield_bar_3d.position = Vector2(0, 0)
-	shield_bar_3d.size = Vector2(380, 30)
+	shield_bar_3d.size = Vector2(280, 22)
 	shield_bar_3d.show_percentage = false
 	shield_bar_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	shield_bar_3d.add_theme_stylebox_override("background", StyleBoxEmpty.new())
@@ -213,8 +213,8 @@ func setup_stats_display() -> void:
 
 	mana_bar_3d = ProgressBar.new()
 	mana_bar_3d.name = "ManaBar"
-	mana_bar_3d.position = Vector2(0, 36)
-	mana_bar_3d.size = Vector2(380, 16)
+	mana_bar_3d.position = Vector2(0, 26)
+	mana_bar_3d.size = Vector2(280, 12)
 	mana_bar_3d.show_percentage = false
 	mana_bar_3d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -238,7 +238,7 @@ func setup_stats_display() -> void:
 	ui_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	ui_sprite.no_depth_test = true
 	ui_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	ui_sprite.pixel_size = 0.007
+	ui_sprite.pixel_size = 0.0042
 	var ui_height: float = 2.7
 	if unit.is_flying():
 		ui_height += BaseUnit3D.FLYING_BASE_HEIGHT
@@ -368,6 +368,34 @@ const SHIELD_COLORS := {
 	3: Color(0.95, 0.25, 0.35), # ENEMY
 }
 
+func _get_dynamic_shield_offset() -> Vector3:
+	if not unit:
+		return Vector3(0.0, 0.8, 0.0)
+	var base_y := 0.75
+	if unit.model:
+		base_y = unit.model.position.y + 0.75 * unit.model.scale.y
+	elif unit.is_flying():
+		base_y = unit.FLYING_BASE_HEIGHT + 0.75
+	return Vector3(0.0, base_y, 0.0)
+
+func _get_dynamic_shield_scale() -> Vector3:
+	if not unit:
+		return Vector3.ONE
+	var base_s: float = 1.0
+	if unit.model:
+		base_s = (unit.model.scale.x + unit.model.scale.y + unit.model.scale.z) / 3.0
+	elif unit.stats:
+		base_s = 1.0 + float(unit.star_level - 1) * 0.15
+	
+	if unit.stats:
+		if unit.stats.is_tank or unit.stats.tier >= 5:
+			base_s = maxf(base_s, 1.25)
+		elif unit.stats.can_fly and unit.stats.tier == 1:
+			base_s = minf(base_s, 0.85)
+	
+	base_s = clampf(base_s, 0.65, 2.4)
+	return Vector3(base_s, base_s * 1.05, base_s)
+
 func setup_shield_sphere() -> void:
 	if is_instance_valid(shield_sphere):
 		shield_sphere.queue_free()
@@ -382,7 +410,7 @@ func setup_shield_sphere() -> void:
 	sphere.radial_segments = 24
 	sphere.rings = 16
 	shield_sphere.mesh = sphere
-	shield_sphere.position = Vector3(0.0, 0.8, 0.0)
+	shield_sphere.position = _get_dynamic_shield_offset()
 	
 	var mat := StandardMaterial3D.new()
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -423,6 +451,7 @@ func update_shield_sphere_visual() -> void:
 	var has_shield := unit.has_active_shield() and unit.current_state != BaseUnit3D.State.DEAD and unit.visible
 	
 	if has_shield:
+		shield_sphere.position = _get_dynamic_shield_offset()
 		var effective_source: int = int(unit.current_shield_source)
 		if unit.team == 1 and effective_source != 0:
 			effective_source = 3 # ENEMY
@@ -433,13 +462,16 @@ func update_shield_sphere_visual() -> void:
 			mat.albedo_color = Color(col.r, col.g, col.b, 0.28)
 			mat.emission = col
 		
+		var target_scale := _get_dynamic_shield_scale()
 		if not shield_sphere.visible or shield_sphere.scale.length_squared() < 0.1:
 			shield_sphere.visible = true
 			if shield_sphere_tween and shield_sphere_tween.is_running():
 				shield_sphere_tween.kill()
 			shield_sphere_tween = create_tween()
 			shield_sphere_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-			shield_sphere_tween.tween_property(shield_sphere, "scale", Vector3.ONE, 0.25)
+			shield_sphere_tween.tween_property(shield_sphere, "scale", target_scale, 0.25)
+		elif not (shield_sphere_tween and shield_sphere_tween.is_running()):
+			shield_sphere.scale = target_scale
 	else:
 		if is_instance_valid(shield_sphere):
 			if not shield_sphere.visible or shield_sphere.scale.length_squared() < 0.05:
@@ -501,7 +533,19 @@ func update_aura_indicator() -> void:
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	for cell in board.get_cells_in_hex_radius(center, unit.stats.passive_aura_range):
+	var cells_to_highlight: Array[Vector2i] = []
+	var is_melee: bool = unit.stats.get_attack_range_hexes() <= 1 or not unit.stats.is_ranged
+	if is_melee:
+		var left_cell := center + Vector2i(-1, 0)
+		var right_cell := center + Vector2i(1, 0)
+		if board.get_cell(left_cell):
+			cells_to_highlight.append(left_cell)
+		if board.get_cell(right_cell):
+			cells_to_highlight.append(right_cell)
+	else:
+		cells_to_highlight = board.get_cells_in_hex_radius(center, unit.stats.passive_aura_range)
+
+	for cell in cells_to_highlight:
 		var marker := MeshInstance3D.new()
 		marker.mesh = outline
 		marker.material_override = material

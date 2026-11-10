@@ -598,7 +598,7 @@ func _update_cells_for_region(region_key: String) -> void:
 					omat.albedo_color = Color("#251f1c")
 
 
-func apply_region_environment(new_region_id: String, duration: float = 0.0) -> void:
+func apply_region_environment(new_region_id: String, duration: float = 0.0, cycle_progress: float = 0.0) -> void:
 	var resolved_id := _resolve_caatinga_region_key(new_region_id)
 	set_region_environment_scene(resolved_id)
 	
@@ -620,7 +620,7 @@ func apply_region_environment(new_region_id: String, duration: float = 0.0) -> v
 		target_sun = get_parent().find_child("DirectionalLight3D", true, false)
 	
 	if envs.is_empty():
-		RegionEnvironment.apply_to(null, target_sun, resolved_id, duration)
+		RegionEnvironment.apply_to(null, target_sun, resolved_id, duration, cycle_progress)
 	else:
 		for env_node in envs:
-			RegionEnvironment.apply_to(env_node, target_sun, resolved_id, duration)
+			RegionEnvironment.apply_to(env_node, target_sun, resolved_id, duration, cycle_progress)

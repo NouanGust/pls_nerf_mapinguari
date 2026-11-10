@@ -31,6 +31,10 @@ func execute(unit: BaseUnit3D, _scale_multiplier: float = 1.0) -> bool:
 		var db := Vector2(unit.global_position.x, unit.global_position.z).distance_to(Vector2(b.global_position.x, b.global_position.z))
 		return da < db
 	)
+	# Priorizar o alvo atual que a Mãe d'Ouro está atacando diretamente
+	if is_instance_valid(unit.current_target) and unit.current_target is BaseUnit3D and unit.current_target in enemies:
+		enemies.erase(unit.current_target)
+		enemies.insert(0, unit.current_target)
 
 	var hit_count := mini(target_count, enemies.size())
 	if hit_count > 0:
@@ -94,7 +98,14 @@ func _strike_enemy_with_lightning(caster: BaseUnit3D, target: BaseUnit3D, damage
 		return
 
 	var impact_pos := target.global_position
-	# 1. Dispara o relâmpago físico 3D caindo do céu
+	if target.model:
+		impact_pos = target.model.global_position + Vector3(0.0, 0.65 * target.model.scale.y, 0.0)
+	elif target.is_flying():
+		impact_pos.y += target.FLYING_BASE_HEIGHT + 0.65
+	else:
+		impact_pos.y += 0.75
+
+	# 1. Dispara o relâmpago físico 3D caindo do céu diretamente sobre o corpo do alvo
 	LightningEffect.create_strike(impact_pos, Color("#fbbf24"), 9.5, 0.09)
 
 	# 2. Aplica o dano mágico da habilidade

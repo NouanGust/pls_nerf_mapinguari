@@ -90,15 +90,40 @@ func resolve_merges(board: Board3D) -> Array[BaseUnit3D]:
 				survivor = candidate
 				break
 		var total_invested := 0
+		var extra_items: Array = []
 		for unit in consumed:
 			total_invested += unit.invested_gold
 			if unit == survivor:
 				continue
+			if unit.has_method("unequip_all_items"):
+				extra_items.append_array(unit.unequip_all_items())
 			if bench_units.has(unit):
 				bench_units.erase(unit)
 			if board.get_unit_at(unit.board_position) == unit:
 				board.remove_unit(unit.board_position)
 			unit.queue_free()
+
+		for extra_item in extra_items:
+			if survivor.has_method("can_equip_more_items") and survivor.can_equip_more_items():
+				survivor.equip_item(extra_item)
+			else:
+				var merged := false
+				if extra_item.is_component() and survivor.has_method("get_equipped_items"):
+					var eq: Array = survivor.get_equipped_items()
+					for i in range(eq.size()):
+						if eq[i].is_component():
+							var combo: ItemData = ItemRegistry.find_combination(eq[i].id, extra_item.id)
+							if combo:
+								survivor.remove_equipped_item_at(i)
+								survivor.equip_item(combo)
+								merged = true
+								break
+				if not merged:
+					var tree := survivor.get_tree()
+					var main_node = tree.current_scene if tree else null
+					if main_node and "item_manager" in main_node and main_node.item_manager:
+						main_node.item_manager.add_item_to_inventory(extra_item)
+
 		survivor.invested_gold = total_invested
 		survivor.promote_to_star(old_star + 1)
 		evolved_units.append(survivor)

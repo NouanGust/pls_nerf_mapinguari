@@ -51,9 +51,11 @@ var _inspected_unit_star_level: int = 1
 @onready var bench: BenchUI = get_node_or_null("Control/BenchPanel/BenchContent/BenchSlots") as BenchUI
 
 # Componentes Modulares de UI
+const ItemInventoryUI = preload("res://Scripts/UI/item_inventory_ui.gd")
 var round_banner_ui: RoundBannerUI
 var synergy_panel_ui: SynergyPanelUI
 var hud_animator: HUDAnimator
+var item_inventory_ui: ItemInventoryUI = null
 
 var sell_zone: PanelContainer
 var _responsive_ready: bool = false
@@ -446,6 +448,7 @@ func _layout_extra_panels() -> void:
 	var shop_top: float = viewport_size.y - shop_h - bar_margin_bottom
 	var bar_w := viewport_size.x - (bar_margin_x * 2.0)
 	ResponsiveLayout.place(bottom_bar, Rect2(bar_margin_x, shop_top, bar_w, shop_h))
+	_layout_item_inventory()
 	
 	var controls := bottom_bar.get_node_or_null("ControlsContainer") as Control
 	var gold_cont := bottom_bar.get_node_or_null("GoldContainer") as Control
@@ -605,3 +608,17 @@ func open_bestiary(stats: UnitStats, star_level: int = 1) -> void:
 		_setup_bestiary_modal()
 	if is_instance_valid(bestiary_modal):
 		bestiary_modal.open_for_unit(stats, star_level)
+
+func setup_item_inventory(manager: ItemManager, main_node: Node) -> void:
+	if item_inventory_ui == null:
+		item_inventory_ui = ItemInventoryUI.new()
+		item_inventory_ui.name = "ItemInventoryUI"
+		hud.add_child(item_inventory_ui)
+	item_inventory_ui.setup(manager, main_node)
+	_layout_item_inventory()
+
+func _layout_item_inventory() -> void:
+	if not is_instance_valid(item_inventory_ui) or not is_instance_valid(hud):
+		return
+	var vp_size := get_viewport().get_visible_rect().size
+	item_inventory_ui.position = Vector2(16.0, maxf(vp_size.y - 330.0, 140.0))

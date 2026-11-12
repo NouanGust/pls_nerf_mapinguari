@@ -1,44 +1,32 @@
-[gd_resource type="Resource" script_class="UnitStats" format=3]
+[gd_resource type="Resource" script_class="UnitStats" format=3 uid="uid://cp2t33ig0jxnx"]
 
-[ext_resource type="Texture2D" path="res://Assets/Units/SplashArts/mandacaru.jpg" id="1_jl4mx"]
-[ext_resource type="Script" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" uid="uid://crcbip4ofhcum" path="res://Assets/Units/SplashArts/mandacaru.jpg" id="1_jl4mx"]
+[ext_resource type="Script" uid="uid://c1mqq86tfxncq" path="res://Scripts/Units/unit_stats.gd" id="1_stats"]
 
 [resource]
 script = ExtResource("1_stats")
-cost = 1
-tier = 1
-combat_role = "Tank"
 unit_name = "Mandacaru"
 unit_id = "mandacaru"
 description = "Cacto imponente que desafia a seca; ergue espinhos defensivos e renova sua própria carapaça."
 lore = "Suas hastes espinhosas formam uma muralha viva no sertão."
+combat_role = "Tank"
 icon = ExtResource("1_jl4mx")
 max_health = 590.0
 attack_damage = 36.0
 attack_speed = 0.72
 armor = 30.0
 magic_resist = 22.0
-movement_speed = 0.0
-is_stationary = true
+movement_speed = 180.0
 max_mana = 90.0
 mana_per_second = 3.0
 mana_when_hit = 8.0
 origins = Array[String](["Seiva", "Vigília"])
-classes = Array[String]([])
 affinities = Array[String](["Flora"])
 biomes = Array[String](["Caatinga"])
 ability_name = "Cerca de Espinhos"
 ability_description = "Cacto imponente que desafia a seca; ergue espinhos defensivos e renova sua própria carapaça."
 ability_damage = 65.0
-ability_shield = 200.0
+ability_shield = 80.0
 ability_range = 2.0
-is_tank = true
-
-is_assassin = false
-is_ranged = false
-prefers_backline = false
-passive_aura_range = 0
-passive_aura_effect = ""
-passive_aura_power = 0.0
 ability_kind = "tank_guard"
-attack_range = 1
+is_tank = true

@@ -8,9 +8,12 @@ const CampaignStore = preload("res://Scripts/Systems/campaign_store.gd")
 const GameOverlay = preload("res://Scripts/UI/game_overlay.gd")
 const BattleTransition = preload("res://Scripts/UI/battle_transition.gd")
 const DebugConsole = preload("res://Scripts/UI/debug_console.gd")
+const ItemManager = preload("res://Scripts/Items/item_manager.gd")
+const ItemRegistry = preload("res://Scripts/Items/item_registry.gd")
 
 @export var debug_console_enabled: bool = true
 var debug_console: DebugConsole
+var item_manager: ItemManager = ItemManager.new()
 var _combat_generation: int = 0
 
 var entry_transition: BattleTransition
@@ -263,6 +266,14 @@ func _ready() -> void:
 	print("  [Drag] - Arrastar Unidade")
 	print("=".repeat(50) + "\n")
 	
+	if ui and ui.has_method("setup_item_inventory"):
+		ui.setup_item_inventory(item_manager, self)
+	if item_manager.get_inventory_items().is_empty():
+		item_manager.add_item_by_id(&"lasca_brauna")
+		item_manager.add_item_by_id(&"cipo_titica")
+		item_manager.add_item_by_id(&"casca_jabuti")
+		item_manager.add_item_by_id(&"raiz_mandioca")
+
 	debug_initialization()
 
 func _play_battle_entry(returning_to_region: bool) -> void:
@@ -720,6 +731,8 @@ func _sell_unit(unit: BaseUnit3D, source: String = "") -> void:
 		_realign_bench_units()
 	player_gold += unit.invested_gold
 	print("%s vendido por %d ouro" % [unit.stats.unit_name, unit.invested_gold])
+	if item_manager and is_instance_valid(unit):
+		item_manager.unequip_all_from_unit(unit)
 	if dragging_unit == unit:
 		dragging_unit = null
 	unit.remove_from_group("player_units")
@@ -1164,6 +1177,8 @@ func prepare_next_round() -> void:
 		_play_boss_cutscene()
 	else:
 		_update_round_atmosphere(1.5)
+	if current_round % 2 == 1 or is_boss_round():
+		grant_random_component()
 	update_ui()
 	print("Novo round")
 
@@ -1314,9 +1329,21 @@ func _input(event: InputEvent) -> void:
 				if ui:
 					ui.toggle_hud()
 					ui_visible = ui.hud_visible
+			KEY_I:
+				if item_manager and not combat_active:
+					grant_random_component()
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_RIGHT:
 			inspect_unit_at_mouse(event.position)
+
+func grant_random_component() -> void:
+	if not item_manager:
+		return
+	var comps := ItemRegistry.get_basic_components()
+	if comps.is_empty():
+		return
+	var comp: ItemData = comps[randi() % comps.size()]
+	item_manager.add_item_to_inventory(comp)
 
 func buy_xp() -> void:
 	if not shop_system or player_level >= Progression.MAX_LEVEL:
@@ -1460,7 +1487,13 @@ func hide_unit_inspector() -> void:
 
 
 func get_board_unit_limit() -> int:
-	return clampi(player_level, 1, Progression.MAX_LEVEL)
+	var bonus := 0
+	if board:
+		for u in board.get_all_units():
+			if u is BaseUnit3D and u.team == 0 and u.has_method("get_equipped_items"):
+				for it in u.get_equipped_items():
+					bonus += it.team_size_bonus
+	return clampi(player_level + bonus, 1, Progression.MAX_LEVEL + 4)
 	
 
 func get_player_units_on_board_count() -> int:

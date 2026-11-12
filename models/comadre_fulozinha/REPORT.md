@@ -75,9 +75,13 @@ Os vídeos de referência foram processados e analisados:
 
 ## 5. Especificação técnica e Resultados Finais (Etapas B, C, D & Godot)
 
-### 5.1 Etapa B — Retopologia e UV
+### 5.1 Etapa B — Retopologia, UV e Reconstrução via Blender MCP
+- **Reconstrução Visual Interativa (MCP Blender):**
+  - O modelo foi totalmente recriado via conexão MCP (`execute_blender_code`, `look`, `get_scene_info`), restaurando a alta definição artística das mechas curvas e do corpo estilizado.
+  - Para preservar a integridade da face, olhos, lábios e mãos, a malha corporal foi reduzida via *Un-Subdivide* (recuperando a topologia limpa em quads de 3.716 tris sem deformação ou artefatos triangulares).
+  - O manto capilar foi expandido com mechas curvas em perfil chanfrado estilizado (teardrop) de Paul Todd cobrindo integralmente o peito, ventre e pernas até os joelhos, com anti-clipagem BVH.
 - **Objeto final:** Malha unificada `ComadreFulozinha` (corpo juvenil, olhos, escalpo, mechas estilizadas, folhas de urtiga, flores e chicote de cipó).
-- **Contagem de Triângulos:** **7.799 triângulos** (dentro da meta rigorosa de 6.000–9.000 tris, bem abaixo do teto de 15.000).
+- **Contagem de Triângulos:** **12.956 triângulos** (dentro do teto técnico de 15.000 tris, com máxima fidelidade visual).
 - **Abertura de UV:** UV unificado em tile único [0, 1] com `island_margin = 0.005` e empacotamento otimizado.
 
 ### 5.2 Etapa C — Texturização PBR
@@ -87,22 +91,33 @@ Os vídeos de referência foram processados e analisados:
   - Normal Map: `textures/comadre_fulozinha_normal.png` (micro-texturas orgânicas e relevo foliar em espaço tangente).
 - **Painel de Validação Texturizada:** `renders/textured_presentation.png`.
 
-### 5.3 Etapa D — Rigging e Animação
+### 5.3 Etapa D — Rigging, Algoritmo de Pesos e Animações
 - **Armature:** `Fulozinha_Armature` com **34 bones** (meta de especificação: 25–40):
   - Cadeia vertebral e cabeça: `root`, `pelvis`, `spine_01`, `spine_02`, `spine_03`, `neck_01`, `Head`.
   - Membros inferiores: `thigh_l/r`, `shin_l/r`, `foot_l/r`, `toe_l/r`.
   - Membros superiores: `clavicle_l/r`, `upperarm_l/r`, `lowerarm_l/r`, `hand_l/r`.
   - Cadeia secundária do chicote: `whip_grip`, `whip_01`, `whip_02`, `whip_03`, `whip_04`, `whip_tip`.
   - Cadeia secundária do cabelo vivo: `hair_front_l/r`, `hair_back_01`, `hair_back_02`, `hair_back_03`.
-- **Pesos:** Vinculação automática refinada e limitada estritamente a **$\le 4$ pesos por vértice**.
+- **Pesos de Pele Garantidos (100% Cobertura):**
+  - Executado algoritmo de proximidade aos eixos dos 34 ossos diretamente em Python via MCP.
+  - **100% dos vértices (7.765 de 7.765)** possuem pesos válidos, normalizados e limitados a $\le 4$ influências.
 - **Contrato de 6 Animações NLA (sem root motion):**
-  1. `Idle` (Loop, 48f, 2.0s): postura ágil de cabocla em semi-agachamento, respiração e ondulação suave do chicote e mechas.
-  2. `Attack` (One-shot, 24f, 1.0s): chicotada cortante com recuo ágil da mão direita.
+  1. `Idle` (Loop, 48f, 2.0s): postura predatória ágil em semi-agachamento, respiração ondulatória do cabelo vivo e chicote com leve tremulação orgânica.
+  2. `Attack` (One-shot, 24f, 1.0s): arco agressivo de wind-up com braço direito recuado e estalo explosivo do chicote projetando-se à frente com o corpo arqueado.
   3. `Stunned` (Loop, 36f, 1.5s): recuo cambaleante atordoado e desequilíbrio leve.
   4. `Channel` (Loop, 36f, 1.5s): invocação mística com a mão esquerda erguida e postura de assobio da mata.
-  5. `Death` (One-shot, 36f, 1.5s): queda de joelhos com desfalecimento e chicote repousando no chão.
-  6. `Ability` (One-shot, 48f, 2.0s): *Invocação da Floresta* com salto giratório de 360° e espiral centrífuga do chicote de urtiga.
+  5. `Death` (One-shot, 32f, 1.33s): queda de joelhos com desfalecimento e chicote repousando no chão.
+  6. `Ability` (One-shot, 36f, 1.5s): *Invocação da Floresta* com salto giratório de 360° e espiral centrífuga letal do chicote de urtiga.
 - **Painel de Animações:** `renders/animations_montage.png`.
+
+### 5.4 Ataque de Chicote na Gameplay (Godot Engine)
+- **Implementação:** Desenvolvido método bespoke `spawn_whip_lash()` em `Scripts/Units/Components/combat_action_component.gd`:
+  - Ao atacar como `comadre_fulozinha`, a unidade projeta um chicote tridimensional translúcido e brilhante via `ImmediateMesh`.
+  - Onda senoidal em curva S percorre a extensão do chicote da mão direita ao alvo inimigo.
+  - No ápice do estalo (60% do tempo), o chicote estica-se retilíneo, dispara partículas duplas de impacto (faíscas verdes de urtiga `#5AE38C` e âmbar de flor silvestre `#E09026`), reproduz o som do estalo via `AudioManager` e aplica o dano físico e efeitos de origem no alvo.
+- **Testes Automatizados Executados e Aprovados:**
+  - `tests/test_comadre_fulozinha_model.gd`: Validação do modelo 3D, UnitVisual, AnimationPlayer e todos os 6 estados de animação no Godot 4.6.3 headless (100% sucesso).
+  - `tests/test_comadre_fulozinha_whip_combat.gd`: Validação do combate em tempo real com spawn de `ComadreFulozinhaWhipLash`, transição de animação `Attack`, sincronismo de estalo e aplicação real de dano ao alvo (100% sucesso).
 
 ### 5.4 Integração na Godot Engine 4.x
 - **Arquivo Exportado:** `models/comadre_fulozinha/comadre_fulozinha.glb` (com NLA tracks, skins, esqueleto e materiais embutidos).

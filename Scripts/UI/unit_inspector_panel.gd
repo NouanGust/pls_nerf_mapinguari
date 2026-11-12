@@ -491,6 +491,77 @@ static func _update_tft_inspector(
 	range_badge.text = "%s · %d Hex" % [pos_str, stats.get_attack_range_hexes()]
 	range_badge.tooltip_text = "Posicionamento Tático:\nIdeal na %s. Alcance efetivo de %d hexágonos." % [pos_str, stats.get_attack_range_hexes()]
 
+	# --- Linha de Itens Equipados (Máximo 2 itens) ---
+	var items_row = vbox.find_child("TFT_ItemsRow", false, false) as HBoxContainer
+	if not items_row:
+		items_row = HBoxContainer.new()
+		items_row.name = "TFT_ItemsRow"
+		items_row.add_theme_constant_override("separation", 6)
+		vbox.add_child(items_row)
+		vbox.move_child(items_row, tactical_row.get_index() + 1)
+
+		var items_label := Label.new()
+		items_label.name = "ItemsTitleLabel"
+		items_label.text = "Itens (2 máx):"
+		items_label.add_theme_font_size_override("font_size", 11)
+		items_label.add_theme_color_override("font_color", Color("#94a3b8"))
+		items_row.add_child(items_label)
+
+		for slot_idx in range(2):
+			var slot_btn := Button.new()
+			slot_btn.name = "ItemSlot_%d" % slot_idx
+			slot_btn.custom_minimum_size = Vector2(32, 32)
+			slot_btn.expand_icon = true
+			slot_btn.add_theme_font_size_override("font_size", 10)
+			items_row.add_child(slot_btn)
+
+	var eq_items: Array = unit.get_equipped_items() if unit.has_method("get_equipped_items") else []
+	for slot_idx in range(2):
+		var slot_btn = items_row.find_child("ItemSlot_%d" % slot_idx, false, false) as Button
+		if not slot_btn:
+			continue
+		if slot_idx < eq_items.size():
+			var it: ItemData = eq_items[slot_idx]
+			slot_btn.text = it.name.substr(0, 3).to_upper() if not it.icon else ""
+			slot_btn.icon = it.icon
+			var it_style := StyleBoxFlat.new()
+			it_style.bg_color = Color("#1e293b")
+			it_style.border_color = Color("#f59e0b") if not it.is_component() else Color("#06b6d4")
+			it_style.border_width_left = 2
+			it_style.border_width_top = 2
+			it_style.border_width_right = 2
+			it_style.border_width_bottom = 2
+			it_style.corner_radius_top_left = 4
+			it_style.corner_radius_top_right = 4
+			it_style.corner_radius_bottom_left = 4
+			it_style.corner_radius_bottom_right = 4
+			slot_btn.add_theme_stylebox_override("normal", it_style)
+			slot_btn.add_theme_stylebox_override("hover", it_style)
+			slot_btn.add_theme_stylebox_override("pressed", it_style)
+			var tt := "%s\n\n%s" % [it.name, it.description]
+			var stats_t := it.get_formatted_stats_text()
+			if not stats_t.is_empty():
+				tt += "\n\n" + stats_t
+			slot_btn.tooltip_text = tt
+		else:
+			slot_btn.text = "+"
+			slot_btn.icon = null
+			var empty_style := StyleBoxFlat.new()
+			empty_style.bg_color = Color(0.06, 0.08, 0.12, 0.6)
+			empty_style.border_color = Color("#334155")
+			empty_style.border_width_left = 1
+			empty_style.border_width_top = 1
+			empty_style.border_width_right = 1
+			empty_style.border_width_bottom = 1
+			empty_style.corner_radius_top_left = 4
+			empty_style.corner_radius_top_right = 4
+			empty_style.corner_radius_bottom_left = 4
+			empty_style.corner_radius_bottom_right = 4
+			slot_btn.add_theme_stylebox_override("normal", empty_style)
+			slot_btn.add_theme_stylebox_override("hover", empty_style)
+			slot_btn.add_theme_stylebox_override("pressed", empty_style)
+			slot_btn.tooltip_text = "Slot de Item Vazio (%d/2)\nEquipe um item arrastando-o da bandeja." % [slot_idx + 1]
+
 	var ability_panel = vbox.find_child("TFT_AbilityPanel", false, false) as PanelContainer
 	if not ability_panel:
 		ability_panel = PanelContainer.new()

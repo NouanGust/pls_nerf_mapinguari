@@ -101,6 +101,17 @@ func try_pickup_unit(mouse_pos: Vector2) -> void:
 	if result and result.collider is BaseUnit3D:
 		var unit: BaseUnit3D = result.collider
 		if unit.team == 0 and unit.current_state != BaseUnit3D.State.DEAD:
+			var tree := get_tree()
+			var main_node = tree.current_scene if tree else null
+			if main_node and "ui" in main_node and main_node.ui and "item_inventory_ui" in main_node.ui and main_node.ui.item_inventory_ui:
+				if main_node.ui.item_inventory_ui.selected_item != null:
+					main_node.ui.item_inventory_ui.try_equip_selected_to_unit(unit)
+					if main_node.has_method("_refresh_synergies"):
+						main_node._refresh_synergies()
+					if main_node.has_method("update_ui"):
+						main_node.update_ui()
+					return
+
 			var grid_pos = unit.board_position
 			if grid_pos.y == -1 or board.is_bench_position(unit.global_position):
 				start_drag({

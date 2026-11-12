@@ -112,26 +112,40 @@ func perform_attack() -> void:
 		target.take_damage(damage, unit if is_instance_valid(unit) else null, UnitStats.DamageType.PHYSICAL)
 		if is_instance_valid(unit) and unit.origin_runtime and is_instance_valid(target):
 			unit.origin_runtime.on_basic_attack_hit(target)
+		if is_instance_valid(unit) and unit.has_method("on_basic_attack_landed") and is_instance_valid(target):
+			unit.on_basic_attack_landed(target)
 
 	if ranged_attack:
-		var p_color: Color = get_projectile_color()
-		var is_dart: bool = unit.stats.unit_id in ["caapora", "arara_azul_lear", "ararinha_azul", "mutum_de_alagoas", "mandacaru"]
-		var start_p: Vector3 = unit.global_position + Vector3.UP * (1.1 if unit.is_flying() else 0.75)
-		var proj_speed: float = 0.32 if is_dart else 0.45
-		var proj_radius: float = 0.16 if is_dart else 0.22
-		var proj_arc: float = 0.45 if is_dart else 0.75
-		spawn_ballistic_projectile(
-			start_p,
-			target,
-			target.global_position + Vector3.UP * 0.7,
-			p_color,
-			proj_arc,
-			proj_speed,
-			apply_attack_damage,
-			"%sAttackProj" % unit.stats.unit_id,
-			proj_radius,
-			is_dart
-		)
+		if unit.stats.unit_id == "comadre_fulozinha":
+			var start_p: Vector3 = unit.global_position + Vector3(0.25, 0.65, 0.0)
+			var target_p: Vector3 = target.global_position + Vector3.UP * 0.7
+			spawn_whip_lash(
+				start_p,
+				target,
+				target_p,
+				Color("#5AE38C"),
+				0.22,
+				apply_attack_damage
+			)
+		else:
+			var p_color: Color = get_projectile_color()
+			var is_dart: bool = unit.stats.unit_id in ["caapora", "arara_azul_lear", "ararinha_azul", "mutum_de_alagoas", "mandacaru"]
+			var start_p: Vector3 = unit.global_position + Vector3.UP * (1.1 if unit.is_flying() else 0.75)
+			var proj_speed: float = 0.32 if is_dart else 0.45
+			var proj_radius: float = 0.16 if is_dart else 0.22
+			var proj_arc: float = 0.45 if is_dart else 0.75
+			spawn_ballistic_projectile(
+				start_p,
+				target,
+				target.global_position + Vector3.UP * 0.7,
+				p_color,
+				proj_arc,
+				proj_speed,
+				apply_attack_damage,
+				"%sAttackProj" % unit.stats.unit_id,
+				proj_radius,
+				is_dart
+			)
 	else:
 		apply_attack_damage.call()
 
@@ -268,3 +282,98 @@ func spawn_ballistic_projectile(
 			on_impact.call()
 	)
 	return projectile
+
+func spawn_whip_lash(
+	start_pos: Vector3,
+	target: BaseUnit3D,
+	impact_pos: Vector3,
+	lash_color: Color = Color("#5AE38C"),
+	duration: float = 0.22,
+	on_impact: Callable = Callable()
+) -> Node3D:
+	var lash_node := Node3D.new()
+	lash_node.name = "ComadreFulozinhaWhipLash"
+	
+	var mesh_inst := ImmediateMesh.new()
+	var mesh_node := MeshInstance3D.new()
+	mesh_node.mesh = mesh_inst
+	
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = lash_color
+	mat.emission_enabled = true
+	mat.emission = lash_color
+	mat.emission_energy_multiplier = 3.5
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh_node.material_override = mat
+	lash_node.add_child(mesh_node)
+	
+	var glow := OmniLight3D.new()
+	glow.name = "WhipGlow"
+	glow.light_color = lash_color
+	glow.light_energy = 2.8
+	glow.omni_range = 3.5
+	lash_node.add_child(glow)
+	
+	var scene_root: Node = unit.get_tree().current_scene if (unit and unit.get_tree()) else null
+	if not scene_root and unit:
+		scene_root = unit.get_parent()
+	if not scene_root:
+		return lash_node
+	scene_root.add_child(lash_node)
+	
+	var impact_called := false
+	var tween := lash_node.create_tween()
+	
+	tween.tween_method(func(progress: float) -> void:
+		if not is_instance_valid(lash_node):
+			return
+		var current_target_pos := impact_pos
+		if is_instance_valid(target) and target.current_state != target.State.DEAD:
+			current_target_pos = target.global_position + Vector3.UP * 0.7
+		
+		# Animate whip line with dynamic S-wave and cracking snap
+		mesh_inst.clear_surfaces()
+		mesh_inst.surface_begin(Mesh.PRIMITIVE_LINE_STRIP)
+		
+		var segments := 18
+		var p_start := start_pos
+		var p_end := current_target_pos
+		var forward := p_end - p_start
+		var right := forward.cross(Vector3.UP).normalized() if abs(forward.normalized().dot(Vector3.UP)) < 0.9 else Vector3.RIGHT
+		
+		# Tip extends swiftly during first 60% of duration
+		var extend_ratio: float = clampf(progress / 0.60, 0.0, 1.0)
+		var current_end := p_start.lerp(p_end, extend_ratio)
+		
+		# S-curve wave amplitude collapses into taut snap at impact
+		var wave_amp: float = (1.0 - extend_ratio) * 0.40 * sin(progress * PI)
+		if progress >= 0.60:
+			wave_amp = (1.0 - progress) * 0.12
+			
+		for i in range(segments + 1):
+			var seg_t: float = float(i) / float(segments)
+			var base_pt := p_start.lerp(current_end, seg_t)
+			var wave_offset := right * (sin(seg_t * PI * 2.8 - progress * 12.0) * wave_amp)
+			var vert_offset := Vector3.UP * (sin(seg_t * PI) * wave_amp * 0.6)
+			mesh_inst.surface_add_vertex(base_pt + wave_offset + vert_offset)
+			
+		mesh_inst.surface_end()
+		
+		# At crack impact (~60% progress), apply damage and burst sparks
+		if progress >= 0.60 and not impact_called:
+			impact_called = true
+			if on_impact.is_valid():
+				on_impact.call()
+			CombatFeedback.create_hit_particles(current_target_pos, lash_color)
+			CombatFeedback.create_hit_particles(current_target_pos, Color("#E09026"))
+			var am: Node = unit.get_node_or_null("/root/AudioManager")
+			if am and am.has_method("play_melee_hit"):
+				am.play_melee_hit()
+	, 0.0, 1.0, duration)
+	
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(lash_node):
+			lash_node.queue_free()
+	)
+	return lash_node

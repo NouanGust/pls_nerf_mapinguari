@@ -102,6 +102,19 @@ var speed_buff_multiplier: float = 1.0
 var _is_swooping: bool = false
 const FLYING_BASE_HEIGHT: float = 0.55
 
+## ========================================================
+## SISTEMA DE ITENS & RELÍQUIAS (Máximo 2 itens por unidade)
+## ========================================================
+const MAX_ITEMS_PER_UNIT: int = 2
+var equipped_items: Array[ItemData] = []
+var _vaqueiro_attack_stacks: int = 0
+var _fulozinha_hit_counter: int = 0
+var _bonfim_nodes_remaining: int = 3
+var _bonfim_damage_bonus: float = 0.0
+var _has_muiraquita_saved: bool = false
+var _first_cast_done: bool = false
+var unselectable_until_msec: int = 0
+
 ## Posição no Board
 var board_position: Vector2i = Vector2i(-1, -1)
 var team: int = 0:
@@ -441,9 +454,70 @@ func setup_timers() -> void:
 	attack_timer.timeout.connect(_on_attack_timer_timeout)
 	
 
+func get_equipped_items() -> Array[ItemData]:
+	return equipped_items
+
+func can_equip_more_items() -> bool:
+	return equipped_items.size() < MAX_ITEMS_PER_UNIT
+
+func equip_item(item: ItemData) -> bool:
+	if not item or equipped_items.size() >= MAX_ITEMS_PER_UNIT:
+		return false
+	equipped_items.append(item)
+	if is_inside_tree():
+		update_stats_display()
+		if health_bar_3d:
+			health_bar_3d.max_value = get_max_health()
+		update_health_bar()
+		update_mana_bar()
+	return true
+
+func remove_equipped_item_at(index: int) -> ItemData:
+	if index >= 0 and index < equipped_items.size():
+		var it := equipped_items[index]
+		equipped_items.remove_at(index)
+		if is_inside_tree():
+			update_stats_display()
+			if health_bar_3d:
+				health_bar_3d.max_value = get_max_health()
+			update_health_bar()
+		return it
+	return null
+
+func unequip_all_items() -> Array[ItemData]:
+	var copy := equipped_items.duplicate()
+	equipped_items.clear()
+	if is_inside_tree():
+		update_stats_display()
+		if health_bar_3d:
+			health_bar_3d.max_value = get_max_health()
+		update_health_bar()
+	return copy
+
+func has_item_effect(effect_id: StringName) -> bool:
+	for it in equipped_items:
+		if it.unique_effect_id == effect_id:
+			return true
+	return false
+
+func get_item_stat_bonus(stat_name: String) -> float:
+	var sum := 0.0
+	for it in equipped_items:
+		if it.stat_modifiers.has(stat_name):
+			sum += float(it.stat_modifiers[stat_name])
+	return sum
+
+func get_item_granted_origins() -> Array[String]:
+	var list: Array[String] = []
+	for it in equipped_items:
+		if not it.origin_grant.is_empty() and not list.has(it.origin_grant):
+			list.append(it.origin_grant)
+	return list
+
 func get_max_health() -> float:
-	var star_multiplier: float = stats.get_star_multiplier(star_level)
-	return stats.max_health * star_multiplier * (1.0 + float(synergy_bonuses.get("max_health_pct", 0.0)))
+	var star_multiplier: float = stats.get_star_multiplier(star_level) if stats else 1.0
+	var base_hp: float = (stats.max_health * star_multiplier if stats else 500.0) + get_item_stat_bonus("max_health")
+	return base_hp * (1.0 + float(synergy_bonuses.get("max_health_pct", 0.0)))
 
 func _prune_expired_buffs() -> void:
 	var now := BattleClock.now_msec()
@@ -489,8 +563,8 @@ func get_support_aura_value(effect_name: String, check_enemies: bool = false) ->
 	return max_val
 
 func get_attack_damage() -> float:
-	var star_multiplier: float = stats.get_star_multiplier(star_level)
-	var base_damage: float = stats.attack_damage * star_multiplier
+	var star_multiplier: float = stats.get_star_multiplier(star_level) if stats else 1.0
+	var base_damage: float = (stats.attack_damage * star_multiplier if stats else 50.0) + get_item_stat_bonus("attack_damage")
 	if BattleClock.now_msec() < attack_weakened_until_msec:
 		base_damage *= attack_damage_multiplier
 	
@@ -501,7 +575,7 @@ func get_attack_damage() -> float:
 	if origin_runtime:
 		base_damage *= origin_runtime.get_attack_bonus_multiplier()
 
-	var damage_multiplier := 1.0 + float(synergy_bonuses.get("damage_pct", 0.0)) + get_power_aura_bonus()
+	var damage_multiplier := 1.0 + float(synergy_bonuses.get("damage_pct", 0.0)) + get_power_aura_bonus() + _bonfim_damage_bonus
 	damage_multiplier *= (1.0 - clampf(get_support_aura_value("enemy_attack_weak", true), 0.0, 0.5))
 	if stats and stats.is_atacante_role() and consecutive_attacks > 0:
 		damage_multiplier += 0.05 * consecutive_attacks
@@ -538,7 +612,8 @@ func _has_ally_focusing_target(target: BaseUnit3D) -> bool:
 	return false
 
 func get_effective_attack_speed() -> float:
-	var speed := stats.attack_speed * (1.0 + float(synergy_bonuses.get("attack_speed_pct", 0.0)) + get_support_aura_value("attack_speed", false))
+	var item_as := get_item_stat_bonus("attack_speed_pct") + (float(_vaqueiro_attack_stacks) * 0.05)
+	var speed := (stats.attack_speed if stats else 1.0) * (1.0 + float(synergy_bonuses.get("attack_speed_pct", 0.0)) + item_as + get_support_aura_value("attack_speed", false))
 	speed *= (1.0 - clampf(get_support_aura_value("enemy_attack_speed_slow", true), 0.0, 0.5))
 	if BattleClock.now_msec() < slowed_until_msec:
 		speed *= 0.7
@@ -550,6 +625,7 @@ func get_effective_armor() -> float:
 	var total := stats.armor if stats else 0.0
 	total += float(synergy_bonuses.get("armor_flat", 0.0))
 	total += float(synergy_bonuses.get("bonus_armor", 0.0))
+	total += get_item_stat_bonus("armor")
 	total += get_support_aura_value("defense", false)
 	for buff in active_buffs:
 		if buff.has("armor_flat"):
@@ -564,6 +640,7 @@ func get_effective_magic_resist() -> float:
 	var total := stats.magic_resist if stats else 0.0
 	total += float(synergy_bonuses.get("magic_resist_flat", 0.0))
 	total += float(synergy_bonuses.get("bonus_magic_resist", 0.0))
+	total += get_item_stat_bonus("magic_resist")
 	total += get_support_aura_value("defense", false)
 	for buff in active_buffs:
 		if buff.has("magic_resist_flat"):
@@ -671,6 +748,13 @@ func apply_armor_shred(duration: float, amount: float) -> void:
 
 func on_enemy_defeated() -> void:
 	enemies_defeated = mini(enemies_defeated + 1, MAX_CERRADO_STACKS)
+	if has_item_effect(&"capelobo_spur"):
+		var enemy_grp := "enemy_units" if team == 0 else "player_units"
+		for enemy in get_tree().get_nodes_in_group(enemy_grp):
+			if enemy is BaseUnit3D and is_instance_valid(enemy) and enemy.current_state != State.DEAD:
+				if global_position.distance_to(enemy.global_position) <= 3.5:
+					enemy.apply_armor_shred(4.0, enemy.get_effective_armor() * 0.30)
+		CombatFeedback.create_status_indicator(self, "UIVO DO CAPELOBO!", 1.2)
 
 func start_combat() -> void:
 	if is_on_bench():
@@ -686,6 +770,15 @@ func start_combat() -> void:
 	velocity = Vector3.ZERO
 	combat_ground_height = global_position.y
 	_prune_expired_buffs()
+
+	# Resets de combate dos Itens
+	_vaqueiro_attack_stacks = 0
+	_fulozinha_hit_counter = 0
+	_bonfim_nodes_remaining = 3
+	_bonfim_damage_bonus = 0.0
+	_has_muiraquita_saved = false
+	_first_cast_done = false
+
 	if origin_runtime:
 		origin_runtime.reset_for_combat()
 	var shield_multiplier := 1.0 + float(synergy_bonuses.get("shield_power_pct", 0.0))
@@ -695,6 +788,34 @@ func start_combat() -> void:
 		set_shield_with_source(start_sh, ShieldSource.CLASS)
 	else:
 		current_shield = 0.0
+
+	# Passivas de Início de Combate de Itens
+	var item_start_mana := get_item_stat_bonus("starting_mana")
+	if item_start_mana > 0.0 and stats:
+		current_mana = clampf(stats.starting_mana + item_start_mana, 0.0, stats.max_mana)
+		update_mana_bar()
+
+	if has_item_effect(&"sertanejo_horn"):
+		var ally_group := "player_units" if team == 0 else "enemy_units"
+		for ally in get_tree().get_nodes_in_group(ally_group):
+			if ally is BaseUnit3D and is_instance_valid(ally) and ally != self and not ally.is_on_bench():
+				if absf(ally.global_position.z - global_position.z) <= 2.5:
+					ally.apply_speed_buff(5.0, 1.25, "+BERRANTE")
+					ally.add_mana(15.0)
+		CombatFeedback.create_status_indicator(self, "TOQUE DO BERRANTE!", 1.5)
+
+	if has_item_effect(&"cachaca_offering"):
+		unselectable_until_msec = BattleClock.now_msec() + 5000
+		CombatFeedback.create_status_indicator(self, "OFERENDA NA MATA", 2.0)
+
+	if has_item_effect(&"comigo_ninguem_pode"):
+		set_shield_with_source(current_shield + 250.0, ShieldSource.SELF)
+		var ally_grp := "player_units" if team == 0 else "enemy_units"
+		for ally in get_tree().get_nodes_in_group(ally_grp):
+			if ally is BaseUnit3D and is_instance_valid(ally) and ally != self and not ally.is_on_bench():
+				if global_position.distance_to(ally.global_position) <= 3.0:
+					ally.set_shield_with_source(ally.current_shield + 250.0, ShieldSource.PLAYER)
+
 	first_attack_used = false
 	first_hit_checked = false
 	enemies_defeated = 0
@@ -730,8 +851,52 @@ func get_backline_enemy(enemies: Array) -> BaseUnit3D:
 func get_closest_enemy(enemies: Array) -> BaseUnit3D:
 	return TargetingComponent.get_closest_enemy(global_position, enemies)
 
+func on_basic_attack_landed(target: BaseUnit3D) -> void:
+	if not is_instance_valid(target) or target.current_state == State.DEAD:
+		return
+	
+	# Chicote da Fulozinha: a cada 3 ataques enraíza o alvo por 1s
+	if has_item_effect(&"fulozinha_whip"):
+		_fulozinha_hit_counter += 1
+		if _fulozinha_hit_counter >= 3:
+			_fulozinha_hit_counter = 0
+			target.apply_root(1.0)
+			CombatFeedback.create_status_indicator(target, "ENRAIZADO!", 1.0)
+
+	# Espora de Vaqueiro: +5% de velocidade de ataque a cada golpe (max 20)
+	if has_item_effect(&"vaqueiro_spur"):
+		if _vaqueiro_attack_stacks < 20:
+			_vaqueiro_attack_stacks += 1
+			if attack_timer:
+				attack_timer.wait_time = 1.0 / get_effective_attack_speed()
+
+	# Cachimbo do Saci: +4 de mana por golpe
+	if has_item_effect(&"saci_pipe"):
+		add_mana(4.0)
+
+	# Foice do Corpo-Seco: dessecação com dano verdadeiro e redução de cura
+	if has_item_effect(&"corpo_seco_scythe"):
+		target.apply_burn(3.0, self, 18.0)
+		CombatFeedback.create_status_indicator(target, "DESSECAÇÃO", 1.5)
+
+	# Bala de Prata Benzida: bônus contra Metamorfo e Assombração
+	if has_item_effect(&"silver_bullet") and target.stats:
+		var is_supernatural: bool = target.stats.classes.has("Assombração") or target.stats.classes.has("Metamorfo") or target.stats.origins.has("Urbano")
+		if is_supernatural:
+			var bonus_dmg := get_attack_damage() * 0.25
+			target.take_damage(bonus_dmg, self, UnitStats.DamageType.TRUE)
+			CombatFeedback.create_damage_number(target.global_position, bonus_dmg, CombatFeedback.DamageType.CRITICAL)
+
+func get_effective_attack_range_hexes() -> int:
+	if not stats:
+		return 1
+	var r := stats.get_attack_range_hexes()
+	if has_item_effect(&"fulozinha_whip") and r <= 1:
+		r += 1
+	return r
+
 func get_attack_range_meters() -> float:
-	return float(stats.get_attack_range_hexes()) * 2.0 + 0.5
+	return float(get_effective_attack_range_hexes()) * 2.0 + 0.5
 
 func is_target_in_attack_range(target: BaseUnit3D) -> bool:
 	if not is_instance_valid(target) or target.is_queued_for_deletion() or target.current_state == State.DEAD or not target.visible or target.is_on_bench():
@@ -931,6 +1096,20 @@ func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.Dam
 		extra_reduction
 	)
 
+	# Efeito: Casco Ancestral de Jabuti (Redução plana de dano direto)
+	if has_item_effect(&"jabuti_shell"):
+		actual_damage = maxf(actual_damage - 20.0, 1.0)
+
+	# Efeito: Caroço de Pequi Espinhoso (Retaliação a agressores corpo a corpo)
+	if has_item_effect(&"pequi_spikes") and is_instance_valid(attacker) and attacker != self:
+		if attacker.current_state != State.DEAD and not attacker.is_on_bench():
+			var is_melee: bool = attacker.stats and attacker.stats.get_attack_range_hexes() <= 1
+			if is_melee:
+				var thorns_dmg: float = actual_damage * 0.20
+				attacker.take_damage(thorns_dmg, self, UnitStats.DamageType.PHYSICAL)
+				CombatFeedback.create_damage_number(attacker.global_position, thorns_dmg, CombatFeedback.DamageType.DAMAGE)
+				CombatFeedback.create_hit_particles(attacker.global_position, Color("#f59e0b"))
+
 	if BattleClock.now_msec() < reflect_until_msec:
 		actual_damage *= 0.6
 		if is_instance_valid(attacker) and attacker != self and attacker.current_state != State.DEAD and not attacker.is_on_bench():
@@ -966,6 +1145,16 @@ func take_damage(amount: float, attacker: BaseUnit3D, damage_type: UnitStats.Dam
 			CombatFeedback.create_hit_particles(global_position, Color.RED)
 	
 	flash_damage()
+
+	# Salva-Vidas: Muiraquitã das Icamiabas (<25% Vida)
+	if has_item_effect(&"muiraquita_lifesaver") and not _has_muiraquita_saved and current_health > 0.0:
+		if (current_health / maxf(get_max_health(), 1.0)) <= 0.25:
+			_has_muiraquita_saved = true
+			immune_until_msec = BattleClock.now_msec() + 1500
+			heal(get_max_health() * 0.30)
+			CombatFeedback.create_status_indicator(self, "MUIRAQUITÃ SAGRADO!", 1.5)
+			CombatFeedback.create_hit_particles(global_position, Color("#10b981"))
+
 	# O golpe que quebra o escudo também não gera mana.
 	if not was_shielded and current_health > 0.0:
 		add_mana(stats.mana_when_hit)
@@ -1105,6 +1294,41 @@ func cast_ability() -> void:
 		return
 	
 	apply_ability_effect(scale_mult)
+	
+	# Efeitos de Itens na Conjuração de Habilidade
+	if has_item_effect(&"saci_pipe") and not _first_cast_done:
+		_first_cast_done = true
+		var enemy_grp := "enemy_units" if team == 0 else "player_units"
+		for enemy in get_tree().get_nodes_in_group(enemy_grp):
+			if enemy is BaseUnit3D and is_instance_valid(enemy) and enemy.current_state != State.DEAD:
+				if global_position.distance_to(enemy.global_position) <= 3.0:
+					enemy.apply_slow(3.5)
+		CombatFeedback.create_status_indicator(self, "FUMAÇA DO SACI!", 1.5)
+
+	if has_item_effect(&"rape_piripiri"):
+		var ally_grp := "player_units" if team == 0 else "enemy_units"
+		var count := 0
+		for ally in get_tree().get_nodes_in_group(ally_grp):
+			if ally is BaseUnit3D and is_instance_valid(ally) and ally != self and ally.current_state != State.DEAD:
+				if global_position.distance_to(ally.global_position) <= 4.0:
+					ally.add_mana(20.0)
+					count += 1
+					if count >= 2:
+						break
+		CombatFeedback.create_status_indicator(self, "RAPÉ SAGRADO!", 1.2)
+
+	if has_item_effect(&"lampiao_boitata") and is_instance_valid(current_target) and current_target.current_state != State.DEAD:
+		current_target.apply_burn(5.0, self, current_target.get_max_health() * 0.03)
+		CombatFeedback.create_status_indicator(current_target, "FOGO DO BOITATÁ", 1.5)
+
+	if has_item_effect(&"loira_mirror"):
+		var enemies: Array = get_tree().get_nodes_in_group("enemy_units" if team == 0 else "player_units")
+		var sorted_by_dist := enemies.filter(func(e): return is_instance_valid(e) and e.current_state != State.DEAD)
+		sorted_by_dist.sort_custom(func(a, b): return global_position.distance_to(a.global_position) > global_position.distance_to(b.global_position))
+		for i in range(mini(2, sorted_by_dist.size())):
+			var target_e: BaseUnit3D = sorted_by_dist[i]
+			target_e.take_damage(150.0, self, UnitStats.DamageType.MAGICAL)
+			CombatFeedback.create_damage_number(target_e.global_position, 150.0, CombatFeedback.DamageType.CRITICAL)
 	
 	if origin_runtime:
 		origin_runtime.on_ability_concluded()
@@ -1302,6 +1526,12 @@ func die() -> void:
 				unit.current_target = null
 	# A morte lógica é imediata; apenas o corpo espera a animação terminar.
 	died.emit(self)
+	if is_inside_tree():
+		var ally_group := "player_units" if team == 0 else "enemy_units"
+		for ally in get_tree().get_nodes_in_group(ally_group):
+			if ally is BaseUnit3D and is_instance_valid(ally) and ally != self and ally.current_state != State.DEAD:
+				if ally.has_method("notify_ally_death"):
+					ally.notify_ally_death()
 	if death_duration > 0.0 and is_inside_tree():
 		await get_tree().create_timer(death_duration, false).timeout
 	# O fim da rodada pode reviver a unidade antes de a animação terminar.
@@ -1313,6 +1543,12 @@ func die() -> void:
 	else:
 		queue_free()
 
+func notify_ally_death() -> void:
+	if has_item_effect(&"bonfim_ribbon") and _bonfim_nodes_remaining > 0:
+		_bonfim_nodes_remaining -= 1
+		_bonfim_damage_bonus += 0.15
+		set_shield_with_source(current_shield + 160.0, ShieldSource.SELF)
+		CombatFeedback.create_status_indicator(self, "NÓ DO BONFIM!", 1.2)
 
 func revive_at_position(world_pos: Vector3) -> void:
 	_death_generation += 1
@@ -1325,7 +1561,7 @@ func revive_at_position(world_pos: Vector3) -> void:
 	if attack_timer:
 		attack_timer.stop()
 	current_health = get_max_health()
-	current_mana = stats.starting_mana
+	current_mana = stats.starting_mana + get_item_stat_bonus("starting_mana")
 	clear_shield()
 	current_target = null
 	velocity = Vector3.ZERO

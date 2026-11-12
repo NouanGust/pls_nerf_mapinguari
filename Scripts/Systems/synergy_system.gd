@@ -87,7 +87,10 @@ func update_synergies(units: Array) -> Dictionary:
 			for unit in members:
 				if unit.stats:
 					var tags: Array = unit.stats.get(field)
-					if tags.has(tag):
+					var has_tag: bool = tags.has(tag)
+					if not has_tag and field == "origins" and unit.has_method("get_item_granted_origins"):
+						has_tag = unit.get_item_granted_origins().has(tag)
+					if has_tag:
 						unique_members[unit.stats.unit_id] = unit.stats
 			var count := unique_members.size()
 			if count == 0:
@@ -128,7 +131,10 @@ func update_synergies(units: Array) -> Dictionary:
 				continue
 			var effect_bonuses: Dictionary = effect.bonuses
 			for unit in members:
-				if unit.stats and unit.stats.origins.has(tag):
+				var has_orig: bool = (unit.stats and unit.stats.origins.has(tag))
+				if not has_orig and unit.has_method("get_item_granted_origins"):
+					has_orig = unit.get_item_granted_origins().has(tag)
+				if has_orig:
 					var unit_bonuses: Dictionary = bonuses_by_unit[unit.get_instance_id()]
 					for key in effect_bonuses:
 						unit_bonuses[key] = float(unit_bonuses.get(key, 0.0)) + float(effect_bonuses[key])

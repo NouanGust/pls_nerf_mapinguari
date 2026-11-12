@@ -1,10 +1,9 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://y8nx2dx55afy"]
 
-[ext_resource type="PackedScene" path="res://Assets/Models/Board/board_pantanal.glb" id="1_pantanal_glb"]
-[ext_resource type="Script" path="res://Scripts/Environment/pantanal_board.gd" id="2_pantanal_ctrl"]
+[ext_resource type="PackedScene" uid="uid://y8yanbr2kqmf" path="res://Assets/Models/Board/board_pantanal.glb" id="1_pantanal_glb"]
+[ext_resource type="Script" uid="uid://iqtmdo37xapo" path="res://Scripts/Environment/pantanal_board.gd" id="2_pantanal_ctrl"]
 
-[node name="BoardEnvironmentPantanal" type="Node3D"]
+[node name="BoardEnvironmentPantanal" type="Node3D" unique_id=222438531]
 script = ExtResource("2_pantanal_ctrl")
 
-[node name="board_pantanal" parent="." instance=ExtResource("1_pantanal_glb")]
-
+[node name="board_pantanal" parent="." unique_id=1874867158 instance=ExtResource("1_pantanal_glb")]

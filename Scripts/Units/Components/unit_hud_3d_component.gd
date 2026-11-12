@@ -155,6 +155,21 @@ func setup_stats_display() -> void:
 	star_center.add_child(star_container)
 	update_star_display()
 
+	var items_center := BoxContainer.new()
+	items_center.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	items_center.alignment = BoxContainer.ALIGNMENT_CENTER
+	items_center.offset_top = 186
+	items_center.offset_bottom = 224
+	items_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(items_center)
+
+	var items_hud_row := HBoxContainer.new()
+	items_hud_row.name = "ItemsHudRow"
+	items_hud_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	items_hud_row.add_theme_constant_override("separation", 10)
+	items_hud_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	items_center.add_child(items_hud_row)
+
 	var bars_center := BoxContainer.new()
 	bars_center.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	bars_center.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -360,6 +375,36 @@ func update_stats_display() -> void:
 			mana_fill.bg_color = Color("#0ea5e9")
 
 	update_status_visibility()
+	update_items_display()
+
+func update_items_display() -> void:
+	if not unit or not is_instance_valid(ui_viewport):
+		return
+	var row = ui_viewport.find_child("ItemsHudRow", true, false) as HBoxContainer
+	if not row:
+		return
+	for c in row.get_children():
+		c.queue_free()
+	
+	var equipped: Array = unit.get_equipped_items() if unit.has_method("get_equipped_items") else []
+	for it in equipped:
+		var badge := PanelContainer.new()
+		badge.custom_minimum_size = Vector2(40, 36)
+		var b_style := StyleBoxFlat.new()
+		b_style.bg_color = Color("#1e293b")
+		b_style.border_color = Color("#f59e0b") if not it.is_component() else Color("#06b6d4")
+		b_style.set_border_width_all(2)
+		b_style.set_corner_radius_all(6)
+		badge.add_theme_stylebox_override("panel", b_style)
+		
+		var lbl := Label.new()
+		lbl.text = it.name.substr(0, 3).to_upper()
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lbl.add_theme_font_size_override("font_size", 22)
+		lbl.add_theme_color_override("font_color", Color.WHITE)
+		badge.add_child(lbl)
+		row.add_child(badge)
 
 const SHIELD_COLORS := {
 	0: Color(1.0, 0.82, 0.22), # CLASS

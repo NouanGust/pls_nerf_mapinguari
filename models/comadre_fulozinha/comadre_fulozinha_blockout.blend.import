@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://djpqryi1dawgw"
-path="res://.godot/imported/comadre_fulozinha_blockout.blend-293401de126d49f9f3e1956b90bf7f7a.scn"
+valid=false
 
 [deps]
 
 source_file="res://models/comadre_fulozinha/comadre_fulozinha_blockout.blend"
-dest_files=["res://.godot/imported/comadre_fulozinha_blockout.blend-293401de126d49f9f3e1956b90bf7f7a.scn"]
 
 [params]
 

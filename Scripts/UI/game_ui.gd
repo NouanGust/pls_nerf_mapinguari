@@ -621,4 +621,7 @@ func _layout_item_inventory() -> void:
 	if not is_instance_valid(item_inventory_ui) or not is_instance_valid(hud):
 		return
 	var vp_size := get_viewport().get_visible_rect().size
-	item_inventory_ui.position = Vector2(16.0, maxf(vp_size.y - 330.0, 140.0))
+	var item_h: float = maxf(item_inventory_ui.size.y, 165.0)
+	var shop_top: float = bottom_bar.position.y if is_instance_valid(bottom_bar) and bottom_bar.position.y > 0.0 else (vp_size.y - 230.0)
+	var target_y: float = shop_top - item_h - 16.0
+	item_inventory_ui.position = Vector2(16.0, maxf(target_y, 130.0))

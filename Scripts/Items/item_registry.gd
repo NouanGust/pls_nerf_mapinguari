@@ -60,10 +60,29 @@ static func _make_recipe_key(a: StringName, b: StringName) -> String:
 	return "%s:%s" % [s_b, s_a]
 
 static func _register(it: ItemData) -> void:
+	if it.icon == null:
+		it.icon = _resolve_item_icon(it.id)
 	_items[it.id] = it
 	if it.recipe.size() == 2:
 		var key := _make_recipe_key(it.recipe[0], it.recipe[1])
 		_recipes[key] = it.id
+
+const ICON_SUBDIRS := ["componentes", "ofensivos", "magicos", "defensivos", "suporte", "emblemas", "consumiveis"]
+
+static func _resolve_item_icon(item_id: StringName) -> Texture2D:
+	var id_str := String(item_id)
+	for sub in ICON_SUBDIRS:
+		var res_path := "res://art/items/%s/%s/icon_v01.png" % [sub, id_str]
+		if ResourceLoader.exists(res_path):
+			var tex := load(res_path) as Texture2D
+			if tex:
+				return tex
+		var abs_path := ProjectSettings.globalize_path(res_path)
+		if FileAccess.file_exists(abs_path):
+			var img := Image.load_from_file(abs_path)
+			if img and not img.is_empty():
+				return ImageTexture.create_from_image(img)
+	return null
 
 static func _register_all_items() -> void:
 	_items.clear()

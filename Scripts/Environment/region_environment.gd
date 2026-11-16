@@ -186,27 +186,10 @@ static func apply_to(world_env: WorldEnvironment, sun: DirectionalLight3D, regio
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.tonemap_exposure = float(profile.get("tonemap_exposure", 1.04))
 
-	# Oclusão de Ambiente (SSAO) e Iluminação Indireta (SSIL) para profundidade 3D realista
-	# (baseado nas boas práticas de iluminação 3D no Godot 4)
-	env.ssao_enabled = true
-	env.ssao_radius = 1.15
-	env.ssao_intensity = 2.35
-	env.ssao_power = 1.55
-	env.ssao_detail = 0.5
-	env.ssao_sharpness = 0.92
-	env.ssao_light_affect = 0.35
-
-	env.ssil_enabled = true
-	env.ssil_radius = 3.5
-	env.ssil_intensity = 0.85
-	env.ssil_sharpness = 0.9
-
-	# Reflexos de tela (SSR) para água espelhada e superfícies molhadas
-	env.ssr_enabled = true
-	env.ssr_max_steps = 64
-	env.ssr_fade_in = 0.15
-	env.ssr_fade_out = 1.8
-	env.ssr_depth_tolerance = 0.35
+	# Oclusão de Ambiente (SSAO) e Efeitos de Tela otimizados para fluidez em PCs de entrada
+	env.ssao_enabled = false
+	env.ssil_enabled = false
+	env.ssr_enabled = false
 
 	# Glow & Brilho sutil
 	env.glow_enabled = true
@@ -222,7 +205,7 @@ static func apply_to(world_env: WorldEnvironment, sun: DirectionalLight3D, regio
 	env.adjustment_contrast = float(profile["adjustment_contrast"])
 	env.adjustment_saturation = float(profile["adjustment_saturation"])
 
-	# Neblina de profundidade + Neblina Volumétrica (para atmosfera sombria e feixes de luz)
+	# Neblina de profundidade
 	env.fog_enabled = true
 	env.fog_aerial_perspective = 0.65
 	env.fog_sky_affect = 0.45
@@ -235,15 +218,17 @@ static func apply_to(world_env: WorldEnvironment, sun: DirectionalLight3D, regio
 		env.volumetric_fog_emission = profile.get("volumetric_fog_emission", Color("#020408"))
 		env.volumetric_fog_emission_energy = 0.25
 		env.volumetric_fog_anisotropy = 0.62
-		env.volumetric_fog_length = 56.0
+		env.volumetric_fog_length = 48.0
 		env.volumetric_fog_ambient_inject = 0.18
 
 	if sun:
 		sun.light_indirect_energy = 1.15
 		sun.light_volumetric_fog_energy = 1.25 if use_vol_fog else 1.0
-		sun.shadow_enabled = true
-		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-		sun.directional_shadow_max_distance = 64.0
+		var gs: Node = Engine.get_main_loop().root.get_node_or_null("GameSettings") if Engine.get_main_loop() else null
+		var shadows_on: bool = bool(gs.get("shadows_enabled")) if gs else true
+		sun.shadow_enabled = shadows_on
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		sun.directional_shadow_max_distance = 48.0
 		sun.shadow_bias = 0.03
 		sun.shadow_normal_bias = 1.2
 		sun.shadow_blur = 0.85

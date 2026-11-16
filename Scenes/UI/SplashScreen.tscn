@@ -1,8 +1,8 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://d4aapqnswcgpf"]
 
-[ext_resource type="Script" path="res://Scripts/UI/splash_screen.gd" id="1_splash"]
+[ext_resource type="Script" uid="uid://ydut4i7tcaqg" path="res://Scripts/UI/splash_screen.gd" id="1_splash"]
 
-[node name="SplashScreen" type="Control"]
+[node name="SplashScreen" type="Control" unique_id=1326243932]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,7 +11,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_splash")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="ColorRect" parent="." unique_id=44701587]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Regions = preload("res://Scripts/Systems/region_rosters.gd")
+const ItemRegistry = preload("res://Scripts/Items/item_registry.gd")
 const DIRECTORY := "user://campaigns"
 const VERSION := 1
 
@@ -91,8 +92,14 @@ static func valid_run(value: Variant) -> bool:
 	for key in ["bench", "field", "shop"]:
 		if not value.get(key) is Array:
 			return false
-	if value["bench"].size() > 9 or value["field"].size() > int(value["level"]) or value["shop"].size() != 5:
+	if value["bench"].size() > 9 or value["field"].size() > int(value["level"]) + 4 or value["shop"].size() != 5:
 		return false
+	if value.has("items"):
+		if not value["items"] is Array or value["items"].size() > 10:
+			return false
+		for item_id in value["items"]:
+			if not item_id is String or not _valid_item_id(item_id):
+				return false
 	var positions: Array[Vector2i] = []
 	for zone in ["bench", "field"]:
 		for unit in value[zone]:
@@ -103,6 +110,12 @@ static func valid_run(value: Variant) -> bool:
 					return false
 			if int(unit["stars"]) < 1 or int(unit["stars"]) > 4 or int(unit["invested"]) < 0:
 				return false
+			if unit.has("items"):
+				if not unit["items"] is Array or unit["items"].size() > 2:
+					return false
+				for item_id in unit["items"]:
+					if not item_id is String or not _valid_item_id(item_id):
+						return false
 			if zone == "field":
 				if not unit.get("cell") is Array or unit["cell"].size() != 2:
 					return false
@@ -117,6 +130,9 @@ static func valid_run(value: Variant) -> bool:
 		if not id is String or (id != "" and not _valid_unit_id(id)):
 			return false
 	return true
+
+static func _valid_item_id(value: Variant) -> bool:
+	return value is String and not value.is_empty() and ItemRegistry.has_item(StringName(value))
 
 static func _valid_unit_id(value: Variant) -> bool:
 	return value is String and value.is_valid_identifier() and ResourceLoader.exists("res://resources/units/%s.tres" % value)

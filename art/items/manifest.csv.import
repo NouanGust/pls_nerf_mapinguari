@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://utnjfwv481tw"
+
+[deps]
+
+files=["res://art/items/manifest.nome.translation", "res://art/items/manifest.categoria.translation", "res://art/items/manifest.descricao.translation", "res://art/items/manifest.adaptacao.translation", "res://art/items/manifest.suposicoes.translation", "res://art/items/manifest.status.translation", "res://art/items/manifest.versao.translation", "res://art/items/manifest.caminho.translation", "res://art/items/manifest.feedback.translation"]
+
+source_file="res://art/items/manifest.csv"
+dest_files=["res://art/items/manifest.nome.translation", "res://art/items/manifest.categoria.translation", "res://art/items/manifest.descricao.translation", "res://art/items/manifest.adaptacao.translation", "res://art/items/manifest.suposicoes.translation", "res://art/items/manifest.status.translation", "res://art/items/manifest.versao.translation", "res://art/items/manifest.caminho.translation", "res://art/items/manifest.feedback.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

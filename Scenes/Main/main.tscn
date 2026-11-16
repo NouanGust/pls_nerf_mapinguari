@@ -33,10 +33,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 0)
 offset_right = -1.0
 
 [node name="TopBar" parent="GameUi/Control" index="0" unique_id=2051808828]
+clip_contents = true
 offset_left = 34.0
 offset_top = 31.0
 offset_right = 591.0
 offset_bottom = 91.0
+
+[node name="Content" parent="GameUi/Control/TopBar" index="0" unique_id=2094092110]
+clip_contents = true
 
 [node name="TimerIcon" parent="GameUi/Control/TopBar/Content/TimerBox" parent_id_path=PackedInt32Array(1710037490, 747864040) index="0" unique_id=924725101]
 texture_filter = 1
@@ -75,22 +79,6 @@ z_index = 2
 [node name="VBoxContainer" parent="GameUi/Control/BottomBar/StatsTooltip" index="0" unique_id=513790708]
 alignment = 1
 
-[node name="Tooltip_name" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="0" unique_id=1095462834]
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Tooltip_hp" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="1" unique_id=2080433627]
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Tooltip_range" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="2" unique_id=1485475993]
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Tooltip_type" parent="GameUi/Control/BottomBar/StatsTooltip/VBoxContainer" index="3" unique_id=76565951]
-horizontal_alignment = 1
-vertical_alignment = 1
-
 [node name="PanelFrame" parent="GameUi/Control/RightBar" parent_id_path=PackedInt32Array(1710037490, 967378360) index="0" unique_id=967378361]
 region_rect = Rect2(0, 352, 160, 48)
 patch_margin_left = 16
@@ -99,10 +87,10 @@ patch_margin_right = 16
 patch_margin_bottom = 32
 
 [node name="HUDToggleButton" parent="GameUi" index="1" unique_id=1460861161]
-offset_left = -56.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 34.0
+offset_left = -74.0
+offset_top = 21.0
+offset_right = -18.0
+offset_bottom = 55.0
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1224019935]
 navigation_mesh = SubResource("NavigationMesh_2a143")

@@ -110,6 +110,8 @@ func try_pickup_unit(mouse_pos: Vector2) -> void:
 						main_node._refresh_synergies()
 					if main_node.has_method("update_ui"):
 						main_node.update_ui()
+					if main_node.has_method("_schedule_save"):
+						main_node._schedule_save()
 					return
 
 			var grid_pos = unit.board_position

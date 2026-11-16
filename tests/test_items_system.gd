@@ -23,6 +23,7 @@ func _run_tests() -> void:
 	success = success and _test_component_fusion_on_unit()
 	success = success and _test_stat_modifiers()
 	success = success and _test_utilitaries()
+	success = success and _test_item_persistence()
 
 	if success:
 		log_msg("\n>> TODOS OS TESTES DE ITENS PASSARAM COM SUCESSO! <<\n")
@@ -53,6 +54,22 @@ func _test_item_registry() -> bool:
 		log_msg("Falha: Coroa das Icamiabas deve conceder +1 de tamanho de equipe!")
 		return false
 	log_msg("  ✓ Coroa das Icamiabas registrada com +1 team_size_bonus.")
+
+	var expected_ready_icons := [
+		&"lasca_brauna", &"pimenta_cumari", &"casca_jabuti", &"ramo_arruda",
+		&"cipo_titica", &"cabaca_agua", &"raiz_mandioca", &"guizo_cascavel", &"muiraquita_bruto",
+		&"chicote_fulozinha", &"esporao_capelobo", &"foice_corpo_seco", &"bala_prata",
+		&"cachimbo_saci"
+	]
+	for icon_id in expected_ready_icons:
+		var it_obj: ItemData = ItemRegistry.get_item(icon_id)
+		if not it_obj or not it_obj.icon:
+			log_msg("Falha: Ícone pronto não carregado para " + String(icon_id))
+			return false
+		if it_obj.icon.get_width() != 1024 or it_obj.icon.get_height() != 1024:
+			log_msg("Falha: Dimensão inválida para ícone de " + String(icon_id))
+			return false
+	log_msg("  ✓ Todos os %d ícones prontos carregados em 1024x1024." % expected_ready_icons.size())
 	return true
 
 func _test_recipes() -> bool:
@@ -245,4 +262,73 @@ func _test_utilitaries() -> bool:
 
 	log_msg("  ✓ Peneira do Saci recolheu os 2 itens da unidade de volta ao inventário perfeitamente!")
 	unit.queue_free()
+	return true
+
+func _test_item_persistence() -> bool:
+	log_msg("\n[7] Testando Persistência de Itens em Unidades e Inventário...")
+	var CampaignStore = preload("res://Scripts/Systems/campaign_store.gd")
+	var run: Dictionary = {
+		"gold": 10,
+		"health": 100,
+		"level": 3,
+		"xp": 0,
+		"enemy_level": 1,
+		"enemy_xp": 0,
+		"round": 1,
+		"win_streak": 0,
+		"loss_streak": 0,
+		"phase": "prep",
+		"locked": false,
+		"shop": ["", "", "", "", ""],
+		"bench": [
+			{
+				"id": "mapinguari",
+				"stars": 1,
+				"invested": 1,
+				"cell": [0, -1],
+				"items": ["lasca_brauna"]
+			}
+		],
+		"field": [
+			{
+				"id": "boitata",
+				"stars": 2,
+				"invested": 4,
+				"cell": [2, 5],
+				"items": ["caroco_pequi", "chicote_fulozinha"]
+			}
+		],
+		"items": ["cipo_titica", "casca_jabuti"]
+	}
+
+	if not CampaignStore.valid_run(run):
+		log_msg("Falha: valid_run rejeitou run contendo itens equipados e no inventário!")
+		return false
+	log_msg("  ✓ CampaignStore.valid_run aceitou run com itens equipados e no inventário.")
+
+	# Valida rejeição de itens inválidos ou acima do limite
+	var invalid_run := run.duplicate(true)
+	invalid_run["field"][0]["items"] = ["item_inexistente_123"]
+	if CampaignStore.valid_run(invalid_run):
+		log_msg("Falha: valid_run deveria rejeitar itens inexistentes!")
+		return false
+	log_msg("  ✓ CampaignStore.valid_run rejeitou com sucesso itens com IDs inexistentes.")
+
+	var excessive_items_run := run.duplicate(true)
+	excessive_items_run["bench"][0]["items"] = ["lasca_brauna", "cipo_titica", "casca_jabuti"]
+	if CampaignStore.valid_run(excessive_items_run):
+		log_msg("Falha: valid_run deveria rejeitar mais de 2 itens em uma unidade!")
+		return false
+	log_msg("  ✓ CampaignStore.valid_run rejeitou unidade com mais de 2 itens.")
+
+	# Valida retrocompatibilidade com unidades sem o campo 'items'
+	var legacy_run := run.duplicate(true)
+	legacy_run["bench"][0].erase("items")
+	legacy_run["field"][0].erase("items")
+	legacy_run.erase("items")
+	if not CampaignStore.valid_run(legacy_run):
+		log_msg("Falha: valid_run não deve falhar em saves legados sem itens!")
+		return false
+	log_msg("  ✓ Retrocompatibilidade de saves antigos validada com sucesso.")
+
 	return true

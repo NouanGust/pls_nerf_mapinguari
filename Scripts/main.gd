@@ -244,11 +244,20 @@ func _ready() -> void:
 		player_level = 1
 		player_xp = 0
 		spawn_enemy_team()
+		if item_manager:
+			item_manager.player_items.clear()
+			item_manager.add_item_by_id(&"lasca_brauna")
+			item_manager.add_item_by_id(&"cipo_titica")
+			item_manager.add_item_by_id(&"casca_jabuti")
+			item_manager.add_item_by_id(&"raiz_mandioca")
 	_update_round_atmosphere(0.0)
 	_run_ready = true
 	var gs: Node = get_node_or_null("/root/GameSettings")
 	if gs and gs.has_method("set_last_played_region"):
 		gs.set_last_played_region(region_id)
+	if gs and gs.has_signal("settings_changed"):
+		if not gs.settings_changed.is_connected(_on_settings_changed):
+			gs.settings_changed.connect(_on_settings_changed)
 	update_ui()
 	_save_campaign()
 	if _entry_in_progress:
@@ -268,13 +277,14 @@ func _ready() -> void:
 	
 	if ui and ui.has_method("setup_item_inventory"):
 		ui.setup_item_inventory(item_manager, self)
-	if item_manager.get_inventory_items().is_empty():
-		item_manager.add_item_by_id(&"lasca_brauna")
-		item_manager.add_item_by_id(&"cipo_titica")
-		item_manager.add_item_by_id(&"casca_jabuti")
-		item_manager.add_item_by_id(&"raiz_mandioca")
+	if item_manager and not item_manager.inventory_changed.is_connected(_schedule_save):
+		item_manager.inventory_changed.connect(_schedule_save)
 
 	debug_initialization()
+
+func _on_settings_changed() -> void:
+	if _run_ready and not _leaving:
+		_update_round_atmosphere(0.0)
 
 func _play_battle_entry(returning_to_region: bool) -> void:
 	var focus_unit: Node3D = null
@@ -1332,6 +1342,11 @@ func _input(event: InputEvent) -> void:
 			KEY_I:
 				if item_manager and not combat_active:
 					grant_random_component()
+			KEY_F7:
+				var gs: Node = get_node_or_null("/root/GameSettings")
+				if gs and gs.has_method("toggle_fps_counter"):
+					gs.toggle_fps_counter()
+					get_viewport().set_input_as_handled()
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_RIGHT:
 			inspect_unit_at_mouse(event.position)

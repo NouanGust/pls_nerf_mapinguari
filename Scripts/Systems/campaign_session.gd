@@ -6,6 +6,7 @@ extends RefCounted
 const Regions = preload("res://Scripts/Systems/region_rosters.gd")
 const CampaignStore = preload("res://Scripts/Systems/campaign_store.gd")
 const GameOverlay = preload("res://Scripts/UI/game_overlay.gd")
+const ItemRegistry = preload("res://Scripts/Items/item_registry.gd")
 
 var game: Node3D
 var overlay: GameOverlay
@@ -118,11 +119,17 @@ func unit_save_data(unit: BaseUnit3D) -> Dictionary:
 						break
 				if pos.y >= 4:
 					break
+	var item_ids: Array[String] = []
+	if unit.has_method("get_equipped_items"):
+		for it in unit.get_equipped_items():
+			if it and not str(it.id).is_empty():
+				item_ids.append(str(it.id))
 	return {
 		"id": unit.stats.unit_id,
 		"stars": unit.star_level,
 		"invested": unit.invested_gold,
 		"cell": [pos.x, pos.y],
+		"items": item_ids,
 	}
 
 func capture_campaign() -> Dictionary:
@@ -161,6 +168,12 @@ func capture_campaign() -> Dictionary:
 		saved_shop.append("")
 	if saved_shop.size() > 5:
 		saved_shop.resize(5)
+
+	var saved_items: Array[String] = []
+	if game.item_manager:
+		for it in game.item_manager.get_inventory_items():
+			if it and not str(it.id).is_empty():
+				saved_items.append(str(it.id))
 	
 	var effective_level: int = clampi(maxi(game.player_level, saved_field.size()), 1, 9)
 	return {
@@ -179,6 +192,7 @@ func capture_campaign() -> Dictionary:
 		"shop": saved_shop,
 		"locked": game.shop_system.is_shop_locked if game.shop_system else false,
 		"match_time": game.match_elapsed_seconds,
+		"items": saved_items,
 	}
 
 func save_campaign() -> bool:
@@ -213,6 +227,13 @@ func restore_campaign(run: Dictionary) -> bool:
 			unit.debug_movement = false
 			game.add_child(unit)
 			unit.invested_gold = int(entry["invested"])
+			
+			if entry.has("items") and entry["items"] is Array:
+				for it_id in entry["items"]:
+					var item_data := ItemRegistry.get_item(StringName(it_id))
+					if item_data:
+						unit.equip_item(item_data)
+						
 			if zone == "bench":
 				if not game.add_unit_to_bench(unit):
 					return false
@@ -220,6 +241,19 @@ func restore_campaign(run: Dictionary) -> bool:
 				var cell := Vector2i(int(entry["cell"][0]), int(entry["cell"][1]))
 				if not game.board.place_unit(unit, cell, false):
 					return false
+
+	if game.item_manager:
+		game.item_manager.player_items.clear()
+		if run.has("items") and run["items"] is Array:
+			for it_id in run["items"]:
+				game.item_manager.add_item_by_id(StringName(it_id))
+		elif not run.has("items"):
+			# Fallback para campanhas anteriores à adição do sistema de itens
+			game.item_manager.add_item_by_id(&"lasca_brauna")
+			game.item_manager.add_item_by_id(&"cipo_titica")
+			game.item_manager.add_item_by_id(&"casca_jabuti")
+			game.item_manager.add_item_by_id(&"raiz_mandioca")
+		game.item_manager.inventory_changed.emit()
 					
 	if game.shop_system:
 		game.shop_system.current_units.clear()
@@ -235,4 +269,8 @@ func restore_campaign(run: Dictionary) -> bool:
 		game.spawn_enemy_team()
 		
 	game._realign_bench_units(false)
+	if game.has_method("_refresh_synergies"):
+		game._refresh_synergies()
+	if game.has_method("update_ui"):
+		game.update_ui()
 	return true

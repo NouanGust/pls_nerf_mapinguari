@@ -20,6 +20,7 @@ var _in_game: bool = false
 var _mode: String = ""
 var _page: int = 0
 var _match_time: float = 0.0
+var _options_tab: String = "graphics"
 var _root: Control
 var _panel: PanelContainer
 var _content: VBoxContainer
@@ -67,6 +68,62 @@ static func button(text: String, action: Callable) -> Button:
 		style.bg_color = Color("#304441") if state == "hover" else Color("#1b3033")
 		style.set_content_margin(SIDE_TOP, 8.0)
 		style.set_content_margin(SIDE_BOTTOM, 8.0)
+		result.add_theme_stylebox_override(state, style)
+	result.pressed.connect(func() -> void:
+		var am = result.get_node_or_null("/root/AudioManager")
+		if am:
+			am.play_ui_click()
+		action.call()
+	)
+	result.mouse_entered.connect(func() -> void:
+		var am = result.get_node_or_null("/root/AudioManager")
+		if am:
+			am.play_ui_hover()
+	)
+	return result
+
+static func tab_button(text: String, action: Callable, is_active: bool) -> Button:
+	var result := Button.new()
+	result.text = text
+	result.custom_minimum_size.y = 48
+	result.add_theme_font_size_override("font_size", 20)
+	result.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for state in ["normal", "hover", "pressed", "focus"]:
+		var border := Color("#f59e0b") if is_active else (Color("#d7b97d") if state == "hover" else Color("#475569"))
+		var style := frame(border)
+		style.bg_color = Color("#223940") if is_active else (Color("#203338") if state == "hover" else Color("#152226"))
+		style.set_content_margin(SIDE_TOP, 8.0)
+		style.set_content_margin(SIDE_BOTTOM, 8.0)
+		style.set_content_margin(SIDE_LEFT, 12.0)
+		style.set_content_margin(SIDE_RIGHT, 12.0)
+		result.add_theme_stylebox_override(state, style)
+	result.pressed.connect(func() -> void:
+		var am = result.get_node_or_null("/root/AudioManager")
+		if am:
+			am.play_ui_click()
+		action.call()
+	)
+	result.mouse_entered.connect(func() -> void:
+		var am = result.get_node_or_null("/root/AudioManager")
+		if am:
+			am.play_ui_hover()
+	)
+	return result
+
+static func preset_button(text: String, action: Callable, is_active: bool) -> Button:
+	var result := Button.new()
+	result.text = text
+	result.custom_minimum_size.y = 44
+	result.add_theme_font_size_override("font_size", 16)
+	result.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for state in ["normal", "hover", "pressed", "focus"]:
+		var border := Color("#38bdf8") if is_active else (Color("#7dd3fc") if state == "hover" else Color("#475569"))
+		var style := frame(border)
+		style.bg_color = Color("#18353f") if is_active else (Color("#1e363e") if state == "hover" else Color("#111f24"))
+		style.set_content_margin(SIDE_TOP, 6.0)
+		style.set_content_margin(SIDE_BOTTOM, 6.0)
+		style.set_content_margin(SIDE_LEFT, 8.0)
+		style.set_content_margin(SIDE_RIGHT, 8.0)
 		result.add_theme_stylebox_override(state, style)
 	result.pressed.connect(func() -> void:
 		var am = result.get_node_or_null("/root/AudioManager")
@@ -156,20 +213,128 @@ func _render() -> void:
 		"options":
 			_content.add_child(label("OPÇÕES", 36, Color("#e4c58a")))
 			var gs: Node = get_node_or_null("/root/GameSettings")
-			var vol: float = float(gs.get("volume")) if gs else 0.8
-			var m_vol: float = float(gs.get("music_volume")) if gs else 0.8
-			var s_vol: float = float(gs.get("sfx_volume")) if gs else 0.8
-			var fs: bool = bool(gs.get("fullscreen")) if gs else false
-			var ao: bool = bool(gs.get("auto_orbit")) if gs else false
-			var sens: float = float(gs.get("mouse_sensitivity")) if gs else 0.25
-			var caatinga_real: bool = (str(gs.get("caatinga_board_variant")) == "realista") if gs else false
-			_slider("Volume geral", "volume", vol, 0.0, 1.0, 0.01)
-			_slider("Música", "music_volume", m_vol, 0.0, 1.0, 0.01)
-			_slider("Efeitos sonoros", "sfx_volume", s_vol, 0.0, 1.0, 0.01)
-			_check("Tela cheia", "fullscreen", fs, OS.has_feature("web"))
-			_check("Orbitar automaticamente", "auto_orbit", ao)
-			_check("Tabuleiro da Caatinga: Versão Realista", "caatinga_board_variant", caatinga_real)
-			_slider("Sensibilidade da câmera", "mouse_sensitivity", sens, 0.05, 1.0, 0.05)
+			
+			# Seletor de Abas
+			var tab_row := HBoxContainer.new()
+			tab_row.add_theme_constant_override("separation", 12)
+			_content.add_child(tab_row)
+			
+			var tab_gfx := tab_button("🖥️ Gráficos & Desempenho", func() -> void:
+				_options_tab = "graphics"
+				_render()
+			, _options_tab == "graphics")
+			tab_row.add_child(tab_gfx)
+			
+			var tab_audio := tab_button("🔊 Áudio & Controles", func() -> void:
+				_options_tab = "audio"
+				_render()
+			, _options_tab == "audio")
+			tab_row.add_child(tab_audio)
+			
+			if _options_tab == "graphics":
+				var preset: String = str(gs.get("graphics_preset")) if gs else "balanced"
+				var max_fps_val: int = int(gs.get("max_fps")) if gs else 30
+				var r_scale: float = float(gs.get("render_scale")) if gs else 0.85
+				var shadows: bool = bool(gs.get("shadows_enabled")) if gs else true
+				var vsync_val: bool = bool(gs.get("vsync")) if gs else true
+				var show_fps_val: bool = bool(gs.get("show_fps")) if gs else false
+				var fs_val: bool = bool(gs.get("fullscreen")) if gs else false
+				
+				# Título de Presets
+				var preset_title := label("PRESETS DE DESEMPENHO", 20, Color("#fcd68a"))
+				preset_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+				_content.add_child(preset_title)
+				
+				var presets_row := HBoxContainer.new()
+				presets_row.add_theme_constant_override("separation", 8)
+				_content.add_child(presets_row)
+				
+				presets_row.add_child(preset_button("⚡ Desempenho", func() -> void:
+					_change_setting("graphics_preset", "low")
+					_render()
+				, preset == "low"))
+				
+				presets_row.add_child(preset_button("⚖️ Balanceado (30 FPS)", func() -> void:
+					_change_setting("graphics_preset", "balanced")
+					_render()
+				, preset == "balanced"))
+				
+				presets_row.add_child(preset_button("✨ Alta Qualidade (60 FPS)", func() -> void:
+					_change_setting("graphics_preset", "high")
+					_render()
+				, preset == "high"))
+				
+				var desc_text := ""
+				match preset:
+					"low":
+						desc_text = "Modo Desempenho: 30 FPS travados, resolução 3D em 65% (FSR) e sem sombras. Máxima fluidez para PCs fracos ou placas integradas."
+					"balanced":
+						desc_text = "Modo Balanceado: 30 FPS estáveis, resolução 3D em 85% (FSR) e sombras suaves. Recomendado para o hardware atual."
+					"high":
+						desc_text = "Modo Alta Qualidade: 60 FPS, resolução 3D nativa (100%) e sombras completas. Para máquinas mais potentes."
+					_:
+						desc_text = "Modo Personalizado: Configurações manuais ativas."
+				
+				var desc_lbl := label(desc_text, 16, Color("#94a3b8"))
+				desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+				_content.add_child(desc_lbl)
+				
+				# Separador de Ajustes Detalhados
+				var manual_title := label("AJUSTES DETALHADOS", 20, Color("#fcd68a"))
+				manual_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+				_content.add_child(manual_title)
+				
+				# Slider de Resolução 3D
+				_slider_scale("Escala de Resolução 3D (FSR)", "render_scale", r_scale, 0.5, 1.0, 0.05)
+				var scale_note := label("Menor resolução 3D alivia a placa de vídeo. Textos, cartas e a interface continuam 100% nítidos.", 15, Color("#64748b"))
+				scale_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+				_content.add_child(scale_note)
+				
+				# Limite de FPS
+				var fps_title := label("Limite de Quadros (FPS Target)", 20, Color("#e5e8dd"))
+				fps_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+				_content.add_child(fps_title)
+				
+				var fps_row := HBoxContainer.new()
+				fps_row.add_theme_constant_override("separation", 8)
+				_content.add_child(fps_row)
+				
+				fps_row.add_child(preset_button("30 FPS (Recomendado)", func() -> void:
+					_change_setting("max_fps", 30)
+					_render()
+				, max_fps_val == 30))
+				
+				fps_row.add_child(preset_button("60 FPS", func() -> void:
+					_change_setting("max_fps", 60)
+					_render()
+				, max_fps_val == 60))
+				
+				fps_row.add_child(preset_button("Ilimitado", func() -> void:
+					_change_setting("max_fps", 0)
+					_render()
+				, max_fps_val == 0))
+				
+				# Toggles
+				_check("Sombras 3D do Tabuleiro", "shadows_enabled", shadows)
+				_check("Sincronização Vertical (V-Sync)", "vsync", vsync_val)
+				_check("Exibir Contador de FPS no Canto Superior (F7)", "show_fps", show_fps_val)
+				_check("Tela cheia", "fullscreen", fs_val, OS.has_feature("web"))
+				
+			else:
+				var vol: float = float(gs.get("volume")) if gs else 0.8
+				var m_vol: float = float(gs.get("music_volume")) if gs else 0.8
+				var s_vol: float = float(gs.get("sfx_volume")) if gs else 0.8
+				var ao: bool = bool(gs.get("auto_orbit")) if gs else false
+				var sens: float = float(gs.get("mouse_sensitivity")) if gs else 0.25
+				var caatinga_real: bool = (str(gs.get("caatinga_board_variant")) == "realista") if gs else false
+				
+				_slider("Volume geral", "volume", vol, 0.0, 1.0, 0.01)
+				_slider("Música", "music_volume", m_vol, 0.0, 1.0, 0.01)
+				_slider("Efeitos sonoros", "sfx_volume", s_vol, 0.0, 1.0, 0.01)
+				_check("Orbitar câmera automaticamente", "auto_orbit", ao)
+				_slider("Sensibilidade da câmera", "mouse_sensitivity", sens, 0.05, 1.0, 0.05)
+				_check("Tabuleiro da Caatinga: Versão Realista", "caatinga_board_variant", caatinga_real)
+			
 			_content.add_child(button("Voltar", _back))
 		"tutorial":
 			_content.add_child(label("COMO JOGAR", 34, Color("#e4c58a")))
@@ -200,6 +365,22 @@ func _render() -> void:
 
 func _slider(title: String, key: String, value: float, minimum: float, maximum: float, step: float) -> void:
 	var caption := label("%s · %.0f%%" % [title, value * 100.0], 22)
+	_content.add_child(caption)
+	var slider := HSlider.new()
+	slider.min_value = minimum
+	slider.max_value = maximum
+	slider.step = step
+	slider.value = value
+	slider.custom_minimum_size.y = 36
+	slider.value_changed.connect(func(amount: float) -> void:
+		caption.text = "%s · %.0f%%" % [title, amount * 100.0]
+		_change_setting(key, amount)
+	)
+	_content.add_child(slider)
+
+func _slider_scale(title: String, key: String, value: float, minimum: float, maximum: float, step: float) -> void:
+	var caption := label("%s · %.0f%%" % [title, value * 100.0], 20, Color("#7dd3fc"))
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_content.add_child(caption)
 	var slider := HSlider.new()
 	slider.min_value = minimum

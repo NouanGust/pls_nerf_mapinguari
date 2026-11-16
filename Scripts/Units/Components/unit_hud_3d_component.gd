@@ -389,21 +389,30 @@ func update_items_display() -> void:
 	var equipped: Array = unit.get_equipped_items() if unit.has_method("get_equipped_items") else []
 	for it in equipped:
 		var badge := PanelContainer.new()
-		badge.custom_minimum_size = Vector2(40, 36)
+		badge.custom_minimum_size = Vector2(38, 38)
 		var b_style := StyleBoxFlat.new()
 		b_style.bg_color = Color("#1e293b")
 		b_style.border_color = Color("#f59e0b") if not it.is_component() else Color("#06b6d4")
 		b_style.set_border_width_all(2)
 		b_style.set_corner_radius_all(6)
+		b_style.set_content_margin_all(2)
 		badge.add_theme_stylebox_override("panel", b_style)
 		
-		var lbl := Label.new()
-		lbl.text = it.name.substr(0, 3).to_upper()
-		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lbl.add_theme_font_size_override("font_size", 22)
-		lbl.add_theme_color_override("font_color", Color.WHITE)
-		badge.add_child(lbl)
+		if it.icon:
+			var tex_rect := TextureRect.new()
+			tex_rect.texture = it.icon
+			tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			tex_rect.custom_minimum_size = Vector2(30, 30)
+			badge.add_child(tex_rect)
+		else:
+			var lbl := Label.new()
+			lbl.text = it.name.substr(0, 3).to_upper()
+			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			lbl.add_theme_font_size_override("font_size", 20)
+			lbl.add_theme_color_override("font_color", Color.WHITE)
+			badge.add_child(lbl)
 		row.add_child(badge)
 
 const SHIELD_COLORS := {

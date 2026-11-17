@@ -19,6 +19,6 @@
 - Sem texto, números, legendas, ingredientes soltos ou cenário.
 
 ## Status e arquivos
-- **Status:** pendente
+- **Status:** aguardando_avaliacao
 - **Versão atual:** v01
 - **Arquivo alvo:** `art/items/suporte/carapuca_saci/icon_v01.png`

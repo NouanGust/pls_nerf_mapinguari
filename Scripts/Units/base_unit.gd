@@ -87,6 +87,8 @@ var _aura_center := Vector2i(-1, -1)
 var _aura_radius: int = -1
 var stunned_until_msec: int = 0
 var strong_control_immune_until_msec: int = 0
+var rooted_until_msec: int = 0
+var _was_rooted: bool = false
 var origin_runtime: OriginRuntime = null
 var current_ability_scale: float = 1.0
 var _was_stunned: bool = false
@@ -678,6 +680,9 @@ func apply_attack_weakness(duration: float, damage_multiplier: float = 0.7) -> v
 func is_stunned() -> bool:
 	return BattleClock.now_msec() < stunned_until_msec
 
+func is_rooted() -> bool:
+	return BattleClock.now_msec() < rooted_until_msec
+
 func is_immune() -> bool:
 	return BattleClock.now_msec() < immune_until_msec
 
@@ -739,6 +744,30 @@ func _recover_from_stun() -> void:
 	if current_mana >= stats.max_mana and stats.ability_name and current_state != State.IDLE and not is_stunned():
 		cast_ability()
 
+func apply_root(duration: float, label: String = "ENRAIZADO") -> void:
+	if current_state == State.DEAD or duration <= 0.0 or is_on_bench():
+		return
+	var now := BattleClock.now_msec()
+	if now < immune_until_msec:
+		return
+	var origin_cr := origin_runtime.get_control_resist_bonus() if origin_runtime else 0.0
+	var aura_cr := get_support_aura_value("control_resist", false)
+	var total_resist := float(synergy_bonuses.get("control_resist_pct", 0.0)) + (stats.stun_resist if stats else 0.0) + origin_cr + aura_cr
+	var resist := clampf(total_resist, 0.0, 0.50)
+	var final_duration := duration * (1.0 - resist)
+	if final_duration <= 0.0:
+		return
+	rooted_until_msec = maxi(rooted_until_msec, now + int(final_duration * 1000.0))
+	_was_rooted = true
+	velocity = Vector3.ZERO
+	if navigation_agent:
+		navigation_agent.velocity = Vector3.ZERO
+	if current_state == State.MOVING:
+		current_state = State.IDLE
+		if unit_visual:
+			unit_visual.update_locomotion(false, 0.0, true)
+	CombatFeedback.create_status_indicator(self, label, final_duration)
+
 func apply_armor_shred(duration: float, amount: float) -> void:
 	if current_state == State.DEAD or duration <= 0.0:
 		return
@@ -762,7 +791,9 @@ func start_combat() -> void:
 	in_combat = true
 	stunned_until_msec = 0
 	strong_control_immune_until_msec = 0
+	rooted_until_msec = 0
 	_was_stunned = false
+	_was_rooted = false
 	_idle_target_timer = 0.0
 	use_navigation = false
 	_detour_dir = Vector3.ZERO
@@ -937,6 +968,11 @@ func check_attack_or_move() -> void:
 	else:
 		if attack_timer:
 			attack_timer.stop()
+		if is_rooted():
+			current_state = State.IDLE
+			velocity = Vector3.ZERO
+			find_target()
+			return
 		if debug_movement:
 			print("%s: MOVENDO (modo: %s)" % [
 				stats.unit_name,
@@ -975,6 +1011,43 @@ func _physics_process(delta: float) -> void:
 	if _was_stunned:
 		_was_stunned = false
 		_recover_from_stun()
+		return
+
+	if is_rooted():
+		_was_rooted = true
+		velocity = Vector3.ZERO
+		if navigation_agent:
+			navigation_agent.velocity = Vector3.ZERO
+		if unit_visual and current_state == State.MOVING:
+			unit_visual.update_locomotion(false, 0.0, true)
+			current_state = State.IDLE
+		if is_instance_valid(current_target) and not current_target.is_queued_for_deletion() and current_target.current_state != State.DEAD and not current_target.is_on_bench() and current_target.visible:
+			var target_pos: Vector3 = current_target.global_position
+			var planar_dist := Vector2(target_pos.x - global_position.x, target_pos.z - global_position.z).length()
+			if planar_dist <= get_attack_range_meters():
+				if current_state != State.ATTACKING:
+					start_attacking()
+				elif attack_timer and attack_timer.is_stopped():
+					attack_timer.start()
+			else:
+				if attack_timer and not attack_timer.is_stopped():
+					attack_timer.stop()
+				current_state = State.IDLE
+				_idle_target_timer -= delta
+				if _idle_target_timer <= 0.0:
+					_idle_target_timer = 0.25
+					find_target()
+		else:
+			current_state = State.IDLE
+			_idle_target_timer -= delta
+			if _idle_target_timer <= 0.0:
+				_idle_target_timer = 0.25
+				find_target()
+		return
+
+	if _was_rooted:
+		_was_rooted = false
+		check_attack_or_move()
 		return
 
 	if stats and stats.is_stationary:
@@ -1500,7 +1573,9 @@ func die() -> void:
 		return
 	in_combat = false
 	_was_stunned = false
+	_was_rooted = false
 	stunned_until_msec = 0
+	rooted_until_msec = 0
 	current_state = State.DEAD
 	current_health = 0
 	clear_shield()

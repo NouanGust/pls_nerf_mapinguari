@@ -46,6 +46,9 @@ func move_direct_to_target(delta: float = 0.0166) -> void:
 	if unit.stats.is_stationary:
 		wait_rooted()
 		return
+	if unit.is_rooted():
+		unit.velocity = Vector3.ZERO
+		return
 	if not is_instance_valid(unit.current_target) or unit.current_target.current_state == BaseUnit3D.State.DEAD or unit.current_target.is_on_bench():
 		unit.current_target = null
 		unit.current_state = BaseUnit3D.State.IDLE
@@ -228,7 +231,7 @@ func _handle_post_collision_detour(direct_dir: Vector3) -> void:
 				break
 
 func move_towards_target() -> void:
-	if not unit or unit.is_stunned():
+	if not unit or unit.is_stunned() or unit.is_rooted():
 		return
 	if unit.stats.is_stationary:
 		wait_rooted()

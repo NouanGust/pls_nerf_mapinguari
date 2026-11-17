@@ -159,6 +159,9 @@ static func create_status_indicator(unit: Node3D, status: String, duration: floa
 	if "STUN" in upper_status or "PARALISIA" in upper_status or "ATORDOADO" in upper_status or "HIPNOTIZADO" in upper_status:
 		_create_stun_visual_effect(unit, duration)
 		return
+	elif "ENRAIZADO" in upper_status or "ROOT" in upper_status or "PRESO" in upper_status:
+		_create_root_visual_effect(unit, duration)
+		return
 	elif "LENTO" in upper_status or "GÉLIDO" in upper_status or "FRIO" in upper_status or "CONGELADO" in upper_status or "SLOW" in upper_status:
 		_create_slow_visual_effect(unit, duration)
 		return
@@ -285,6 +288,53 @@ static func _create_slow_visual_effect(unit: Node3D, duration: float) -> void:
 	tw.tween_property(frost, "scale", Vector3(1.15, 1.15, 1.15), 0.3).set_trans(Tween.TRANS_QUAD)
 	tw.tween_property(mat, "albedo_color:a", 0.0, 0.35).set_delay(maxf(duration - 0.35, 0.1))
 	tw.chain().tween_callback(frost.queue_free)
+
+## Efeito visual 3D de enraizamento / cipós (raízes e espinhos emergindo do solo prendendo os pés)
+static func _create_root_visual_effect(unit: Node3D, duration: float) -> void:
+	var root_fx := Node3D.new()
+	root_fx.name = "RootVisualFX"
+	root_fx.position = Vector3(0.0, 0.04, 0.0)
+	unit.add_child(root_fx)
+
+	var root_mat := StandardMaterial3D.new()
+	root_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	root_mat.albedo_color = Color(0.22, 0.65, 0.25, 0.9)
+	root_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	root_mat.emission_enabled = true
+	root_mat.emission = Color("#22c55e")
+	root_mat.emission_energy_multiplier = 2.0
+
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.48
+	torus.outer_radius = 0.66
+	torus.ring_segments = 16
+	ring.mesh = torus
+	ring.rotation_degrees.x = 90.0
+	ring.material_override = root_mat
+	root_fx.add_child(ring)
+
+	var cyl_mesh := CylinderMesh.new()
+	cyl_mesh.top_radius = 0.04
+	cyl_mesh.bottom_radius = 0.07
+	cyl_mesh.height = 0.45
+	for i in 4:
+		var stem := MeshInstance3D.new()
+		stem.mesh = cyl_mesh
+		stem.material_override = root_mat
+		var ang := TAU * float(i) / 4.0
+		stem.position = Vector3(cos(ang) * 0.52, 0.20, sin(ang) * 0.52)
+		stem.rotation_degrees = Vector3(randf_range(-15.0, 15.0), randf_range(0.0, 360.0), randf_range(-15.0, 15.0))
+		root_fx.add_child(stem)
+
+	root_fx.scale = Vector3(0.1, 0.1, 0.1)
+	var tw := root_fx.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(root_fx, "scale", Vector3.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(root_mat, "albedo_color:a", 0.0, 0.3).set_delay(maxf(duration - 0.3, 0.1))
+	if duration > 0.3:
+		tw.tween_property(root_fx, "scale", Vector3(0.1, 0.1, 0.1), 0.25).set_delay(duration - 0.25)
+	tw.chain().tween_callback(root_fx.queue_free)
 
 ## Efeito visual 3D de queimadura (fagulhas e chamas subindo da unidade)
 static func _create_burn_visual_effect(unit: Node3D, duration: float) -> void:

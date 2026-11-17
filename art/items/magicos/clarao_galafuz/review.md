@@ -1,7 +1,9 @@
 # Review — Clarão de João Galafuz (`clarao_galafuz`)
 
 - **Versão:** v01
-- **Status:** pendente
+- **Status:** aguardando_avaliacao
 - **Arquivo:** `icon_v01.png`
-- **Verificações técnicas:** aguardando geração
-- **Observações:** —
+- **Dimensões originais da ferramenta:** 1024 × 1024
+- **Dimensões finais verificadas:** 1024 × 1024 px (1:1 PNG)
+- **Verificações técnicas:** Arquivo válido, proporção 1:1, 1024×1024 confirmado, sem moldura, sem texto/cenário.
+- **Observações:** Piloto v01 gerado e validado tecnicamente (1024x1024 PNG, 1:1).

@@ -95,14 +95,21 @@ static func find_target_for(unit: BaseUnit3D) -> BaseUnit3D:
 	var enemy_group: String = "enemy_units" if unit.team == 0 else "player_units"
 	var enemies: Array = filter_valid_enemies(unit.get_tree().get_nodes_in_group(enemy_group))
 	
-	if unit.stats.is_stationary and not enemies.is_empty():
-		enemies = enemies.filter(func(e):
-			return unit.is_target_in_attack_range(e)
-		)
-		if enemies.is_empty():
-			unit.current_target = null
-			unit._wait_rooted()
-			return null
+	if not enemies.is_empty():
+		if unit.stats.is_stationary:
+			enemies = enemies.filter(func(e):
+				return unit.is_target_in_attack_range(e)
+			)
+			if enemies.is_empty():
+				unit.current_target = null
+				unit._wait_rooted()
+				return null
+		elif unit.is_rooted():
+			var in_range_enemies := enemies.filter(func(e):
+				return unit.is_target_in_attack_range(e)
+			)
+			if not in_range_enemies.is_empty():
+				enemies = in_range_enemies
 	
 	print("  %s procurando alvo... encontrados %d inimigos" % [unit.stats.unit_name, enemies.size()])
 	

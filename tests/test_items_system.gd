@@ -58,8 +58,10 @@ func _test_item_registry() -> bool:
 	var expected_ready_icons := [
 		&"lasca_brauna", &"pimenta_cumari", &"casca_jabuti", &"ramo_arruda",
 		&"cipo_titica", &"cabaca_agua", &"raiz_mandioca", &"guizo_cascavel", &"muiraquita_bruto",
-		&"chicote_fulozinha", &"esporao_capelobo", &"foice_corpo_seco", &"bala_prata",
-		&"cachimbo_saci"
+		&"chicote_fulozinha", &"esporao_capelobo", &"foice_corpo_seco", &"bala_prata", &"espora_vaqueiro",
+		&"cachimbo_saci", &"lampiao_boitata", &"espelho_loira", &"clarao_galafuz", &"rape_piripiri",
+		&"caroco_pequi", &"casco_jabuti_ancestral", &"folha_comigo_ninguem_pode", &"couro_sucuri", &"cerca_mandacaru",
+		&"muiraquita_icamiabas", &"fita_bonfim", &"oferenda_cachaca", &"berrante_sertanejo", &"carapuca_saci"
 	]
 	for icon_id in expected_ready_icons:
 		var it_obj: ItemData = ItemRegistry.get_item(icon_id)
